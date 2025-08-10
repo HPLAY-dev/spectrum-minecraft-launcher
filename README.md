@@ -3,8 +3,11 @@ An open source Minecraft Launcher in Python3. Currently focusing on Modloaders.
 
 ## 1.0 Files
 **mclauncher_core.py** Core Functions
+
 **tkui.py**            UI
+
 **JavaWrapper.jar**    see 1.1
+
 **make.bat**           pack via PyInstaller
 
 ### 1.1 JavaWrapper
@@ -19,6 +22,9 @@ Launcher functions. One day there will be a documentation. Forgive me for not wr
 
 ## 3.0 3rd-party stuff
 **BMCLAPI** download faster in China Mainland.
+
 **JavaWrapper** fixed bugs on Windows with East-Asian language(zh_CN for me).
+
 **PCL 2** Launch command referred.
+
 **Fabric** Modloader.
