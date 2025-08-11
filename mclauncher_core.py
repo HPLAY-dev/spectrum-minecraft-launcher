@@ -26,15 +26,30 @@ def is_fabric(minecraft_dir, version_name) -> bool: # necessary & workiing(in a 
             print(False)
             return False
 
-def merge_json(path_a, path_b): # Merge Jsons
+def merge_json(path_a, path_b, modify=True): # Merge Jsons
     with open(path_a, 'r') as f:
         json_a = json.loads(f.read())
     with open(path_b, 'r') as f:
         json_b = json.loads(f.read())
+        minecraft_libs = json_b['libraries']
     json_b.update(json_a)
+    if modify:
+        json_b['libraries'] = minecraft_libs
+        for i in range(len(json_a['libraries'])):
+            nocp = False # flag of nocopy
+            for j in range(len(json_b['libraries'])):
+                a = json_a['libraries'][i]['name'].replace('.', '/').replace(':', '/')
+                b = json_b['libraries'][j]['name'].replace('.', '/').replace(':', '/')
+                if a.split('/')[:4] == b.split('/')[:4]:
+                    nocp = True
+            if not nocp:
+                json_b['libraries'].append(json_a['libraries'][i])
+        json_b['arguments']['jvm'].append("-DFabricMcEmu= net.minecraft.client.main.Main ")
+    with open('C:/users/magic/json.json', 'w') as f:
+        f.write(json.dumps(json_b))
     return json_b
 
-def parse_maven_metadata_xml(url='https://maven.fabricmc.net/net/fabricmc/fabric-installer/maven-metadata.xml'):
+def parse_maven_metadata_xml(url='https://maven.fabricmc.net/net/fabricmc/fabric-loader/maven-metadata.xml'):
     xml_string = requests.get(url).text
     """将 XML 字符串转换为 Python 字典"""
     root = ET.fromstring(xml_string)
@@ -71,7 +86,7 @@ def download_fabric_installer(path, ver):
     with open(path, 'wb') as f:
         f.write(requests.get(f'https://maven.fabricmc.net/net/fabricmc/fabric-installer/{ver}/fabric-installer-{ver}.jar').content)
 
-def install_fabric_version(minecraft_dir, path_to_installer, version, version_name, java="", print_status=True, bmclapi=False): # latest fabric as default
+def install_fabric_version_installer(minecraft_dir, version, version_name, path_to_installer, java="", print_status=True, bmclapi=False): # latest fabric as default
     if not os.path.exists(path_to_installer):
         raise FileNotFoundError("FabricInstaller not found")
     if not os.path.exists(java):
@@ -86,6 +101,46 @@ def install_fabric_version(minecraft_dir, path_to_installer, version, version_na
     os.rename(f'{minecraft_dir}/versions/{folder}/{folder}.json', f'{minecraft_dir}/versions/{folder}/fabric.json')
     input()
     os.rename(f'{minecraft_dir}/versions/{folder}', f'{minecraft_dir}/versions/{version_name}')
+
+def download_fabric_json(minecraft_dir, version, version_name, loader_version='latest'):
+    if loader_version == 'latest':
+        loader_version = get_latest_fabric_version_id()
+    url = f'https://maven.fabricmc.net/net/fabricmc/fabric-loader/{loader_version}/fabric-loader-{loader_version}.json'
+    jsonfile = requests.get(url).text
+    jsonfile = json.loads(jsonfile)
+    # Parse JSON
+    jsonfile["inheritsFrom"] = version
+    jsonfile["mainClass"] = jsonfile["mainClass"]['client']
+    jsonfile.pop("version")
+    jsonfile.pop("min_java_version")
+    libraries = []
+    for item in jsonfile['libraries']['client']:
+        libraries.append(item)
+    for item in jsonfile['libraries']['common']:
+        libraries.append(item)
+    jsonfile["libraries"] = libraries
+    jsonfile["releaseTime"] = '0' # Needs Fix......
+    jsonfile["id"] = f"fabric-loader-{loader_version}-{version}"
+    jsonfile["time"] = '0' # Fix need......
+    jsonfile["type"] = 'release'
+
+    # Add FabricLoader to libraries
+    # .minecraft/libraries/net/fabricmc/fabric-loader/0.17.2
+    loader_json = {
+        "name": "net.fabricmc:fabric-loader:0.16.14",
+        "url": "https://maven.fabricmc.net/"
+    }
+    # intermediary_json = {
+    #     "name": "net.fabricmc:fabric-loader:0.16.14",
+    #     "url": "https://maven.fabricmc.net/"
+    # }
+    jsonfile["libraries"].append(loader_json)
+
+    content = json.dumps(jsonfile)
+
+    os.makedirs(f'{minecraft_dir}/versions/{version_name}', exist_ok=True)
+    with open(f'{minecraft_dir}/versions/{version_name}/Fabric.json', 'w') as f:
+        f.write(content)
 
 def get_file_path():
     if getattr(sys, 'frozen', False):
@@ -174,16 +229,15 @@ def download_version_json(minecraft_dir, version, version_name, bmclapi=False): 
         version = manifest["latest"]["release"]
     elif version == "latest_snapshot":
         version = manifest["latest"]["snapshot"]
-    if not os.path.exists(f'{minecraft_dir}/versions/{version_name}/{version_name}.json'):
-        for current in manifest["versions"]:
-            if current["id"] == version:
-                os.makedirs(f'{minecraft_dir}/versions/{version_name}', exist_ok=True)
-                with open(f'{minecraft_dir}/versions/{version_name}/{version_name}.json', 'wb') as f:
-                    url = current["url"]
-                    if bmclapi:
-                        url = url.replace("https://launchermeta.mojang.com/", "https://bmclapi2.bangbang93.com/")
-                        url = url.replace("https://launcher.mojang.com/", "https://bmclapi2.bangbang93.com/")
-                    f.write(requests.get(url).content)
+    for current in manifest["versions"]:
+        if current["id"] == version:
+            os.makedirs(f'{minecraft_dir}/versions/{version_name}', exist_ok=True)
+            with open(f'{minecraft_dir}/versions/{version_name}/{version_name}.json', 'wb') as f:
+                url = current["url"]
+                if bmclapi:
+                    url = url.replace("https://launchermeta.mojang.com/", "https://bmclapi2.bangbang93.com/")
+                    url = url.replace("https://launcher.mojang.com/", "https://bmclapi2.bangbang93.com/")
+                f.write(requests.get(url).content)
 
 def get_mainclass(minecraft_dir, version, version_name):
     if is_fabric(minecraft_dir, version_name):
@@ -238,7 +292,7 @@ def download_libraries(minecraft_dir, version, version_name, print_status=True, 
         if progress_callback:
             progress_callback(current, amount, f"[LIB][{current}/{amount}]")
         if print_status:
-            print(f'{current}/{file_amount} {lib["name"]}')
+            print(f'{current}/{file_amount}\n- {lib["name"]}')
         if not is_library_required(lib):
             continue
         '''{
@@ -293,13 +347,21 @@ def download_libraries(minecraft_dir, version, version_name, print_status=True, 
                 path = path.split('/')[0:-1]
                 path = '/'.join(path)
                 os.makedirs(path, exist_ok=True)
-                if os.path.exists(f'{minecraft_dir}/libraries/{lib["downloads"]["artifact"]["path"]}') and not if_natives and not if_natives_late_versions:
+                local_path = f'{minecraft_dir}/libraries/{lib["downloads"]["artifact"]["path"]}'
+                if os.path.exists(local_path) and not if_natives and not if_natives_late_versions and os.path.getsize(local_path) == lib['downloads']['artifact']['size']:
+                    print(lib['downloads']['artifact']['size'])
                     continue
                 with open(f'{minecraft_dir}/libraries/{lib["downloads"]["artifact"]["path"]}', 'wb') as f:
                     url = lib["downloads"]["artifact"]["url"]
                     if bmclapi:
+                        fallback_url = url
                         url = url.replace("https://libraries.minecraft.net/", "https://bmclapi2.bangbang93.com/maven/")
-                    f.write(requests.get(url).content)
+                        # if unable to download use original url.
+                        try:
+                            f.write(requests.get(url).content)
+                        except:
+                            f.write(requests.get(fallback_url).content)
+                            print(f'using Fallback url: {fallback_url}\ninstead of {url}')
             if if_natives or if_natives_late_versions:
                 # if not allow continue
                 if if_natives_late_versions:
@@ -383,6 +445,7 @@ def download_libraries(minecraft_dir, version, version_name, print_status=True, 
                         guess_path = f'{native()}/{arch}/org/{path[0]}/{path[1]}/*.*'
                         cmd = cmd+f" && cp {natives_path}/{guess_path} ."
                 os.system(cmd)
+        print(f'- {url}')
 
 def download_assets(minecraft_dir, version_name, print_status=True, bmclapi=False, progress_callback=None):
     with open(f'{minecraft_dir}/versions/{version_name}/{version_name}.json', 'r') as f:
@@ -448,15 +511,22 @@ def download_assets(minecraft_dir, version_name, print_status=True, bmclapi=Fals
 
 def auto_download(minecraft_dir, version, version_name, java='', fabric=False, print_status=True, bmclapi=False, progress_callback=None):
     if fabric:
-        download_fabric_installer(minecraft_dir+'/fabric-installer.jar', get_latest_fabric_version_id())
-        path_to_installer = minecraft_dir+'/fabric-installer.jar'
-        install_fabric_version(minecraft_dir, path_to_installer, version, version_name, java=java)
-
+        # # Download via Installer
+        # download_fabric_installer(minecraft_dir+'/fabric-installer.jar', get_latest_fabric_version_id())
+        # path_to_installer = minecraft_dir+'/fabric-installer.jar'
+        # install_fabric_version(minecraft_dir, path_to_installer, version, version_name, java=java)
+        
+        # Download JSON directly:
+        fabric_json = f'{minecraft_dir}/versions/{version_name}/Fabric.json'
+        if not os.path.exists(fabric_json):
+            download_fabric_json(minecraft_dir, version, version_name)
     if print_status:
         print("Downloading version .json File")
     download_version_json(minecraft_dir, version, version_name, bmclapi=bmclapi)
     if fabric:
-        merge_json(f'{minecraft_dir}/versions/{version_name}/fabric.json', f'{minecraft_dir}/versions/{version_name}/{version_name}.json')
+        jsonfile = merge_json(f'{minecraft_dir}/versions/{version_name}/Fabric.json', f'{minecraft_dir}/versions/{version_name}/{version_name}.json')
+        with open(f'{minecraft_dir}/versions/{version_name}/{version_name}.json', 'w') as f:
+            f.write(json.dumps(jsonfile))
     if print_status:
         print("Downloading version .jar File")
     download_jar(minecraft_dir, version_name, bmclapi=bmclapi)
@@ -701,6 +771,7 @@ def launch(javaw, xmx, minecraft_dir, version, version_name, javawrapper=None, u
     # minecraft args
     uuid = gen_random_uuid()
     minecraft_args = get_minecraft_args(minecraft_dir, version, version_name)
+    
     if type(minecraft_args) == list:
         minecraft_args_cp = minecraft_args[0]
         minecraft_args_minecraft = minecraft_args[1]

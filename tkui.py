@@ -293,7 +293,7 @@ class App(CTk):
         self.ver_combobox.configure(values=versions)
 
     def launch(self):
-        javaw = self.javaw_entry.get()
+        java = self.javaw_entry.get()
         if java == '':
             messagebox.showerror('Argument Error', 'Java is blank')
             return 1
@@ -318,7 +318,7 @@ class App(CTk):
             version_name = self.ver_combobox.get()[12:]
             version = get_minecraft_version(mcdir, version_name)
             player = self.name_entry.get()
-            cmd = launch(javaw, xmx, mcdir, version, version_name, wrapper, username=player)
+            cmd = launch(java, xmx, mcdir, version, version_name, wrapper, username=player)
 
             if native() == 'windows':
                 path = get_file_path()
