@@ -10,69 +10,59 @@ import json
 import subprocess
 import platform
 
+def get_file_path():
+    if getattr(sys, 'frozen', False):
+        return os.path.dirname(sys.executable) # EXE
+    return os.path.dirname(os.path.abspath(__file__)) # .py
+
 v_snapshot = False
 v_release = True
 v_old = False
 bmclapi = False
 
 lang = 'en_US'
-text = {
-    "zh_CN": {
-        "Fail:Int": "无法整数化",
-        "Title:Version": '版本',
-        "Title:Launch": '启动设置',
-        "Title:Download": '下载设置',
-        "Title:Misc": '其他',
-        "Title:DownloadStatus": "下载进度",
-        "Ctrl:MinecraftPath": "Minecraft 文件夹",
-        "Ctrl:Version": '版本',
-        "Ctrl:JavaPath": 'Java 目录',
-        "Ctrl:PlayerName": '玩家名称',
-        "Ctrl:MaxMem": 'JVM 内存大小',
-        "Ctrl:WrapperPath": 'JavaWrapper 目录',
-        "Ctrl:VersionName": '版本名称',
-        "Ctrl:UseBMCLAPI": 'BMCLAPI',
-        "Ctrl:DownloadFabric": 'Fabric',
-        "Ctrl:Download": '下载',
-        "Ctrl:Launch": '启动',
-        "Ctrl:SaveCfg": '保存设置',
-        "Ctrl:OpenCfg": '打开设置',
-        "Ctrl:RefVerList": '更新版本列表',
-        "Ctrl:ShowSnapshot": '显示快照版本',
-        "Ctrl:ShowAncient": '显示早期版本',
-        "Ctrl:DownloadJavaWrapper": '下载JavaWrapper',
-        "Other:Enter Text": '输入文本',
-        "Other:JavaWrapperNeedless": 'JavaWrapper 在此操作系统上不需要'
-    },
-    "en_US": {
+translate = {'en_US': 
+    {
+        "WindowTitle": "Spectrum Launcher",
         "Fail:Int": "Fail to Int",
-        "Title:Version": 'Version',
-        "Title:Launch": 'Launch Options',
-        "Title:Download": 'Download Options',
-        "Title:Misc": 'Misc Options',
+        "Title:Version": "Version",
+        "Title:Launch": "Launch Options",
+        "Title:Download": "Download Options",
+        "Title:Misc": "Misc Options",
         "Title:DownloadStatus": "Download Progress",
         "Ctrl:MinecraftPath": ".minecraft Folder",
-        "Ctrl:Version": 'Version',
-        "Ctrl:JavaPath": 'Java Path',
-        "Ctrl:PlayerName": 'Player Name',
-        "Ctrl:MaxMem": 'JVM Memory Size',
-        "Ctrl:WrapperPath": 'JavaWrapper Path',
-        "Ctrl:VersionName": 'Version Name',
-        "Ctrl:UseBMCLAPI": 'BMCLAPI',
-        "Ctrl:DownloadFabric": 'Fabric',
-        "Ctrl:Download": 'Download',
-        "Ctrl:Launch": 'Launch',
-        "Ctrl:SaveCfg": 'Save Config',
-        "Ctrl:OpenCfg": 'Open Config',
-        "Ctrl:RefVerList": 'Update Version List',
-        "Ctrl:ShowSnapshot": 'Show Snapshot Versions',
-        "Ctrl:ShowAncient": 'Show Old Versions',
-        "Ctrl:DownloadJavaWrapper": 'Download JavaWrapper',
-        "Other:Enter Text": 'Enter Text',
-        "Other:JavaWrapperNeedless": 'JavaWrapper not needed on this OS'
+        "Ctrl:Version": "Version",
+        "Ctrl:JavaPath": "Java Path",
+        "Ctrl:PlayerName": "Player Name",
+        "Ctrl:MaxMem": "JVM Memory Size",
+        "Ctrl:WrapperPath": "JavaWrapper Path",
+        "Ctrl:VersionName": "Version Name",
+        "Ctrl:UseBMCLAPI": "BMCLAPI",
+        "Ctrl:DownloadFabric": "Fabric",
+        "Ctrl:Download": "Download",
+        "Ctrl:Launch": "Launch",
+        "Ctrl:SaveCfg": "Save Config",
+        "Ctrl:OpenCfg": "Open Config",
+        "Ctrl:RefVerList": "Update Version List",
+        "Ctrl:ShowSnapshot": "Show Snapshot Versions",
+        "Ctrl:ShowAncient": "Show Old Versions",
+        "Ctrl:DownloadJavaWrapper": "Download JavaWrapper",
+        "Other:Enter Text": "Enter Text",
+        "Other:JavaWrapperNeedless": "JavaWrapper not needed on this OS",
+        "Text:Installed": "[Installed] ",
+        "Title:Language": "Language"
     }
 }
-if locale.getdefaultlocale()[0] in text:
+if os.path.exists(get_file_path()+'/lang'):
+    langs = os.listdir(get_file_path()+'/lang')
+    for langname in langs:
+        with open(get_file_path()+'/lang/'+langname, 'r', encoding='utf-8') as f:
+            jsonfile = json.loads(f.read())
+        translate[langname] = jsonfile
+
+if 'default' in langs:
+    lang = 'default'
+elif locale.getdefaultlocale()[0] in langs:
     lang = locale.getdefaultlocale()[0]
 else:
     lang = 'en_US'
@@ -91,14 +81,9 @@ def refresh_versions(show_snapshot=v_snapshot, show_old=v_old, show_release=v_re
         if 'libraries' in dir_files:
             dir_files.pop(dir_files.index('libraries'))
         for i in range(len(dir_files)):
-            v_list.insert(0,'[Installed] '+dir_files[i])
+            v_list.insert(0,translate[lang]['Text:Installed']+dir_files[i])
     # return v_list
     versions = v_list
-
-def get_file_path():
-    if getattr(sys, 'frozen', False):
-        return os.path.dirname(sys.executable) # EXE
-    return os.path.dirname(os.path.abspath(__file__)) # .py
 
 class App(CTk):
 
@@ -114,7 +99,7 @@ class App(CTk):
                 amount = int(prog[1])
                 now = int(prog[0])
             except:
-                raise(text[lang]['FailInt'])
+                raise(translate[lang]['FailInt'])
             self.progressbar_lib.set(now/amount)
         elif message[0:5] == "[AST]":
             prog = message[6:-1].split('/')
@@ -122,119 +107,143 @@ class App(CTk):
                 amount = int(prog[1])
                 now = int(prog[0])
             except:
-                raise(text[lang]['FailInt'])
+                raise(translate[lang]['FailInt'])
             self.progressbar_assets.set(now/amount)
 
     def __init__(self, *kargs, **kwargs):
         super().__init__(*kargs, **kwargs)
         if native() == 'windows':
-            titlefont = ("Segoe UI", 24, "bold")
+            titlefont = ("霞鹜文楷", 24, "bold")
         elif native() == 'osx':
             titlefont = ("San Francisco", 24, "bold")
         else:
             titlefont = ("Noto Sans", 24, "bold")
 
+        if native() == 'windows':
+            defaultfont = ("霞鹜文楷", 13)
+        elif native() == 'osx':
+            defaultfont = ("San Francisco", 13)
+        else:
+            defaultfont = ("Noto Sans", 13)
+        
+
         self.main_frame = CTkFrame(self, fg_color=self.cget("bg"))
 
         self.main_frame.grid(row=0, column=0, padx=10, pady=10)
 
-        self.title_label = CTkLabel(master=self.main_frame, text=text[lang]["Title:Version"], font=titlefont)
+        self.title_label = CTkLabel(master=self.main_frame, text=translate[lang]["Title:Version"], font=titlefont)
         self.title_label.grid(row=0, column=0, sticky="w", pady=(0, 10))
 
-        self.mc_path_label = CTkLabel(master=self.main_frame, text=text[lang]["Ctrl:MinecraftPath"])
+        self.mc_path_label = CTkLabel(master=self.main_frame, text=translate[lang]["Ctrl:MinecraftPath"], font=defaultfont)
         self.mc_path_label.grid(row=1, column=0, sticky="w", pady=(0, 10))
-        self.mc_path_entry = CTkEntry(master=self.main_frame, placeholder_text=text[lang]["Other:Enter Text"])
+        self.mc_path_entry = CTkEntry(master=self.main_frame, placeholder_text=translate[lang]["Other:Enter Text"], font=defaultfont)
         self.mc_path_entry.grid(row=1, column=1, pady=(0, 10), padx=10)
 
-        self.ver_label = CTkLabel(master=self.main_frame, text=text[lang]["Ctrl:Version"])
+        self.ver_label = CTkLabel(master=self.main_frame, text=translate[lang]["Ctrl:Version"], font=defaultfont)
         self.ver_label.grid(row=2, column=0, sticky="w", pady=(0, 10))
         # versions = get_version_list(show_snapshot=v_snapshot, show_old=v_old, show_release=v_release, bmclapi=bmclapi)
         refresh_versions(show_snapshot=v_snapshot, show_old=v_old, show_release=v_release, bmclapi=bmclapi, minecraft_dir=self.mc_path_entry.get())
-        self.ver_combobox = CTkComboBox(master=self.main_frame, state='readonly', values=versions)
+        self.ver_combobox = CTkComboBox(master=self.main_frame, state='readonly', values=versions, font=defaultfont)
         self.ver_combobox.grid(row=2, column=1, pady=(0, 10), padx=10)
         
-        self.title2_label = CTkLabel(master=self.main_frame, text=text[lang]["Title:Launch"], font=titlefont)
+        self.title2_label = CTkLabel(master=self.main_frame, text=translate[lang]["Title:Launch"], font=titlefont)
         self.title2_label.grid(row=4, column=0, sticky="w", pady=(0, 10))
 
-        self.javaw_label = CTkLabel(master=self.main_frame, text=text[lang]["Ctrl:JavaPath"])
+        self.javaw_label = CTkLabel(master=self.main_frame, text=translate[lang]["Ctrl:JavaPath"], font=defaultfont)
         self.javaw_label.grid(row=3, column=0, sticky="w", pady=(0, 10))
-        self.javaw_entry = CTkEntry(master=self.main_frame, placeholder_text=text[lang]["Other:Enter Text"])
+        self.javaw_entry = CTkEntry(master=self.main_frame, placeholder_text=translate[lang]["Other:Enter Text"], font=defaultfont)
         self.javaw_entry.grid(row=3, column=1, pady=(0, 10), padx=10)
 
-        self.name_label = CTkLabel(master=self.main_frame, text=text[lang]["Ctrl:PlayerName"])
+        self.name_label = CTkLabel(master=self.main_frame, text=translate[lang]["Ctrl:PlayerName"], font=defaultfont)
         self.name_label.grid(row=5, column=0, sticky="w", pady=(0, 10))
-        self.name_entry = CTkEntry(master=self.main_frame, placeholder_text=text[lang]["Other:Enter Text"])
+        self.name_entry = CTkEntry(master=self.main_frame, placeholder_text=translate[lang]["Other:Enter Text"], font=defaultfont)
         self.name_entry.grid(row=5, column=1, pady=(0, 10), padx=10)
 
-        self.memmax_label = CTkLabel(master=self.main_frame, text=text[lang]["Ctrl:MaxMem"])
+        self.memmax_label = CTkLabel(master=self.main_frame, text=translate[lang]["Ctrl:MaxMem"], font=defaultfont)
         self.memmax_label.grid(row=6, column=0, sticky="w", pady=(0, 10))
-        self.memmax_entry = CTkEntry(master=self.main_frame, placeholder_text=text[lang]["Other:Enter Text"])
+        self.memmax_entry = CTkEntry(master=self.main_frame, placeholder_text=translate[lang]["Other:Enter Text"], font=defaultfont)
         self.memmax_entry.grid(row=6, column=1, pady=(0, 10), padx=10)
 
         # Windows only
         if native() == "windows":
-            self.wrapper_label = CTkLabel(master=self.main_frame, text=text[lang]["Ctrl:WrapperPath"])
+            self.wrapper_label = CTkLabel(master=self.main_frame, text=translate[lang]["Ctrl:WrapperPath"], font=defaultfont)
             self.wrapper_label.grid(row=7, column=0, sticky="w", pady=(0, 10))
-            self.wrapper_entry = CTkEntry(master=self.main_frame, placeholder_text=text[lang]["Other:Enter Text"])
+            self.wrapper_entry = CTkEntry(master=self.main_frame, placeholder_text=translate[lang]["Other:Enter Text"], font=defaultfont)
             self.wrapper_entry.grid(row=7, column=1, pady=(0, 10), padx=10)
         else:
-            self.wrapper_label = CTkLabel(master=self.main_frame, text=text[lang]["Other:JavaWrapperNeedless"])
+            self.wrapper_label = CTkLabel(master=self.main_frame, text=translate[lang]["Other:JavaWrapperNeedless"], font=defaultfont)
             self.wrapper_label.grid(row=7, column=0, sticky="w", pady=(0, 10))
         
-        self.title_label = CTkLabel(master=self.main_frame, text=text[lang]["Title:Download"], font=titlefont)
+        self.title_label = CTkLabel(master=self.main_frame, text=translate[lang]["Title:Download"], font=titlefont)
         self.title_label.grid(row=8, column=0, sticky="w", pady=(0, 10))
 
-        self.ver_name_label = CTkLabel(master=self.main_frame, text=text[lang]["Ctrl:VersionName"])
+        self.ver_name_label = CTkLabel(master=self.main_frame, text=translate[lang]["Ctrl:VersionName"], font=defaultfont)
         self.ver_name_label.grid(row=9, column=0, sticky="w", pady=(0, 10))
-        self.ver_name_entry = CTkEntry(master=self.main_frame, placeholder_text=text[lang]["Other:Enter Text"])
+        self.ver_name_entry = CTkEntry(master=self.main_frame, placeholder_text=translate[lang]["Other:Enter Text"], font=defaultfont)
         self.ver_name_entry.grid(row=9, column=1, pady=(0, 10), padx=10)
 
-        self.dl_bmcl_checkbox = CTkCheckBox(master=self.main_frame, text=text[lang]["Ctrl:UseBMCLAPI"])
+        self.dl_bmcl_checkbox = CTkCheckBox(master=self.main_frame, text=translate[lang]["Ctrl:UseBMCLAPI"], font=defaultfont)
         self.dl_bmcl_checkbox.grid(row=10, column=0, sticky="w", pady=(0, 10))
 
-        self.dl_fabric_checkbox = CTkCheckBox(master=self.main_frame, text=text[lang]["Ctrl:DownloadFabric"])
+        self.dl_fabric_checkbox = CTkCheckBox(master=self.main_frame, text=translate[lang]["Ctrl:DownloadFabric"], font=defaultfont)
         self.dl_fabric_checkbox.grid(row=10, column=1, sticky="w", pady=(0, 10))
         
-        self.launch_button = CTkButton(master=self.main_frame, text=text[lang]["Ctrl:Launch"], command=self.launch)
-        self.launch_button.grid(row=11, column=1, pady=(0, 10))
+        self.launch_button = CTkButton(master=self.main_frame, text=translate[lang]["Ctrl:Launch"], font=defaultfont, command=self.launch)
+        self.launch_button.grid(row=12, column=1, pady=(0, 10))
         
-        self.launch_button = CTkButton(master=self.main_frame, text=text[lang]["Ctrl:Download"], command=self.download)
-        self.launch_button.grid(row=11, column=0, pady=(0, 10))
+        self.launch_button = CTkButton(master=self.main_frame, text=translate[lang]["Ctrl:Download"], font=defaultfont, command=self.download)
+        self.launch_button.grid(row=12, column=0, pady=(0, 10))
 
-        self.title_label = CTkLabel(master=self.main_frame, text=text[lang]["Title:Misc"], font=titlefont)
+        self.title_label = CTkLabel(master=self.main_frame, text=translate[lang]["Title:Misc"], font=titlefont)
         self.title_label.grid(row=0, column=3, sticky="w", pady=(0, 10))
 
-        self.opencfg_button = CTkButton(master=self.main_frame, text=text[lang]["Ctrl:OpenCfg"], command=self.opencfg)
+        self.opencfg_button = CTkButton(master=self.main_frame, text=translate[lang]["Ctrl:OpenCfg"], font=defaultfont, command=self.opencfg)
         self.opencfg_button.grid(row=1, column=3, pady=(0, 10))
 
-        self.savecfg_button = CTkButton(master=self.main_frame, text=text[lang]["Ctrl:SaveCfg"], command=self.savecfg)
+        self.savecfg_button = CTkButton(master=self.main_frame, text=translate[lang]["Ctrl:SaveCfg"], font=defaultfont, command=self.savecfg)
         self.savecfg_button.grid(row=2, column=3, pady=(0, 10))
 
-        self.refresh_versions_button = CTkButton(master=self.main_frame, text=text[lang]["Ctrl:RefVerList"], command=self.refresh_versions)
+        self.refresh_versions_button = CTkButton(master=self.main_frame, text=translate[lang]["Ctrl:RefVerList"], font=defaultfont, command=self.refresh_versions)
         self.refresh_versions_button.grid(row=3, column=3, pady=(0, 10))
 
-        self.snapshot_checkbox = CTkCheckBox(master=self.main_frame, text=text[lang]["Ctrl:ShowSnapshot"], command=self.toggle_snapshot)
-        self.snapshot_checkbox.grid(row=4, column=3, sticky="w", pady=(0, 10))
+        if native() == 'windows':
+            self.dl_jwrapper_button = CTkButton(master=self.main_frame, text=translate[lang]["Ctrl:DownloadJavaWrapper"], font=defaultfont, command=self.download_javawrapper)
+            self.dl_jwrapper_button.grid(row=4, column=3, pady=(0, 10))
 
-        self.old_checkbox = CTkCheckBox(master=self.main_frame, text=text[lang]["Ctrl:ShowAncient"], command=self.toggle_old)
-        self.old_checkbox.grid(row=5, column=3, sticky="w", pady=(0, 10))
+        self.snapshot_checkbox = CTkCheckBox(master=self.main_frame, text=translate[lang]["Ctrl:ShowSnapshot"], font=defaultfont, command=self.toggle_snapshot)
+        self.snapshot_checkbox.grid(row=5, column=3, sticky="w", pady=(0, 10))
 
-        self.title_label = CTkLabel(master=self.main_frame, text=text[lang]["Title:DownloadStatus"], font=titlefont)
-        self.title_label.grid(row=6, column=3, sticky="w", pady=(0, 10))
+        self.old_checkbox = CTkCheckBox(master=self.main_frame, text=translate[lang]["Ctrl:ShowAncient"], font=defaultfont, command=self.toggle_old)
+        self.old_checkbox.grid(row=6, column=3, sticky="w", pady=(0, 10))
 
-        self.log_entry = CTkEntry(master=self.main_frame, width=200)
+        self.title_label = CTkLabel(master=self.main_frame, text=translate[lang]["Title:DownloadStatus"], font=titlefont)
+        self.title_label.grid(row=7, column=3, sticky="w", pady=(0, 10))
+
+        self.log_entry = CTkEntry(master=self.main_frame, width=200, font=defaultfont)
         # self.log_entry.grid(row=7, column=3, sticky="w", pady=(0, 10))
 
         self.progressbar_lib = CTkProgressBar(master=self.main_frame, width=200)
-        self.progressbar_lib.grid(row=7, column=3, sticky="w", pady=(0, 10))
+        self.progressbar_lib.grid(row=8, column=3, sticky="w", pady=(0, 10))
         self.progressbar_lib.set(0)
 
         self.progressbar_assets = CTkProgressBar(master=self.main_frame, width=200)
-        self.progressbar_assets.grid(row=8, column=3, sticky="w", pady=(0, 10))
+        self.progressbar_assets.grid(row=9, column=3, sticky="w",pady=(0, 10))
         self.progressbar_assets.set(0)
 
-        self.dl_jwrapper_button = CTkButton(master=self.main_frame, text=text[lang]["Ctrl:DownloadJavaWrapper"], command=self.download_javawrapper)
-        self.dl_jwrapper_button.grid(row=9, column=3, pady=(0, 10))
+        self.title_label = CTkLabel(master=self.main_frame, text=translate['en_US']["Title:Language"], font=titlefont)
+        self.title_label.grid(row=10, column=3, sticky="w", pady=(0, 10))
+
+        self.language_combobox = CTkComboBox(master=self.main_frame, state='readonly', values=langs, font=defaultfont, command=self.change_language)
+        self.language_combobox.grid(row=11, column=3, pady=(0, 10))
+
+    def change_language(self, value):
+        global lang
+        lang = value
+        
+        if value == 'default':
+            os.remove(get_file_path()+'/lang/default')
+        with open(get_file_path()+'/lang/default', 'w') as f:
+            f.write(json.dumps(translate[value]))
 
     def download(self):
         if not hasattr(self, 'download_thread') or not self.download_thread.is_alive():
@@ -242,7 +251,7 @@ class App(CTk):
             if not os.path.exists(mcdir):
                 messagebox.showerror('Argument Error', 'Cannot find Minecraft Path')
                 return 1
-            if self.ver_combobox.get()[0:12] == "[Installed] ": # [Installed] 
+            if self.ver_combobox.get()[0:12] == translate[lang]['Text:Installed']: # [Installed] 
                 version_name = self.ver_combobox.get()[12:]
                 if version_name == '':
                     messagebox.showerror('Argument Error', 'Version Name is blank')
@@ -314,7 +323,7 @@ class App(CTk):
         if not os.path.exists(mcdir):
             messagebox.showerror('Argument Error', 'Cannot find Minecraft Path')
             return 1
-        if self.ver_combobox.get()[0:12] == "[Installed] ": # [Installed] 
+        if self.ver_combobox.get()[:len(translate[lang]['Text:Installed'])] == translate[lang]['Text:Installed']: # [Installed] 
             version_name = self.ver_combobox.get()[12:]
             version = get_minecraft_version(mcdir, version_name)
             player = self.name_entry.get()
@@ -353,7 +362,6 @@ class App(CTk):
         os.mkdirs(dir_path, exist_ok=True)
         with open(path, 'wb') as f:
             f.write(requests.get('https://github.com/00ll00/java_launch_wrapper/releases/download/v1.4.4/java_launch_wrapper-1.4.4.jar').content)
-
 
     def opencfg(self):
         path = get_file_path()
@@ -395,6 +403,6 @@ class App(CTk):
 
 set_appearance_mode("light")
 app = App()
-app.title("Spectrum Launcher")
-app.geometry("600x480+100+100")
+app.title(translate[lang]['WindowTitle'])
+app.geometry("600x540+100+100")
 app.mainloop()
