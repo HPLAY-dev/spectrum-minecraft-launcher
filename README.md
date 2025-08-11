@@ -26,6 +26,19 @@ Fabric is currently 100% support. The Core will **defaultly download latest vers
 ## 4.0 Multi-Language
 Language Strings are currently configured inside the `tkui.py`, to modify it, you need to add you language key and all of the strings in en_US(zh_CN too). Switching OS language will also switch the UI language(restart needed). The fallback language is en_US.
 
+## 5.0 Problems
+SHA1 checksum not checked.
+
+Fabric Version Selection not implemented
+
+1.0 *and other ancient versions too* is unable to load assets.
+
+## 6.0 To do list
+compatibily of ancient version
+
+mod download in launcher
+
+......
 
 ## 999.0 3rd-party stuff
 **BMCLAPI** download faster in China Mainland.
