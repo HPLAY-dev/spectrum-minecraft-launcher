@@ -251,8 +251,8 @@ class App(CTk):
             if not os.path.exists(mcdir):
                 messagebox.showerror('Argument Error', 'Cannot find Minecraft Path')
                 return 1
-            if self.ver_combobox.get()[0:12] == translate[lang]['Text:Installed']: # [Installed] 
-                version_name = self.ver_combobox.get()[12:]
+            if self.ver_combobox.get()[:len(translate[lang]['Text:Installed'])] == translate[lang]['Text:Installed']: # [Installed] 
+                version_name = self.ver_combobox.get()[len(translate[lang]['Text:Installed']):]
                 if version_name == '':
                     messagebox.showerror('Argument Error', 'Version Name is blank')
                     return 1
@@ -324,7 +324,7 @@ class App(CTk):
             messagebox.showerror('Argument Error', 'Cannot find Minecraft Path')
             return 1
         if self.ver_combobox.get()[:len(translate[lang]['Text:Installed'])] == translate[lang]['Text:Installed']: # [Installed] 
-            version_name = self.ver_combobox.get()[12:]
+            version_name = self.ver_combobox.get()[len(translate[lang]['Text:Installed']):]
             version = get_minecraft_version(mcdir, version_name)
             player = self.name_entry.get()
             cmd = launch(java, xmx, mcdir, version, version_name, wrapper, username=player)
@@ -359,7 +359,7 @@ class App(CTk):
         path = self.wrapper_entry.get()
         path = path.replace('\\', '/')
         dir_path = '/'.join(path.split('/')[0:-1])
-        os.mkdirs(dir_path, exist_ok=True)
+        os.makedirs(dir_path, exist_ok=True)
         with open(path, 'wb') as f:
             f.write(requests.get('https://github.com/00ll00/java_launch_wrapper/releases/download/v1.4.4/java_launch_wrapper-1.4.4.jar').content)
 
