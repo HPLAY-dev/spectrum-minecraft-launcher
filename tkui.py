@@ -10,6 +10,18 @@ import json
 import subprocess
 import platform
 
+def detect_error(stdout, stderr) -> str:
+    stdout = stdout.decode(encoding='gbk').split('\r\n')
+    stderr = stderr.decode(encoding='gbk')
+    if stderr == '':
+        return 0
+    else:
+        stderr = stderr.split('\r\n')
+        for line in stderr:
+            line = line.split(': ')
+            if len(line) == 3:
+                return(1,line[1],line[2])
+
 def get_file_path():
     if getattr(sys, 'frozen', False):
         return os.path.dirname(sys.executable) # EXE
@@ -332,7 +344,7 @@ class App(CTk):
             if native() == 'windows':
                 path = get_file_path()
                 path = path.replace('\\', '/') + '/launch.bat'
-                with open(path, 'w') as file:
+                with open(path, 'w', encoding='utf-8') as file:
                     file.write(cmd)
             else:
                 path = get_file_path()
