@@ -12,24 +12,23 @@ from pathlib import Path
 
 
 # Tools
-def get_file_path(): # 获取当前Python文件路径
+def get_file_path() -> str:
+    '''获取当前Python文件路径'''
     if getattr(sys, 'frozen', False):
         return os.path.dirname(sys.executable) # EXE
     return os.path.dirname(os.path.abspath(__file__)) # .py
 
-def get_system_bits() -> str: # 获取系统位数('32','64')
+def get_system_bits() -> str:
+    ''' 获取系统位数('32','64')'''
     return platform.architecture()[0][:2]
 
-def native() -> str: # 获取系统native, Windows为'windows' MacOS为'osx' GNU/Linux为'linux'
+def native() -> str:
+    '''获取系统native, Windows为windows MacOS为osx GNU/Linux为linux'''
     return platform.system().lower()
 
 # ModLoader/Fabric
-def is_fabric(minecraft_dir, version_name) -> bool: # 检测版本是否为Fabric，返回bool
-    # if os.path.exists(minecraft_dir+f"/versions/{version_name}/fabric-loader.jar"):
-    #     return True
-    # else:
-    #     return False
-
+def is_fabric(minecraft_dir, version_name) -> bool:
+    '''检测版本是否为Fabric，返回bool'''
     with open(minecraft_dir+'/versions/'+version_name+'/'+version_name+'.json', 'r') as f:
         if "fabric-loader" in f.read():
             print(True)
@@ -38,16 +37,12 @@ def is_fabric(minecraft_dir, version_name) -> bool: # 检测版本是否为Fabri
             print(False)
             return False
 
-def merge_json(fabric_json_path, minecraft_json_path, modify=True) -> dict: # 合并Fabric与Minecraft的Json并进行处理，返回dict 
+def fabric_merge_json(fabric_json_path, minecraft_json_path, modify=True) -> dict:
+    '''合并Fabric与Minecraft的Json并进行处理，返回dict'''
     with open(path_a, 'r') as f:
         json_a = json.loads(f.read()) # fabric
     with open(path_b, 'r') as f:
         json_b = json.loads(f.read()) # mineccraft
-        # minecraft_libs = json_b['libraries']
-    # if modify:
-    #     for lib in range(len(json_b['libraries'])):
-    #         if lib+1 < len(json_b['libraries']) and json_b['libraries'][lib]['name'][:16] == 'org.ow2.asm:asm:':
-    #             json_b['libraries'].pop(lib)
     lib_b = json_b['libraries']
     json_b.update(json_a)
     json_b['libraries'].extend(lib_b)
@@ -58,23 +53,8 @@ def merge_json(fabric_json_path, minecraft_json_path, modify=True) -> dict: # �
 
     return json_b
 
-    #     json_b['libraries'] = minecraft_libs
-    #     for i in range(len(json_a['libraries'])):
-    #         # In order to avoid multiple "asm"(others too) lib(1 from minecraft, 1 from fabric), 
-    #         # the libraries need to be checked.
-    #         a = json_a['libraries'][i]['name'].replace('.', '/').replace(':', '/')
-    #         for j in range(len(json_b['libraries'])):
-    #             if not json_b['libraries'][j] == 'remove':
-    #                 b = json_b['libraries'][j]['name'].replace('.', '/').replace(':', '/')
-    #                 if a.split('/')[:4] == b.split('/')[:4]:
-    #                     print(json_a['libraries'][i]['name'])
-    #                     json_b['libraries'][i] = 'remove'
-    #         json_b['libraries'].append(json_a['libraries'][i])
-    #     json_b['arguments']['jvm'].append("-DFabricMcEmu= net.minecraft.client.main.Main ")
-    # while 'remove' in json_b['libraries']:
-    #     json_b['libraries'].pop(json_b['libraries'].index('remove'))
-
-def parse_xml(url=str) -> dict: # 处理xml，返回dict
+def parse_xml(url=str) -> dict:
+    '''处理xml，返回dict'''
     item = requests.get(url)
     if item.status_code != 200:
         raise Exception(f"Request Fail: {item.status_code}\nurl: {url}")
@@ -107,43 +87,32 @@ def parse_xml(url=str) -> dict: # 处理xml，返回dict
     
     return {root.tag: parse_element(root)}
 
-def get_fabric_installer_versions() -> list: # 搜索metadata获得所有Fabric-Loader版本，最后一项最新，返回list，
+def get_fabric_installer_versions() -> list:
+    '''搜索metadata获得所有Fabric-Loader版本，最后一项最新，返回list，'''
     return parse_xml(url='https://maven.fabricmc.net/net/fabricmc/fabric-loader/maven-metadata.xml')['metadata']['versioning']['versions']
 
-def get_latest_fabric_loader_version() -> str: # 搜索metadata获得最新Fabric-Loader版本，返回str
+def download_fabric_api(minecraft_dir, version, version_name, mod_version='latest') -> None:
+    '''下载Fabric API(一个Mod)'''
+    metadata = parse_xml('https://maven.fabricmc.net/net/fabricmc/fabric-api/fabric-api/maven-metadata.xml')
+    available = []
+    for i in metadata['metadata']['versioning']['versions']:
+        if '+'+version in i:
+            available.append(i)
+    if mod_version == 'latest':
+        mod_version = available[-1]
+    url = f'https://maven.fabricmc.net/net/fabricmc/fabric-api/fabric-api/{mod_version}/fabric-api-{mod_version}.jar'
+    raw = requests.get(url)
+    if raw.status_code != 200:
+        raise Exception(f"Request Fail: {raw.status_code}\nurl: {url}")
+    with open(f'{minecraft_dir}/versions/{version_name}/mods/fabric-api-{mod_version}.jar', 'wb') as f:
+        f.write(raw.content)
+
+def get_latest_fabric_loader_version() -> str:
+    '''搜索metadata获得最新Fabric-Loader版本，返回str'''
     return parse_xml(url='https://maven.fabricmc.net/net/fabricmc/fabric-loader/maven-metadata.xml')['metadata']['versioning']['latest']
 
-# # 以下为废弃的定义
-# def get_latest_fabric_installer_version() -> str: # 搜索metadata获得最新Fabric-Installer版本，返回str
-#     return parse_xml(url="https://maven.fabricmc.net/net/fabricmc/fabric-installer/maven-metadata.xml")['metadata']['versioning']['latest']
-
-# def download_fabric_installer(path, version) -> None: # 下载Fabric-Installer，无返回，废弃
-#     if not os.path.exists(path):
-#         with open(path, 'wb') as f:
-#             url = f'https://maven.fabricmc.net/net/fabricmc/fabric-installer/{version}/fabric-installer-{version}.jar'
-#             item = requests.get(url)
-#             if item.status_code != 200:
-#                 raise Exception(f"Request Fail: {item.status_code}\nurl: {url}")
-#             f.write(item.content)
-    
-# def install_fabric_version_installer(minecraft_dir, version, version_name, path_to_installer, java="", print_status=True, bmclapi=False): # 损坏，请勿使用
-#     if not os.path.exists(path_to_installer):
-#         raise FileNotFoundError("FabricInstaller not found")
-#     if not os.path.exists(java):
-#         java = 'java'
-#     command = f'{java} -jar {path_to_installer} client -dir {minecraft_dir} -mcversion {version}'
-#     print(command)
-#     os.system(command)
-#     for folder in os.listdir(minecraft_dir+'/versions'):
-#         folder_splited = folder.split('-')
-#         if folder_splited[0] == 'fabric' and folder_splited[1] == 'loader' and version in folder:
-#             fabric_version_folderpath = folder
-#             os.rename(f'{minecraft_dir}/versions/{folder}/{folder}.json', f'{minecraft_dir}/versions/{folder}/fabric.json')
-#             os.rename(f'{minecraft_dir}/versions/{folder}', f'{minecraft_dir}/versions/{version_name}')
-#             break
-# # 以上为废弃定义
-
-def download_fabric_json(minecraft_dir, version, version_name, loader_version='latest') -> None: # 下载Fabric-Loader的JSON文件到.minecraft/versions/{version_name}/Fabric.json，用于和当前版本的Minecraft的json合并
+def download_fabric_json(minecraft_dir, version, version_name, loader_version='latest') -> None:
+    '''下载Fabric-Loader的JSON文件到.minecraft/versions/{version_name}/Fabric.json，用于和当前版本的Minecraft的json合并'''
     if loader_version == 'latest':
         loader_version = get_latest_fabric_loader_version()
     url = f'https://maven.fabricmc.net/net/fabricmc/fabric-loader/{loader_version}/fabric-loader-{loader_version}.json'
@@ -187,7 +156,33 @@ def download_fabric_json(minecraft_dir, version, version_name, loader_version='l
     with open(f'{minecraft_dir}/versions/{version_name}/Fabric.json', 'w') as f:
         f.write(content)
 
-def get_version_manifest(bmclapi=False) -> dict: # 获取版本列表卷宗，返回dict
+# Java Functions
+def get_java_version(java_binary_path='java') -> list:
+    '''执行java -version并获得返回值，格式为[8, '1.8.0_452']或[21, "21.0.7"]等，返回list'''
+    p = s.Popen([java_binary_path, '-version'], stdout=s.PIPE, stderr=s.PIPE)
+    stdout, stderr = p.communicate()
+    ver_full = stderr.decode().split('\n')[0].split(' version ')[1][1:-1] # 行类似 'openjdk version "1.8.0_462"'
+    if ver_full.split('.')[0] == '1':
+        major_version = ver_full.split(".")[1]
+    else:
+        major_version = ver_full.split('.')[0]
+
+    return [major_version, ver_full]
+
+def check_java_available(java_binary_path, minecraft_dir, version_name) -> bool:
+    '''查看java是否符合要求 (不在launch()中使用)，返回bool'''
+    with open(f'{minecraft_dir}/versions/{version_name}/{version_name}.json', 'r') as f:
+        raw = f.read()
+    version_json = json.loads(raw)
+    if "javaVersion" in version_json and "majorVersion" in version_json["javaVersion"]:
+        required_version = version_json["javaVersion"]["majorVersion"]
+        return get_java_version(java_binary_path) == required_version
+    else:
+        return False
+
+# Manifest Function
+def get_version_manifest(bmclapi=False) -> dict:
+    '''获取版本列表卷宗，返回dict'''
     if bmclapi:
         url = "https://bmclapi2.bangbang93.com/mc/game/version_manifest.json"
     else:
@@ -199,30 +194,8 @@ def get_version_manifest(bmclapi=False) -> dict: # 获取版本列表卷宗，�
     else:
         raise Exception(f"Request Fail: {raw.status_code}\nurl: {url}")
 
-# Java Functions
-def get_java_version(java_binary_path='java') -> list: # 执行java -version并获得返回值，格式为[8, '1.8.0_452']或[21, "21.0.7"]等，返回list
-    p = s.Popen([java_binary_path, '-version'], stdout=s.PIPE, stderr=s.PIPE)
-    stdout, stderr = p.communicate()
-    ver_full = stderr.decode().split('\n')[0].split(' version ')[1][1:-1] # 行类似 'openjdk version "1.8.0_462"'
-    if ver_full.split('.')[0] == '1':
-        major_version = ver_full.split(".")[1]
-    else:
-        major_version = ver_full.split('.')[0]
-
-    return [major_version, ver_full]
-
-def check_java_available(java_binary_path, minecraft_dir, version_name) -> bool: # 查看java是否符合要求 (不在launch()中使用)，返回bool
-    with open(f'{minecraft_dir}/versions/{version_name}/{version_name}.json', 'r') as f:
-        raw = f.read()
-    version_json = json.loads(raw)
-    if "javaVersion" in version_json and "majorVersion" in version_json["javaVersion"]:
-        required_version = version_json["javaVersion"]["majorVersion"]
-        return get_java_version(java_binary_path) == required_version
-    else:
-        return False
-
-# Manifest Function
-def get_version_list(show_snapshot=False, show_old=False, show_release=True, bmclapi=False) -> list: # 获取minecraft版本列表，返回list
+def get_version_list(show_snapshot=False, show_old=False, show_release=True, bmclapi=False) -> list:
+    '''获取minecraft版本列表，返回list'''
     if bmclapi:
         url = "https://bmclapi2.bangbang93.com/mc/game/version_manifest.json"
     else:
@@ -242,7 +215,8 @@ def get_version_list(show_snapshot=False, show_old=False, show_release=True, bmc
         returns.append(version['id'])
     return returns
 
-def get_version_json(version, bmclapi=False) -> dict: # 获取当前Minecraft版本的json，没有使用，返回dict
+def get_version_json(version, bmclapi=False) -> dict:
+    '''获取当前Minecraft版本的json，没有使用，返回dict'''
     manifest = get_version_manifest()
     for current in manifest["versions"]:
         1
@@ -251,9 +225,10 @@ def get_version_json(version, bmclapi=False) -> dict: # 获取当前Minecraft版
             if raw.status_code != 200:
                 raise Exception(f"Request Fail: {raw.status_code}\nurl: {current['url']}")
             return json.loads(raw.text)
-    raise Exception("version not found")
+    raise NameError("version not found")
 
-def download_version_json(minecraft_dir, version, version_name, bmclapi=False) -> None: # 下载Minecraft为指定版本的json，返回None
+def download_version_json(minecraft_dir, version, version_name, bmclapi=False) -> None:
+    '''下载Minecraft为指定版本的json，返回None'''
     manifest = get_version_manifest()
     if version == "latest":
         version = manifest["latest"]["release"]
@@ -273,7 +248,8 @@ def download_version_json(minecraft_dir, version, version_name, bmclapi=False) -
                 f.write(item.content)
 
 # Process Version Json Function
-def get_mainclass(minecraft_dir, version, version_name) -> str: # 获取Minecraft版本的mainClass，Fabric为'net.fabricmc.loader.impl.launch.knot.KnotClient'，返回str
+def get_mainclass(minecraft_dir, version, version_name) -> str:
+    '''获取Minecraft版本的mainClass，Fabric为'net.fabricmc.loader.impl.launch.knot.KnotClient'，返回str'''
     if is_fabric(minecraft_dir, version_name):
         return "net.fabricmc.loader.impl.launch.knot.KnotClient"
     # version_json_path = minecraft_dir +'/versions/' + version + '/' + version + '.json'
@@ -286,7 +262,8 @@ def get_mainclass(minecraft_dir, version, version_name) -> str: # 获取Minecraf
     return version_data["mainClass"]
 
 # Download Minecraft Function
-def download_jar(minecraft_dir, version_name, bmclapi=False) -> None: # 下载Minecraft为指定版本的jar，返回None
+def download_jar(minecraft_dir, version_name, bmclapi=False) -> None:
+    '''下载Minecraft为指定版本的jar，返回None'''
     # if os.path.exists(f'{minecraft_dir}/{version}/{version}.jar'):
     #     return 'AlE'
     with open(f'{minecraft_dir}/versions/{version_name}/{version_name}.json', 'r') as f:
@@ -304,7 +281,8 @@ def download_jar(minecraft_dir, version_name, bmclapi=False) -> None: # 下载Mi
                 raise Exception(f"Request Fail: {item.status_code}\nurl: {url}")
             f.write(item.content)
 
-def download_libraries(minecraft_dir, version, version_name, print_status=True, bmclapi=False, progress_callback=None): # 下载Minecraft为指定版本的libraries(库)，返回None
+def download_libraries(minecraft_dir, version, version_name, print_status=True, bmclapi=False, progress_callback=None):
+    '''下载Minecraft为指定版本的libraries(库)，返回None'''
     with open(f'{minecraft_dir}/versions/{version_name}/{version_name}.json', 'r') as f:
         version_json = f.read()
     version_json = json.loads(version_json)
@@ -469,7 +447,7 @@ def download_libraries(minecraft_dir, version, version_name, print_status=True, 
                     elif os.path.exists("/bin/unzip"):
                         unzip_bin = "/bin/unzip"
                     else:
-                        raise Exception("Cannot unzip native dlls, no unzip binary found (in /usr/bin & /bin)")
+                        raise OSError("Cannot unzip native dlls, no unzip binary found (in /usr/bin & /bin)")
                     cmd = f'cd {natives_path} && unzip -o {temp_zip} {excludes}'
                     path = filename.split("-")
                     if path[0] == 'lwjgl':
@@ -482,7 +460,8 @@ def download_libraries(minecraft_dir, version, version_name, print_status=True, 
                 os.system(cmd)
         print(f'- {url}')
 
-def download_assets(minecraft_dir, version_name, print_status=True, bmclapi=False, progress_callback=None): # 下载Minecraft为指定版本的assets(素材)，返回None
+def download_assets(minecraft_dir, version_name, print_status=True, bmclapi=False, progress_callback=None):
+    '''下载Minecraft为指定版本的assets(素材)，返回None'''
     with open(f'{minecraft_dir}/versions/{version_name}/{version_name}.json', 'r') as f:
         version_json = f.read()
     version_json = json.loads(version_json)
@@ -553,7 +532,8 @@ def download_assets(minecraft_dir, version_name, print_status=True, bmclapi=Fals
                 f.write(item.content)
     progress_callback(current, file_amount, f"Download Finish")
 
-def auto_download(minecraft_dir, version, version_name, fabric=False, print_status=True, bmclapi=False, progress_callback=None): # 下载整个Minecraft版本，返回None
+def auto_download(minecraft_dir, version, version_name, fabric=False, print_status=True, bmclapi=False, progress_callback=None):
+    '''下载整个Minecraft版本，返回None'''
     if fabric:
         # # Download via Installer (broken, remove one day)
         # path_to_installer = minecraft_dir+'/fabric-installer.jar'
@@ -569,7 +549,7 @@ def auto_download(minecraft_dir, version, version_name, fabric=False, print_stat
     download_version_json(minecraft_dir, version, version_name, bmclapi=bmclapi)
     # 
     if fabric:
-        jsonfile = merge_json(f'{minecraft_dir}/versions/{version_name}/Fabric.json', f'{minecraft_dir}/versions/{version_name}/{version_name}.json')
+        jsonfile = fabric_merge_json(f'{minecraft_dir}/versions/{version_name}/Fabric.json', f'{minecraft_dir}/versions/{version_name}/{version_name}.json')
         with open(f'{minecraft_dir}/versions/{version_name}/{version_name}.json', 'w') as f:
             f.write(json.dumps(jsonfile))
     if print_status:
@@ -585,7 +565,8 @@ def auto_download(minecraft_dir, version, version_name, fabric=False, print_stat
     download_assets(minecraft_dir, version_name, bmclapi=bmclapi, progress_callback=progress_callback)
 
 # Launch Function
-def get_minecraft_libraries(minecraft_dir, version_name) -> list: # 获取minecraft的所有需要libraries(库)，返回list
+def get_minecraft_libraries(minecraft_dir, version_name) -> list:
+    '''获取minecraft的所有需要libraries(库)，返回list'''
     # read json
     version_json_path = f'{minecraft_dir}/versions/{version_name}/{version_name}.json'
     
@@ -648,7 +629,8 @@ def get_minecraft_libraries(minecraft_dir, version_name) -> list: # 获取minecr
     #     #         libraries.append(f'{minecraft_dir}/versions/{version_name}/'+i)
     return libraries
 
-def get_minecraft_args(minecraft_dir, version, version_name) -> str: # 获取Minecraft参数，返回str
+def get_minecraft_args(minecraft_dir, version, version_name) -> str:
+    '''获取Minecraft参数，返回str'''
     # version_json_path = minecraft_dir +'/versions/' + version_name + '/' + version + '.json'
     version_json_path = f'{minecraft_dir}/versions/{version_name}/{version_name}.json'
     with open(version_json_path, 'r', encoding='utf-8') as f:
@@ -662,7 +644,8 @@ def get_minecraft_args(minecraft_dir, version, version_name) -> str: # 获取Min
                 args_list.append(key)
         return ' '.join(args_list)
 
-def is_library_required(library) -> bool:  # 检测Library是否需要，参数library为get_minecraft_libraries()获得的列表中的每一项，返回bool
+def is_library_required(library) -> bool:
+    '''检测Library是否需要，参数library为get_minecraft_libraries()获得的列表中的每一项，返回bool'''
     if "rules" not in library:
         if 'name' in library: # Fabric
             if 'natives-' in library['name'] and not f'natives-{native()}' in library['name']:
@@ -671,7 +654,7 @@ def is_library_required(library) -> bool:  # 检测Library是否需要，参数l
             else:
                 allow = True
         else:
-            raise Exception("Broken library.")
+            raise SyntaxError("Broken library.")
             
         return allow
     
@@ -692,7 +675,8 @@ def is_library_required(library) -> bool:  # 检测Library是否需要，参数l
 
     return allow
 
-def get_cp_args(minecraft_dir, version, version_name) -> str:  # 获取classpath参数，返回str
+def get_cp_args(minecraft_dir, version, version_name) -> str:
+    '''获取classpath参数，返回str'''
     version_jar = f'{minecraft_dir}/versions/{version_name}/{version_name}.jar'
     
     # get libraries
@@ -710,7 +694,8 @@ def get_cp_args(minecraft_dir, version, version_name) -> str:  # 获取classpath
     
     return f'"{separator.join(classpath)}"'.replace("\\", '/')
 
-def get_assetIndex(minecraft_dir, version_name) -> str: # 获取assetIndex(素材索引)，返回str
+def get_assetIndex(minecraft_dir, version_name) -> str:
+    '''获取assetIndex(素材索引)，返回str'''
     version_json_path = f"{minecraft_dir}/versions/{version_name}/{version_name}.json"
     try:
         with open(version_json_path, 'r', encoding='utf-8') as f:
@@ -721,7 +706,8 @@ def get_assetIndex(minecraft_dir, version_name) -> str: # 获取assetIndex(素�
         input("version.JSON decode err")
     return version_data["assets"]
 
-def gen_random_uuid(): # 生成随机uuid，小写，返回str
+def gen_random_uuid():
+    '''生成随机uuid，小写，返回str'''
     chars = "1234567890abcdef"
     uuid = ""
     for i in range(32):
@@ -729,7 +715,8 @@ def gen_random_uuid(): # 生成随机uuid，小写，返回str
     # return uuid.upper()
     return uuid
 
-def get_jvm_args(minecraft_dir, version, version_name): # 获取指定版本Minecraft的jvm参数(-D)，返回str
+def get_jvm_args(minecraft_dir, version, version_name):
+    '''获取指定版本Minecraft的jvm参数(-D)，返回str'''
     version_json_path = f"{minecraft_dir}/versions/{version_name}/{version_name}.json"
     d_args = ["-Dfml.ignoreInvalidMinecraftCertificates=True", 
             "-Djdk.lang.Process.allowAmbiguousCommands=true", 
@@ -801,10 +788,12 @@ def get_jvm_args(minecraft_dir, version, version_name): # 获取指定版本Mine
         args_text = args_text.replace(i, replacer[i])
     return args_text
 
-def remove_version(minecraft_dir, version_name): # 删除指定版本Minecraft的natives,jar,json文件，libraries与assets将保留，返回None
+def remove_version(minecraft_dir, version_name):
+    '''删除指定版本Minecraft的natives,jar,json文件，libraries与assets将保留，返回None'''
     shutil.rmtree(f'{minecraft_dir}/versions/{version_name}')
 
-def get_minecraft_version(minecraft_dir, version_name): # 从json中获取Minecraft版本，返回str
+def get_minecraft_version(minecraft_dir, version_name):
+    '''从json中获取Minecraft版本，返回str'''
     with open(f'{minecraft_dir}/versions/{version_name}/{version_name}.json', 'r') as f:
         version_json = json.loads(f.read())
     if 'id' in version_json:
@@ -812,9 +801,10 @@ def get_minecraft_version(minecraft_dir, version_name): # 从json中获取Minecr
     elif "inheritsFrom" in version_json:
         return version_json["inheritsFrom"]
     else:
-        raise Exception("version.json seems invalid")
+        raise FileNotFoundError("version.json seems invalid")
 
-def launch(javaw, xmx, minecraft_dir, version, version_name, javawrapper=None, username="steve", xmn="256M") -> str: # 生成启动脚本，返回str
+def launch(javaw, xmx, minecraft_dir, version, version_name, javawrapper=None, username="steve", xmn="256M") -> str:
+    '''生成启动脚本，返回str'''
     # all of the items in lists are NOT ended with space!!!
     # -x args (JVM stuff)
     minecraft_dir = minecraft_dir.replace('\\', '/')
@@ -861,7 +851,7 @@ def launch(javaw, xmx, minecraft_dir, version, version_name, javawrapper=None, u
         if javawrapper != None:
             javawrapper_arg = f'-jar "{javawrapper}"'
         else:
-            raise Exception("Unspecified JavaWrapper on Windows Platform.")
+            raise SyntaxError("Unspecified JavaWrapper on Windows Platform.")
     else:
         javawrapper_arg = ''
     if split_cp_from_minecraft_args:
@@ -872,4 +862,4 @@ def launch(javaw, xmx, minecraft_dir, version, version_name, javawrapper=None, u
     return final_pt1+' '+final_pt2
 
 if __name__ == '__main__':
-    pass
+    print(parse_xml('https://maven.fabricmc.net/net/fabricmc/fabric-api/fabric-api/maven-metadata.xml'))
