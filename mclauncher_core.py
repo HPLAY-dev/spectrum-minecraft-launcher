@@ -8,6 +8,8 @@ import requests
 import subprocess as s
 import locale
 import xml.etree.ElementTree as ET
+import zipfile as zipf
+from distutils.version import LooseVersion
 from pathlib import Path
 
 
@@ -15,8 +17,8 @@ from pathlib import Path
 def get_file_path() -> str:
     '''获取当前Python文件路径'''
     if getattr(sys, 'frozen', False):
-        return os.path.dirname(sys.executable) # EXE
-    return os.path.dirname(os.path.abspath(__file__)) # .py
+        return os.path.dirname(sys.executable).replace('\\', '/') # EXE
+    return os.path.dirname(os.path.abspath(__file__)).replace('\\', '/') # .py
 
 def get_system_bits() -> str:
     ''' 获取系统位数('32','64')'''
@@ -25,6 +27,70 @@ def get_system_bits() -> str:
 def native() -> str:
     '''获取系统native, Windows为windows MacOS为osx GNU/Linux为linux'''
     return platform.system().lower()
+
+# ModLoader/Forge
+def get_all_forgeable_versions():
+    '''获取Forge支持的所有Minecraft版本'''
+    url = 'https://bmclapi2.bangbang93.com/forge/minecraft'
+    item = requests.get(url)
+    if item.status_code != 200:
+        raise Exception(f"Request Fail: {item.status_code}\nurl: {url}")
+    return item.json()
+
+def get_forge_version(version):
+    '''获取支持此Minecraft版本的Forge'''
+    url = 'https://bmclapi2.bangbang93.com/forge/minecraft/'+version
+    item = requests.get(url)
+    if item.status_code != 200:
+        raise Exception(f"Request Fail: {item.status_code}\nurl: {url}")
+    return item.json()
+
+def download_forge_json(minecraft_dir, version, version_name, forge_version='latest', bmclapi=False):
+    '''下载一个包含了Forge的东西的版本json'''
+    if forge_version == 'latest':
+        forge_versions = get_forge_version(version)
+        versions = []
+        for ver in forge_versions:
+            versions.append(ver["version"])
+        sorted([LooseVersion(v) for v in versions], reverse=True)
+        forge_version = versions[0]
+
+    url = 'https://bmclapi2.bangbang93.com/forge/download'
+    url = url+f'?mcversion={version}&version={forge_version}&category=installer&format=jar'
+    item = requests.get(url)
+    if item.status_code != 200:
+        raise Exception(f"Request Fail: {item.status_code}\nurl: {url}")
+    os.makedirs(get_file_path()+"/temp", exist_ok=True)
+    with open(get_file_path()+"/temp/forge_installer.zip", 'wb') as f: # Of course we downloaded a .jar file, but in order to identify the format, we use .zip
+        f.write(item.content)
+    
+    with zipf.ZipFile(get_file_path()+"/temp/forge_installer.zip",'r') as file:
+        file.extractall(get_file_path()+"/temp/forge_installer")
+    
+    if not os.path.exists(get_file_path()+"/temp/forge_installer/install_profile.json"):
+        shutil.rmtree(get_file_path()+"/temp/forge_installer/")
+        raise Exception("Fuck, INSTALL_PROFILE.JSON not found")
+    with open(get_file_path()+"/temp/forge_installer/install_profile.json", 'r') as f:
+        install_profile = json.loads(f.read())
+    if not 'versionInfo' in install_profile:
+        shutil.rmtree(get_file_path()+"/temp/forge_installer/")
+        raise Exception("versionInfo not found")
+    
+    forge_version_json = install_profile['versionInfo']
+    version_json = get_version_json(version, bmclapi)
+    original_libs = version_json['libraries']
+    version_json.update(forge_version_json)
+    version_json['libraries'].extend(original_libs)
+
+    for i in range(len(version_json['libraries'])):
+        if not 'url' in version_json['libraries'][i] and not 'downloads' in version_json['libraries'][i]:
+            version_json['libraries'][i]['url'] = 'https://libraries.minecraft.net/'
+                
+
+    os.makedirs(f'{minecraft_dir}/versions/{version_name}', exist_ok=True)
+    with open(f'{minecraft_dir}/versions/{version_name}/{version_name}.json', 'w') as f:
+        f.write(json.dumps(version_json))
+    shutil.rmtree(get_file_path()+"/temp/forge_installer/")
 
 # ModLoader/Fabric
 def is_fabric(minecraft_dir, version_name) -> bool:
@@ -47,7 +113,7 @@ def fabric_merge_json(fabric_json_path, minecraft_json_path, modify=True) -> dic
     json_b.update(json_a)
     json_b['libraries'].extend(lib_b)
     for i in range(len(json_b['libraries'])):
-        if json_b['libraries'][i]['name'] == 'org.ow2.asm:asm:9.6':
+        if json_b['libraries'][i]['name'] == 'org.ow2.asm:asm:9.6': # 我怎么感觉这么写会出事呢awa， 本意是要丢掉minecraft版本json里与fabric重复的asm项，有空(也不一定)改，（主打一个能跑就行awa）
             json_b['libraries'].pop(i)
             break
 
@@ -216,7 +282,7 @@ def get_version_list(show_snapshot=False, show_old=False, show_release=True, bmc
     return returns
 
 def get_version_json(version, bmclapi=False) -> dict:
-    '''获取当前Minecraft版本的json，没有使用，返回dict'''
+    '''获取当前Minecraft版本的json，返回dict'''
     manifest = get_version_manifest()
     for current in manifest["versions"]:
         1
@@ -308,14 +374,16 @@ def download_libraries(minecraft_dir, version, version_name, print_status=True, 
             "size": 126113
         },
         {'''
-        if not "downloads" in lib: # For fabric stuff format like that
+        if not "downloads" in lib: # Fallback
             # first we need to get the path of file like org/ow2/asm/asm/9.8
             name = lib['name'].split(':') # [org.ow2.asm,asm,9.8]
-            # name = lib['name'].replace(':', '$SEP$')
             name[0] = name[0].replace('.', '$SEP$') # [org$SEP$ow2$SEP$asm,asm,9.8]
             filename = '-'.join(name[1:])+'.jar' # asm-9.8.jar
             name = "$SEP$".join(name) # org$SEP$ow2$SEP$asm$SEP$asm$SEP$9.8
             path = name.replace("$SEP$",'/') # org/ow2/asm/asm/9.8
+            # 为forge设置特例(byd forge)
+            if lib['name'].split(':')[0] == 'net.minecraftforge':
+                filename = filename.replace('.jar', '-universal.jar')
             if bmclapi:
                 url_base = "https://bmclapi2.bangbang93.com/maven/"
             else:
@@ -325,7 +393,7 @@ def download_libraries(minecraft_dir, version, version_name, print_status=True, 
             os.makedirs(local_path, exist_ok=True)
             file_path = local_path + '/' + filename
             
-            if os.path.exists(file_path) and "size" in lib and os.path.getsize(file_path) == lib['size']:
+            if os.path.exists(file_path):
                 pass
             else:
                 with open(file_path, 'wb') as f:
@@ -363,10 +431,14 @@ def download_libraries(minecraft_dir, version, version_name, print_status=True, 
                         fallback_url = url
                         url = url.replace("https://libraries.minecraft.net/", "https://bmclapi2.bangbang93.com/maven/")
                         # if unable to download use original url.
-                        item = requests.get(url)
-                        if item.status_code != 200:
-                            raise Exception(f"Request Fail: {item.status_code}\nurl: {url}")
-                        f.write(item.content)
+                    item = requests.get(url)
+                    if item.status_code != 200:
+                        raise Exception(f"Request Fail: {item.status_code}\nurl: {url}")
+                    f.write(item.content)
+                    # if lib["name"] == 'net.java.dev.jna:jna:4.4.0':
+                    #     input(url)
+                    #     input(os.path.getsize(f'{minecraft_dir}/libraries/{lib["downloads"]["artifact"]["path"]}'))
+                    #     input(lib["downloads"]["artifact"]["size"])
             if if_natives or if_natives_late_versions:
                 # if not allow continue
                 if if_natives_late_versions:
@@ -377,18 +449,6 @@ def download_libraries(minecraft_dir, version, version_name, print_status=True, 
                     natives = lib["downloads"]["classifiers"]["natives-"+native()+'-'+get_system_bits()]
                 else:
                     print("cannot find key")
-                # if if_natives:
-                #     path = minecraft_dir+'/libraries/'+natives["path"]
-                # elif if_natives_late_versions:
-                #     path = minecraft_dir+'/libraries/'+lib["downloads"]["artifact"]["path"]
-                # path = path.split('/')[0:-1]
-                # path = '/'.join(path)
-                # os.makedirs(path, exist_ok=True)
-                # if os.path.exists(minecraft_dir+'/libraries/'+natives["path"]):
-                #     continue
-
-                # get natives path
-                # natives_path = minecraft_dir+'/'+version+'/'+version+'-natives'.replace("/",'\\')
                 natives_path = f'{minecraft_dir}/versions/{version_name}/{version_name}-natives'
                 os.makedirs(natives_path, exist_ok=True)
                 # get exclude
@@ -402,8 +462,6 @@ def download_libraries(minecraft_dir, version, version_name, print_status=True, 
                         excludes = ''
                 elif if_natives_late_versions:
                     excludes = '-x META-INF/*'
-                # excludes = "META-INF/"
-                # with open(minecraft_dir+'/libraries/'+natives["path"], 'wb') as f:
                 late = "artifact" in lib["downloads"] and "path" in lib["downloads"]["artifact"]
                 if late:
                     filename = lib["downloads"]["artifact"]["path"].split('/')[-1]
@@ -420,44 +478,31 @@ def download_libraries(minecraft_dir, version, version_name, print_status=True, 
                     if item.status_code != 200:
                         raise Exception(f"Request Fail: {item.status_code}\nurl: {url}")
                     f.write(item.content)
-                try:
-                    shutil.copy(temp_zip, minecraft_dir+'/libraries/'+lib['downloads']['artifact']['path'])
-                except:
-                    pass
+                # try:
+                #     shutil.copy(temp_zip, minecraft_dir+'/libraries/'+lib['downloads']['artifact']['path'])
+                # except:
+                #     pass
 
                 # unzip it
                 program_path = get_file_path()
-                unzip_exe = program_path.replace('/', '\\')+'\\unzip\\unzip.exe'
-                if os.path.exists(unzip_exe):
+                natives_path = f'{minecraft_dir}/versions/{version_name}/{version_name}-natives'
+                # use zipfile to unzip these things
+                with zipf.ZipFile(temp_zip, 'r') as f:
+                    f.extractall(natives_path)
+                if path[0] == 'lwjgl':
+                    guess_path = natives_path+'/'f'{native()}/x{get_system_bits()}/org/{path[0]}/{path[1]}/*.*'
+                    program_path1 = program_path.replace('/','\\')
+                    shutil.copy(guess_path, natives_path)
+
                     if native() == 'windows':
-                        natives_path = natives_path.replace("/", '\\')
-                        excludes = excludes.replace("/", '\\')
-                        # cmd = f'cd {natives_path} && {unzip_exe} -o {temp_zip} {excludes} && del {temp_zip}'.replace('/', '\\')
-                        cmd = f'cd {natives_path} && {unzip_exe} -o "{temp_zip}" {excludes}'.replace('/', '\\')
-                        path = filename.split("-")
-                        if path[0] == 'lwjgl':
-                            guess_path = f'{native()}\\x{get_system_bits()}\\org\\{path[0]}\\{path[1]}\\*.*'
-                            program_path1 = program_path.replace('/','\\')
-                            cmd = cmd+f" && copy .\\{guess_path} ."
-                            if os.path.exists(natives_path+"/windows/x64/org/lwjgl/lwjgl.dll"): # .minecraft\1.21\1.21-natives\windows\x64\org\lwjgl\lwjgl.dll
-                                shutil.copy(natives_path+"/windows/x64/org/lwjgl/lwjgl.dll", natives_path)
-                else:
-                    if os.path.exists("/usr/bin/unzip"):
-                        unzip_bin = "/usr/bin/unzip"
-                    elif os.path.exists("/bin/unzip"):
-                        unzip_bin = "/bin/unzip"
-                    else:
-                        raise OSError("Cannot unzip native dlls, no unzip binary found (in /usr/bin & /bin)")
-                    cmd = f'cd {natives_path} && unzip -o {temp_zip} {excludes}'
-                    path = filename.split("-")
-                    if path[0] == 'lwjgl':
-                        if get_system_bits() == '64':
-                            arch = "x64"
-                        else:
-                            arch = "x86"
-                        guess_path = f'{native()}/{arch}/org/{path[0]}/{path[1]}/*.*'
-                        cmd = cmd+f" && cp {natives_path}/{guess_path} ."
-                os.system(cmd)
+                        filename_end = 'dll'
+                    elif native() == 'macos':
+                        filename_end = 'dylib'
+                    elif native() == 'linux':
+                        filename_end = 'so'
+
+                    if os.path.exists(natives_path+f"/windows/x64/org/lwjgl/lwjgl.{filename_end}"): # .minecraft\1.21\1.21-natives\windows\x64\org\lwjgl\lwjgl.dll
+                        shutil.copy(natives_path+f"/windows/x64/org/lwjgl/lwjgl.{filename_end}", natives_path)
         print(f'- {url}')
 
 def download_assets(minecraft_dir, version_name, print_status=True, bmclapi=False, progress_callback=None):
@@ -532,36 +577,28 @@ def download_assets(minecraft_dir, version_name, print_status=True, bmclapi=Fals
                 f.write(item.content)
     progress_callback(current, file_amount, f"Download Finish")
 
-def auto_download(minecraft_dir, version, version_name, fabric=False, print_status=True, bmclapi=False, progress_callback=None):
+def auto_download(minecraft_dir, version, version_name, modloader='vanilla', bmclapi=False, progress_callback=None):
     '''下载整个Minecraft版本，返回None'''
-    if fabric:
-        # # Download via Installer (broken, remove one day)
-        # path_to_installer = minecraft_dir+'/fabric-installer.jar'
-        # download_fabric_installer(path_to_installer, get_latest_fabric_installer_version())
-        # install_fabric_version_installer(minecraft_dir, version, version_name, path_to_installer, java=java)
-        
-        # Download JSON directly: (bug fixed)
+    if modloader == 'fabric':
         fabric_json = f'{minecraft_dir}/versions/{version_name}/Fabric.json'
         if not os.path.exists(fabric_json):
             download_fabric_json(minecraft_dir, version, version_name)
-    if print_status:
-        print("Downloading version .json File")
-    download_version_json(minecraft_dir, version, version_name, bmclapi=bmclapi)
-    # 
-    if fabric:
+        download_version_json(minecraft_dir, version, version_name, bmclapi=bmclapi)
         jsonfile = fabric_merge_json(f'{minecraft_dir}/versions/{version_name}/Fabric.json', f'{minecraft_dir}/versions/{version_name}/{version_name}.json')
         with open(f'{minecraft_dir}/versions/{version_name}/{version_name}.json', 'w') as f:
             f.write(json.dumps(jsonfile))
-    if print_status:
-        print("Downloading version .jar File")
+    elif modloader == 'forge':
+        if not os.path.exists(f'{minecraft_dir}/versions/{version_name}/{version_name}.json'):
+            download_forge_json(minecraft_dir, version, version_name, bmclapi=bmclapi)
+    elif modloader == 'vanilla':
+        download_version_json(minecraft_dir, version, version_name, bmclapi=bmclapi)
+    else:
+        raise Exception('Modloader not found '+modloader)
+
     download_jar(minecraft_dir, version_name, bmclapi=bmclapi)
 
-    if print_status:
-        print("Downloading version Library File")
     download_libraries(minecraft_dir, version, version_name, bmclapi=bmclapi, progress_callback=progress_callback)
 
-    if print_status:
-        print("Downloading version Assets File")
     download_assets(minecraft_dir, version_name, bmclapi=bmclapi, progress_callback=progress_callback)
 
 # Launch Function
@@ -602,10 +639,14 @@ def get_minecraft_libraries(minecraft_dir, version_name) -> list:
             # name = lib['name'].replace(':', '$SEP$')
             name[0] = name[0].replace('.', '$SEP$')
             filename = '-'.join(name[1:])+'.jar'
+            # Forge特例
+            if lib['name'].split(':')[0] == 'net.minecraftforge':
+                filename = filename.replace('.jar', '-universal.jar')
             name = "$SEP$".join(name)
             path = name.replace("$SEP$",'/')
             local_path = f'{minecraft_dir}/libraries/{path}/{filename}'
             if not os.path.exists(local_path):
+                print('fuck')
                 raise FileNotFoundError("Library not found")
             libraries.append(local_path)
         else:
@@ -615,8 +656,15 @@ def get_minecraft_libraries(minecraft_dir, version_name) -> list:
                 lib_path = lib["downloads"]["artifact"]["path"]
                 full_path = f'{minecraft_dir}/libraries/{lib_path}'
                 libraries.append(full_path)
-            elif "natives" in lib["downloads"]["artifact"]["path"]: #DEBUG
-                lib_path = lib["downloads"]["artifact"]["path"]
+            else: #DEBUG
+                if 'downloads' in lib and 'artifact' in lib['downloads'] and 'path' in lib['downloads']['artifact']:
+                    lib_path = lib["downloads"]["artifact"]["path"]
+                else:
+                    name = lib['name'].split(':') # [org.ow2.asm,asm,9.8]
+                    name[0] = name[0].replace('.', '$SEP$') # [org$SEP$ow2$SEP$asm,asm,9.8]
+                    filename = '-'.join(name[1:])+'.jar' # asm-9.8.jar
+                    name = "$SEP$".join(name) # org$SEP$ow2$SEP$asm$SEP$asm$SEP$9.8
+                    lib_path = name.replace("$SEP$",'/') # org/ow2/asm/asm/9.8
                 full_path = f'{minecraft_dir}/libraries/{lib_path}'
                 libraries.append(full_path)
     # check is fabric. if True,add fabric loader jar
@@ -627,6 +675,7 @@ def get_minecraft_libraries(minecraft_dir, version_name) -> list:
     #     #     print(filename_splited)
     #     #     if len(filename_splited) == 3 and filename_splited[0] == 'fabric' and filename_splited[1] == 'loader' and filename_splited[2] == '0':
     #     #         libraries.append(f'{minecraft_dir}/versions/{version_name}/'+i)
+        print(lib['name'])
     return libraries
 
 def get_minecraft_args(minecraft_dir, version, version_name) -> str:
