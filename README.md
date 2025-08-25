@@ -4,7 +4,11 @@ An open-source lightweight Minecraft Launcher in Python3. Currently focusing on 
 ## 1.0 Files
 **mclauncher_core.py** Core Functions
 
-**tkui.py**            UI
+**main.py**            UI Processor
+
+**ui.py**              UI converted to py
+
+**qt.ui**              UI by Qt Designer
 
 **JavaWrapper.jar**    see 1.1
 
@@ -18,18 +22,13 @@ Fixes Unicode problems on Windows.
 ## 2.0 Launcher Core
 Launcher functions. *Forgive me for not writing comment~*.
 
-## 3.0 Fabric Support
-Fabric is currently 100% support. The Core will **defaultly download latest version of Fabric Loader**. For version below 1.14.4, do not tick fabric checkbox
+## 3.0 ModLoader Support
+Fabric & Forge is currently 100% support. Neoforge working.
 
 ## 4.0 Multi-Language
-Check /lang
-Current only zh_CN and en_US(Fallback) is supported
+Only zh_CN
 
 ## 5.0 Problems
-SHA1 checksum not checked.
-
-Fabric Version Selection not implemented
-
 1.0 *and other ancient versions too* is unable to load assets.
 
 ## 6.0 To do list
