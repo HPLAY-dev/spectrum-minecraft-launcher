@@ -1,5 +1,5 @@
 # Spectrum Minecraft Launcher
-An open source Minecraft Launcher in Python3. Currently focusing on Modloaders.
+An open-source lightweight Minecraft Launcher in Python3. Currently focusing on Modloaders.
 
 ## 1.0 Files
 **mclauncher_core.py** Core Functions
