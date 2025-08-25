@@ -24,8 +24,13 @@ def detect_error(stdout, stderr) -> str:
 
 def get_file_path():
     if getattr(sys, 'frozen', False):
-        return os.path.dirname(sys.executable) # EXE
-    return os.path.dirname(os.path.abspath(__file__)) # .py
+        path = os.path.dirname(sys.executable)
+    else:
+        path = os.path.dirname(os.path.abspath(__file__)) # .py
+    path = path.replace('\\', '/')
+    if path[-1] == '//':
+        path = path[:-1]
+    return path
 
 v_snapshot = False
 v_release = True
@@ -64,15 +69,20 @@ translate = {'en_US':
         "Text:Installed": "[Installed] ",
         "Title:Language": "Language",
         "Text:None": "None",
-        "Ctrl:ModLoader": "ModLoader"
+        "Ctrl:ModLoader": "ModLoader",
+        "Ctrl:ModLoaderVersion": "ModLoader Version",
+        "Ctrl:RefMLVerList": "Refresh ModLoader Version"
     }
 }
+
 if os.path.exists(get_file_path()+'/lang'):
     langs = os.listdir(get_file_path()+'/lang')
     for langname in langs:
         with open(get_file_path()+'/lang/'+langname, 'r', encoding='utf-8') as f:
             jsonfile = json.loads(f.read())
         translate[langname] = jsonfile
+else:
+    langs = []
 
 if 'default' in langs:
     lang = 'default'
@@ -98,6 +108,26 @@ def refresh_versions(show_snapshot=v_snapshot, show_old=v_old, show_release=v_re
             v_list.insert(0,translate[lang]['Text:Installed']+dir_files[i])
     # return v_list
     versions = v_list
+
+def refresh_modloader_versions(modloader, mcversion):
+    global modloader_versions
+    if len(mcversion) > 0 and mcversion[0] == '[':
+        version_list = []
+    elif modloader == 'fabric':
+        version_list = get_fabric_versions()
+    elif modloader == 'forge':
+        version_list = []
+        for version in get_forge_version(mcversion):
+            version_list.append(version['version'])
+    elif modloader == 'neoforge':
+        version_list = []
+        for version in get_neoforge_version(mcversion):
+            version_list.append(version['version'])
+    else:
+        version_list = []
+    modloader_versions = version_list
+    
+    
 
 class App(CTk):
 
@@ -137,7 +167,6 @@ class App(CTk):
             defaultfont = ("San Francisco", 13)
         else:
             defaultfont = ("Noto Sans", 13)
-        
 
         self.main_frame = CTkFrame(self, fg_color=self.cget("bg"))
 
@@ -153,7 +182,7 @@ class App(CTk):
         self.mc_path_entry.grid(row=i, column=1, pady=(0, 10), padx=10)
 
         i += 1
-        self.ver_label = CTkLabel(master=self.main_frame, text=translate[lang]["Ctrl:ModLoader"], font=defaultfont)
+        self.ver_label = CTkLabel(master=self.main_frame, text=translate[lang]["Ctrl:Version"], font=defaultfont)
         self.ver_label.grid(row=i, column=0, sticky="w", pady=(0, 10))
         # versions = get_version_list(show_snapshot=v_snapshot, show_old=v_old, show_release=v_release, bmclapi=bmclapi)
         refresh_versions(show_snapshot=v_snapshot, show_old=v_old, show_release=v_release, bmclapi=bmclapi, minecraft_dir=self.mc_path_entry.get())
@@ -161,12 +190,21 @@ class App(CTk):
         self.ver_combobox.grid(row=i, column=1, pady=(0, 10), padx=10)
 
         i += 1
-        self.modloader_label = CTkLabel(master=self.main_frame, text=translate[lang]["Ctrl:Version"], font=defaultfont)
+        self.modloader_label = CTkLabel(master=self.main_frame, text=translate[lang]["Ctrl:ModLoader"], font=defaultfont)
         self.modloader_label.grid(row=i, column=0, sticky="w", pady=(0, 10))
         # versions = get_version_list(show_snapshot=v_snapshot, show_old=v_old, show_release=v_release, bmclapi=bmclapi)
         refresh_versions(show_snapshot=v_snapshot, show_old=v_old, show_release=v_release, bmclapi=bmclapi, minecraft_dir=self.mc_path_entry.get())
-        self.modloader_combobox = CTkComboBox(master=self.main_frame, state='readonly', values=['None','Fabric', 'Forge'], font=defaultfont)
+        self.modloader_combobox = CTkComboBox(master=self.main_frame, state='readonly', values=['None','Fabric', 'Forge', 'neoforge'], font=defaultfont)
         self.modloader_combobox.grid(row=i, column=1, pady=(0, 10), padx=10)
+
+        i += 1
+        self.modloader_ver_label = CTkLabel(master=self.main_frame, text=translate[lang]["Ctrl:ModLoaderVersion"], font=defaultfont)
+        self.modloader_ver_label.grid(row=i, column=0, sticky="w", pady=(0, 10))
+        # versions = get_version_list(show_snapshot=v_snapshot, show_old=v_old, show_release=v_release, bmclapi=bmclapi)
+        modloader_versions = []
+        self.modloader_ver_combobox = CTkComboBox(master=self.main_frame, state='readonly', values=modloader_versions, font=defaultfont)
+        self.modloader_ver_combobox.grid(row=i, column=1, pady=(0, 10), padx=10)
+        self.refresh_ml_versions()
         
         i += 1
         self.title2_label = CTkLabel(master=self.main_frame, text=translate[lang]["Title:Launch"], font=titlefont)
@@ -214,8 +252,6 @@ class App(CTk):
         i += 1
         self.dl_bmcl_checkbox = CTkCheckBox(master=self.main_frame, text=translate[lang]["Ctrl:UseBMCLAPI"], font=defaultfont)
         self.dl_bmcl_checkbox.grid(row=i, column=0, sticky="w", pady=(0, 10))
-        self.dl_fabric_checkbox = CTkCheckBox(master=self.main_frame, text=translate[lang]["Ctrl:DownloadFabric"], font=defaultfont)
-        self.dl_fabric_checkbox.grid(row=i, column=1, sticky="w", pady=(0, 10))
 
         i += 1        
         self.launch_button = CTkButton(master=self.main_frame, text=translate[lang]["Ctrl:Launch"], font=defaultfont, command=self.launch)
@@ -238,6 +274,10 @@ class App(CTk):
         i += 1
         self.refresh_versions_button = CTkButton(master=self.main_frame, text=translate[lang]["Ctrl:RefVerList"], font=defaultfont, command=self.refresh_versions)
         self.refresh_versions_button.grid(row=i, column=3, pady=(0, 10))
+
+        i += 1
+        self.refresh_ml_versions_button = CTkButton(master=self.main_frame, text=translate[lang]["Ctrl:RefMLVerList"], font=defaultfont, command=self.refresh_ml_versions)
+        self.refresh_ml_versions_button.grid(row=i, column=3, pady=(0, 10))
 
         i += 1
         if native() == 'windows':
@@ -308,7 +348,6 @@ class App(CTk):
             else:
                 modloader = modloader.lower()
             bmclapi = self.dl_bmcl_checkbox.get()
-            fabric = self.dl_fabric_checkbox.get()
             java = self.javaw_entry.get()
             self.download_thread = threading.Thread(
                 target=auto_download,
@@ -337,6 +376,11 @@ class App(CTk):
         v_old = not v_old
         refresh_versions(show_snapshot=v_snapshot, show_old=v_old, show_release=v_release, bmclapi=bmclapi, minecraft_dir=self.mc_path_entry.get())
         self.ver_combobox.configure(values=versions)
+
+    def refresh_ml_versions(self):
+        global modloader_versions
+        refresh_modloader_versions(self.modloader_combobox.get(), self.ver_combobox.get())
+        self.modloader_ver_combobox.configure(values=modloader_versions)
 
     def launch(self):
         java = self.javaw_entry.get()
