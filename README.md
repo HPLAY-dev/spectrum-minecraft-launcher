@@ -8,8 +8,6 @@ An open source Minecraft Launcher in Python3. Currently focusing on Modloaders.
 
 **JavaWrapper.jar**    see 1.1
 
-**make.bat**           pack via PyInstaller
-
 ### 1.1 JavaWrapper
 Fixes Unicode problems on Windows.
 > 如果你的 Windows 系统启用了 Beta 版：使用Unicode UTF-8提供全球语言支持，Java 可能会在读取命令行参数时使用错误的编码进行解码，导致一系列问题。
@@ -18,13 +16,14 @@ Fixes Unicode problems on Windows.
 > From: [GitHub/00ll00/java_launch_wrapper](https://github.com/00ll00/java_launch_wrapper)
 
 ## 2.0 Launcher Core
-Launcher functions. One day there will be a documentation. Forgive me for not writing comment.
+Launcher functions. *Forgive me for not writing comment~*.
 
 ## 3.0 Fabric Support
 Fabric is currently 100% support. The Core will **defaultly download latest version of Fabric Loader**. For version below 1.14.4, do not tick fabric checkbox
 
 ## 4.0 Multi-Language
-Language Strings are currently configured inside the `tkui.py`, to modify it, you need to add you language key and all of the strings in en_US(zh_CN too). Switching OS language will also switch the UI language(restart needed). The fallback language is en_US.
+Check /lang
+Current only zh_CN and en_US(Fallback) is supported
 
 ## 5.0 Problems
 SHA1 checksum not checked.
@@ -34,17 +33,12 @@ Fabric Version Selection not implemented
 1.0 *and other ancient versions too* is unable to load assets.
 
 ## 6.0 To do list
-compatibily of ancient version
-
-mod download in launcher
+- [x] Fabric ModLoader
+- [x] Forge ModLoader
+- [ ] Neoforge ModLoader
+- [ ] Saves Manager & Shaders(Optifine & Iris) Manager & Resourcepack Manager & ...
+- [ ] Modpacks support
+- [ ] Liteloader
+- [ ] Quilt
 
 ......
-
-## 999.0 3rd-party stuff
-**BMCLAPI** download faster in China Mainland.
-
-**JavaWrapper** fixed bugs on Windows with East-Asian language(zh_CN for me).
-
-**PCL 2** Launch command referred.
-
-**Fabric** Modloader.
