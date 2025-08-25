@@ -3,10 +3,12 @@ import os
 import re
 import json
 import mclauncher_core as launcher
+from PyQt5 import QtWidgets
 from PyQt5.QtCore import Qt, QStringListModel
 from PyQt5.QtWidgets import QApplication, QMainWindow
 from ui import Ui_MainWindow
-from tkinter import messagebox as msgbox
+from tkinter import messagebox as messagebox
+from qt_material import apply_stylesheet
 
 
 def app_path():
@@ -44,6 +46,8 @@ class MainWindow(QMainWindow, Ui_MainWindow):
         self.lineEdit.editingFinished.connect(self.update_installed_versions) # 更新Minecraft目录
 
         self.LaunchBtn.clicked.connect(self.launch) # 启动
+
+        self.comboBox.currentTextChanged.connect(self.update_ml_version_list)
 
         self.load_config()
 
@@ -141,11 +145,6 @@ class MainWindow(QMainWindow, Ui_MainWindow):
         elif description[1:-1].split('][')[0] == 'AST':
             self.progressBar_2.setValue(int(current/total*100))
 
-    def set_version_list(self, version_list: list):
-        current_list = self.model.stringList()
-        current_list = version_list
-        self.model.setStringList(current_list)
-    
     def load_config(self):
         if os.path.exists(app_path()+'/cfg.json'):
             with open(app_path()+'/cfg.json', 'r') as f:
@@ -173,9 +172,29 @@ class MainWindow(QMainWindow, Ui_MainWindow):
         current_list = launcher.get_version_list(self.checkBox_2.isChecked(), self.checkBox_3.isChecked(), self.checkBox_4.isChecked(), self.checkBox.isChecked())
         self.model.setStringList(current_list)
 
+    def update_ml_version_list(self, state):
+        if len(self.listView.selectionModel().selectedIndexes()) == 0:
+            return 0
+        version = self.listView.selectionModel().selectedIndexes()[0].data()
+        modloader = self.comboBox.currentText().lower()
+        if modloader == 'forge':
+            current_list = launcher.get_forge_version(version)
+        elif modloader == 'fabric':
+            current_list = launcher.get_fabric_versions(version)
+        elif modloader == 'neoforge':
+            current_list = launcher.get_neoforge_version(version)
+        else:
+            current_list = []
+
+        self.comboBox_2.clear()
+        for ver in current_list:
+            self.comboBox_2.addItem(ver)
+        
+
 if __name__ == "__main__":
     QApplication.setAttribute(Qt.AA_EnableHighDpiScaling)
     app = QApplication(sys.argv)
+    apply_stylesheet(app, theme='light_blue.xml')
     myWin = MainWindow()
     myWin.show()
     sys.exit(app.exec_())
