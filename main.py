@@ -3,11 +3,14 @@ import os
 import re
 import json
 import mclauncher_core as launcher
+import shutil
+import zipfile as z
 from PyQt5 import QtWidgets
-from PyQt5.QtCore import Qt, QStringListModel
+from PyQt5.QtCore import Qt, QStringListModel, QSize
 from PyQt5.QtWidgets import QApplication, QMainWindow
+from PyQt5.QtGui import QStandardItemModel, QIcon, QStandardItem
 from ui import Ui_MainWindow
-from tkinter import messagebox as messagebox
+from tkinter import messagebox as msgbox
 from qt_material import apply_stylesheet
 
 
@@ -23,6 +26,15 @@ def app_path():
 
     return path
 
+def fpath(path):
+    path = path.replace('\\', '/')
+    if path[-1] == '/':
+        path = path[:-1]
+    return path
+
+default_save_icon = app_path()+'/assets/default_save_icon.png'
+if not os.path.exists(app_path()+'/assets/default_save_icon.png'):
+    msgbox.showerror('Assets load fail', '/assets/default_save_icon.png')
 class MainWindow(QMainWindow, Ui_MainWindow):
     def __init__(self, parent=None):    
         super(MainWindow, self).__init__(parent)
@@ -49,9 +61,190 @@ class MainWindow(QMainWindow, Ui_MainWindow):
 
         self.comboBox.currentTextChanged.connect(self.update_ml_version_list)
 
+        self.mainTabWidget.currentChanged.connect(self.page_process) # change tab
+
+        self.comboBox_5.currentTextChanged.connect(self.switch_manager_select_version) # Resourcepack manager
+
+        self.pushButton_4.clicked.connect(self.remove_version) # Remove ver
+
+        self.pushButton_5.clicked.connect(self.remove_save) # Remove save
+
+        self.pushButton_6.clicked.connect(self.remove_respack) # Remove respack
+        
         self.load_config()
 
         self.update_installed_versions()
+
+    def remove_version(self):
+        minecraft_dir = self.lineEdit.text().replace('\\', '/')
+        if minecraft_dir[-1] == '/':
+            minecraft_dir = minecraft_dir[:-1]
+        if not os.path.exists(minecraft_dir):
+            return 1
+
+        if len(self.listView.selectionModel().selectedIndexes()) == 0:
+            msgbox.showerror('Spectrum 启动器', '你必须选择一个版本。')
+            return 1
+        ver = self.listView.selectionModel().selectedIndexes()[0].data()
+
+        msgbox.showinfo('Spectrum 启动器', f'“{ver}”将会永久消失！（真的很久！）')
+        launcher.remove_version(minecraft_dir, ver)
+        self.update_installed_versions()
+
+    def remove_save(self):
+        minecraft_dir = self.lineEdit.text().replace('\\', '/')
+        if minecraft_dir[-1] == '/':
+            minecraft_dir = minecraft_dir[:-1]
+        if not os.path.exists(minecraft_dir):
+            return 1
+
+        if self.comboBox_5.currentText() == '':
+            msgbox.showerror('Spectrum 启动器', '你必须选择一个版本。')
+            return 1
+        ver = self.comboBox_5.currentText()
+
+        if len(self.listView_saves.selectionModel().selectedIndexes()) == 0:
+            msgbox.showerror('Spectrum 启动器', '你必须选择一个存档。')
+            return 1
+        save = self.listView_saves.selectionModel().selectedIndexes()[0].data()
+
+        msgbox.showinfo('Spectrum 启动器', f'“{save}”将会永久消失！（真的很久！）')
+        launcher.remove_save(minecraft_dir, ver, save)
+        self.switch_manager_select_version(version_name=ver)
+
+    def remove_respack(self):
+        minecraft_dir = self.lineEdit.text().replace('\\', '/')
+        if minecraft_dir[-1] == '/':
+            minecraft_dir = minecraft_dir[:-1]
+        if not os.path.exists(minecraft_dir):
+            return 1
+
+        if self.comboBox_5.currentText() == '':
+            msgbox.showerror('Spectrum 启动器', '你必须选择一个版本。')
+            return 1
+        ver = self.comboBox_5.currentText()
+
+        if len(self.listView_respack.selectionModel().selectedIndexes()) == 0:
+            msgbox.showerror('Spectrum 启动器', '你必须选择一个资源包。')
+            return 1
+        respack = self.listView_respack.selectionModel().selectedIndexes()[0].data()
+
+        msgbox.showinfo('Spectrum 启动器', f'“{respack}”将会永久消失！（真的很久！）')
+        launcher.remove_resourcepack(minecraft_dir, ver, respack)
+        self.switch_manager_select_version(version_name=ver)
+
+
+    def switch_manager_select_version(self, version_name):
+        minecraft_dir = self.lineEdit.text().replace('\\', '/')
+        if minecraft_dir[-1] == '/':
+            minecraft_dir = minecraft_dir[:-1]
+        if not os.path.exists(minecraft_dir):
+            return 1
+        
+        if self.comboBox_5.currentText() == '':
+            return 1
+        version_name = self.comboBox_5.currentText()
+
+        # 设置存档列表
+        self.model_saves = QStandardItemModel()
+        data = launcher.get_saves(minecraft_dir, version_name)
+
+        for i in data:
+            save_icon = f'{minecraft_dir}/versions/{version_name}/saves/{i}/icon.png'
+            if os.path.exists(save_icon):
+                self.model_saves.appendRow(QStandardItem(QIcon(save_icon), i))
+            else:
+                self.model_saves.appendRow(QStandardItem(QIcon(default_save_icon), i))
+        self.listView_saves.setModel(self.model_saves) # 版本列表
+
+        # 设置资源包列表
+        self.model_respacks = QStandardItemModel()
+        data = launcher.get_resourcepacks(minecraft_dir, version_name)
+
+        for i in data:
+            save_icon = f'{minecraft_dir}/versions/{version_name}/resourcepacks/{i}/pack.png'
+            if os.path.exists(save_icon):
+                self.model_respacks.appendRow(QStandardItem(QIcon(save_icon), i))
+            else:
+                self.model_respacks.appendRow(QStandardItem(QIcon(default_save_icon), i))
+        self.listView_respack.setModel(self.model_respacks) # 版本列表
+
+    def dragEnterEvent(self, event):
+        if event.mimeData().hasUrls():
+            event.accept()
+        else:
+            event.ignore()
+
+    def dragMoveEvent(self, event):
+        if event.mimeData().hasUrls():
+            event.accept()
+        else:
+            event.ignore()
+
+    def dropEvent(self, event):
+        minecraft_dir = self.lineEdit.text().replace('\\', '/')
+        if minecraft_dir[-1] == '/':
+            minecraft_dir = minecraft_dir[:-1]
+        if not os.path.exists(minecraft_dir):
+            return 1
+        
+        if self.comboBox_5.currentText() == '':
+            return 1
+        version_name = self.comboBox_5.currentText()
+
+        saves_path = f'{minecraft_dir}/versions/{version_name}/saves'
+        if not os.path.exists(saves_path):
+            return 1
+
+        pos = event.pos()
+        widget_under_cursor = self.childAt(pos)
+        while widget_under_cursor and widget_under_cursor.metaObject().className() == 'QWidget':
+            widget_under_cursor = widget_under_cursor.parent()
+        print()
+        if not event.mimeData().hasUrls():
+            event.ignore()
+        elif widget_under_cursor.objectName() == 'listView_saves':
+            files = [url.toLocalFile() for url in event.mimeData().urls()]
+            for file in files:
+                file = fpath(file)
+                if os.path.isdir(file) and os.path.exists(file+'/level.dat'):
+                    dirname = file.split('/')[-1]
+                    shutil.copytree(file, saves_path+'/'+dirname)
+                else:
+                    try:
+                        with z.ZipFile(file) as f:
+                            dirname = '.'.join(file.split('.')[:-1]).split('/')[-1]
+                            f.extractall(saves_path+'/'+dirname)
+                            if not os.path.exists(saves_path+'/'+dirname+'/level.dat'):
+                                msgbox.showwarning('Spectrum 启动器', '文件不是存档文件夹或压缩为.zip的存档文件夹')
+                                shutil.rmtree(saves_path+'/'+dirname)
+                    except zipfile.BadZipFile:
+                        msgbox.showwarning('Spectrum 启动器', '文件不是存档文件夹或压缩为.zip的存档文件夹')
+            event.accept()
+        elif widget_under_cursor.objectName() == 'listView_respack':
+            files = [url.toLocalFile() for url in event.mimeData().urls()]
+            for file in files:
+                file = fpath(file)
+                if os.path.isdir(file) and os.path.exists(file+'/level.dat'):
+                    dirname = file.split('/')[-1]
+                    shutil.copytree(file, saves_path+'/'+dirname)
+                else:
+                    try:
+                        with z.ZipFile(file) as f:
+                            dirname = '.'.join(file.split('.')[:-1]).split('/')[-1]
+                            f.extractall(saves_path+'/'+dirname)
+                            if not os.path.exists(saves_path+'/'+dirname+'/level.dat'):
+                                msgbox.showwarning('Spectrum 启动器', '文件不是存档文件夹或压缩为.zip的存档文件夹')
+                                shutil.rmtree(saves_path+'/'+dirname)
+                    except zipfile.BadZipFile:
+                        msgbox.showwarning('Spectrum 启动器', '文件不是存档文件夹或压缩为.zip的存档文件夹')
+            event.accept()
+
+    def page_process(self, page_index):
+        if page_index == 2:
+            self.setAcceptDrops(True)
+        else:
+            self.setAcceptDrops(False)
 
     def update_installed_versions(self):
         minecraft_dir = self.lineEdit.text().replace('\\', '/')
@@ -63,6 +256,10 @@ class MainWindow(QMainWindow, Ui_MainWindow):
             self.comboBox_3.clear()
             for ver in versions:
                 self.comboBox_3.addItem(ver)
+
+            self.comboBox_5.clear()
+            for ver in versions:
+                self.comboBox_5.addItem(ver)
     
     def launch(self):
         minecraft_dir = self.lineEdit.text().replace('\\', '/')
@@ -127,7 +324,7 @@ class MainWindow(QMainWindow, Ui_MainWindow):
             msgbox.showerror('Spectrum 启动器', 'Minecraft路径中已经包含此名称的版本。')
             return 1
         
-        modloader = self.comboBox.currentText()
+        modloader = self.comboBox.currentText().lower()
         if modloader == '无':
             modloader = 'vanilla'
         
@@ -136,7 +333,9 @@ class MainWindow(QMainWindow, Ui_MainWindow):
             msgbox.showerror('Spectrum 启动器', '请选择模组加载器的版本。')
             return 1
 
-        launcher.auto_download(minecraft_dir=minecraft_dir, version=version, version_name=version_name, modloader=modloader, modloader_version=modloader_version, progress_callback=self.progress_callback)
+        r = launcher.auto_download(minecraft_dir=minecraft_dir, version=version, version_name=version_name, modloader=modloader, modloader_version=modloader_version, progress_callback=self.progress_callback)
+        if r == 721:
+            msgbox.showwarning('Spectrum 启动器', '下载的modloader与minecraft版本不被Spectrum启动器所兼容')
         self.update_installed_versions()
 
     def progress_callback(self, current, total, description):
@@ -178,11 +377,17 @@ class MainWindow(QMainWindow, Ui_MainWindow):
         version = self.listView.selectionModel().selectedIndexes()[0].data()
         modloader = self.comboBox.currentText().lower()
         if modloader == 'forge':
-            current_list = launcher.get_forge_version(version)
+            current_dict = launcher.get_forge_version(version)
+            current_list = []
+            for item in current_dict:
+                current_list.append(item["version"])
         elif modloader == 'fabric':
-            current_list = launcher.get_fabric_versions(version)
+            current_list = launcher.get_fabric_versions()
         elif modloader == 'neoforge':
-            current_list = launcher.get_neoforge_version(version)
+            current_dict = launcher.get_neoforge_version(version)
+            current_list = []
+            for item in current_dict:
+                current_list.append(item["version"])
         else:
             current_list = []
 

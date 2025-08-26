@@ -28,6 +28,62 @@ def native() -> str:
     '''获取系统native, Windows为windows MacOS为osx GNU/Linux为linux'''
     return platform.system().lower()
 
+# ModLoader/NeoForge
+def get_neoforge_version(version) -> dict:
+    '''获取支持此Minecraft版本的Neoforge'''
+    url = 'https://bmclapi2.bangbang93.com/neoforge/list/'+version
+    item = requests.get(url)
+    if item.status_code != 200:
+        raise Exception(f"Request Fail: {item.status_code}\nurl: {url}")
+    return item.json()
+
+def download_neoforge_json(minecraft_dir, version, version_name, neoforge_version='latest', bmclapi=False) -> None:
+    if neoforge_version == 'latest':
+        neoforge_version = get_neoforge_version(version)[-1]
+        path = neoforge_version['installerPath']
+        if path.split('/')[1] == 'maven':
+            path = '/'.join(path.split('/')[2:])
+        else:
+            raise Exception("Format Unknown")
+        url = 'https://maven.neoforged.net/'+path
+    else:
+        for i in get_neoforge_version(version):
+            if i['version'] == neoforge_version:
+                path = i['installerPath']
+        if path.split('/')[1] == 'maven':
+            path = '/'.join(path.split('/')[2:])
+        else:
+            raise Exception("Format Unknown")
+        url = 'https://maven.neoforged.net/'+path
+    item = requests.get(url)
+    if item.status_code != 200:
+        raise Exception(f"Request Fail: {item.status_code}\nurl: {url}")
+
+    os.makedirs(get_file_path()+"/temp", exist_ok=True)
+    with open(get_file_path()+"/temp/neoforge_installer.zip", 'wb') as f: # Of course we downloaded a .jar file, but in order to identify the format, we use .zip
+        f.write(item.content)
+    
+    with zipf.ZipFile(get_file_path()+"/temp/neoforge_installer.zip",'r') as file:
+        file.extractall(get_file_path()+"/temp/neoforge_installer")
+    
+    if not os.path.exists(get_file_path()+"/temp/neoforge_installer/version.json"):
+        raise Exception("Cannot find version.json in downloaded neoforge installer")
+    
+    with open(get_file_path()+"/temp/neoforge_installer/version.json", 'r') as f:
+        neoforge_json = json.loads(f.read())
+    
+    version_json = get_version_json(version, bmclapi)
+    original_libs = version_json['libraries']
+    version_json.update(neoforge_json)
+    version_json['libraries'].extend(original_libs)
+
+    os.makedirs(f'{minecraft_dir}/versions/{version_name}/', exist_ok=True)
+
+    with open(f'{minecraft_dir}/versions/{version_name}/{version_name}.json', 'w') as f:
+        f.write(json.dumps(version_json))
+    
+    shutil.rmtree(get_file_path()+"/temp")
+
 # ModLoader/Forge
 def get_all_forgeable_versions():
     '''获取Forge支持的所有Minecraft版本'''
@@ -69,28 +125,46 @@ def download_forge_json(minecraft_dir, version, version_name, forge_version='lat
     
     if not os.path.exists(get_file_path()+"/temp/forge_installer/install_profile.json"):
         shutil.rmtree(get_file_path()+"/temp/forge_installer/")
-        raise Exception("Fuck, INSTALL_PROFILE.JSON not found")
+        raise Exception("INSTALL_PROFILE.JSON not found")
     with open(get_file_path()+"/temp/forge_installer/install_profile.json", 'r') as f:
         install_profile = json.loads(f.read())
-    if not 'versionInfo' in install_profile:
-        shutil.rmtree(get_file_path()+"/temp/forge_installer/")
-        raise Exception("versionInfo not found")
-    
-    forge_version_json = install_profile['versionInfo']
-    version_json = get_version_json(version, bmclapi)
-    original_libs = version_json['libraries']
-    version_json.update(forge_version_json)
-    version_json['libraries'].extend(original_libs)
 
-    for i in range(len(version_json['libraries'])):
-        if not 'url' in version_json['libraries'][i] and not 'downloads' in version_json['libraries'][i]:
-            version_json['libraries'][i]['url'] = 'https://libraries.minecraft.net/'
-                
+
+    if 'versionInfo' in install_profile:
+        forge_version_json = install_profile['versionInfo']
+        version_json = get_version_json(version, bmclapi)
+        original_libs = version_json['libraries']
+        version_json.update(forge_version_json)
+        version_json['libraries'].extend(original_libs)
+
+    # elif 'libraries' in install_profile:
+    #     forge_version_json = install_profile['libraries']
+    #     version_json = get_version_json(version, bmclapi)
+    #     original_libs = version_json['libraries']
+    #     version_json.update(forge_version_json)
+    #     version_json['libraries'].extend(original_libs)
+
+    elif os.path.exists(get_file_path()+"/temp/forge_installer/version.json"):
+        print(1)
+        with open(get_file_path()+"/temp/forge_installer/version.json", 'r') as f:
+            forge_version_json = json.loads(f.read())
+        version_json = get_version_json(version, bmclapi)
+        original_libs = version_json['libraries']
+        version_json.update(forge_version_json)
+        version_json['libraries'].extend(original_libs)
+
+        for i in range(len(version_json['libraries'])):
+            lib = version_json['libraries'][i]
+            print(lib['name'])
+            if lib['name'] == 'net.minecraftforge:forge:1.21.8-58.0.10:client':
+                version_json['libraries'][i]['url'] = 'https://github.com/HPLAY-dev/spectrum-minecraft-launcher/raw/refs/heads/main/misc/forge-1.21.8-58.0.10-client.jar'
+
 
     os.makedirs(f'{minecraft_dir}/versions/{version_name}', exist_ok=True)
     with open(f'{minecraft_dir}/versions/{version_name}/{version_name}.json', 'w') as f:
         f.write(json.dumps(version_json))
-    shutil.rmtree(get_file_path()+"/temp/forge_installer/")
+    
+    shutil.rmtree(get_file_path()+"/temp")
 
 # ModLoader/Fabric
 def is_fabric(minecraft_dir, version_name) -> bool:
@@ -103,7 +177,7 @@ def is_fabric(minecraft_dir, version_name) -> bool:
             print(False)
             return False
 
-def fabric_merge_json(fabric_json_path, minecraft_json_path, modify=True) -> dict:
+def fabric_merge_json(path_a, path_b, modify=True) -> dict:
     '''合并Fabric与Minecraft的Json并进行处理，返回dict'''
     with open(path_a, 'r') as f:
         json_a = json.loads(f.read()) # fabric
@@ -175,7 +249,11 @@ def download_fabric_api(minecraft_dir, version, version_name, mod_version='lates
 
 def get_latest_fabric_loader_version() -> str:
     '''搜索metadata获得最新Fabric-Loader版本，返回str'''
-    return parse_xml(url='https://maven.fabricmc.net/net/fabricmc/fabric-loader/maven-metadata.xml')['metadata']['versioning']['latest']
+    return parse_xml(url='https://maven.fabricmc.net/net/fabricmc/fabric-loader/maven-metadata.xml')['metadata']['versioning']['release']
+
+def get_fabric_versions() -> list:
+    '''获得所有fabric版本'''
+    return parse_xml(url='https://maven.fabricmc.net/net/fabricmc/fabric-loader/maven-metadata.xml')['metadata']['versioning']['versions']
 
 def download_fabric_json(minecraft_dir, version, version_name, loader_version='latest') -> None:
     '''下载Fabric-Loader的JSON文件到.minecraft/versions/{version_name}/Fabric.json，用于和当前版本的Minecraft的json合并'''
@@ -227,7 +305,7 @@ def get_java_version(java_binary_path='java') -> list:
     '''执行java -version并获得返回值，格式为[8, '1.8.0_452']或[21, "21.0.7"]等，返回list'''
     p = s.Popen([java_binary_path, '-version'], stdout=s.PIPE, stderr=s.PIPE)
     stdout, stderr = p.communicate()
-    ver_full = stderr.decode().split('\n')[0].split(' version ')[1][1:-1] # 行类似 'openjdk version "1.8.0_462"'
+    ver_full = stderr.decode().split('\n')[-3].split(' version ')[1][1:-1] # 行类似 'openjdk version "1.8.0_462"'
     if ver_full.split('.')[0] == '1':
         major_version = ver_full.split(".")[1]
     else:
@@ -245,6 +323,18 @@ def check_java_available(java_binary_path, minecraft_dir, version_name) -> bool:
         return get_java_version(java_binary_path) == required_version
     else:
         return False
+
+def get_required_java_version(minecraft_dir, version_name):
+    '''查看需要的java版本，返回[8,17,21]类似'''
+    with open(f'{minecraft_dir}/versions/{version_name}/{version_name}.json', 'r') as f:
+        raw = f.read()
+    version_json = json.loads(raw)
+    if "javaVersion" in version_json and "majorVersion" in version_json["javaVersion"]:
+        required_version = version_json["javaVersion"]["majorVersion"]
+        return required_version
+    else:
+        return None
+    
 
 # Manifest Function
 def get_version_manifest(bmclapi=False) -> dict:
@@ -577,19 +667,24 @@ def download_assets(minecraft_dir, version_name, print_status=True, bmclapi=Fals
                 f.write(item.content)
     progress_callback(current, file_amount, f"Download Finish")
 
-def auto_download(minecraft_dir, version, version_name, modloader='vanilla', bmclapi=False, progress_callback=None):
+def auto_download(minecraft_dir, version, version_name, modloader='vanilla', bmclapi=False, modloader_version='latest', progress_callback=None):
     '''下载整个Minecraft版本，返回None'''
+    modloader = modloader.lower()
     if modloader == 'fabric':
         fabric_json = f'{minecraft_dir}/versions/{version_name}/Fabric.json'
         if not os.path.exists(fabric_json):
-            download_fabric_json(minecraft_dir, version, version_name)
+            download_fabric_json(minecraft_dir, version, version_name, loader_version='latest')
         download_version_json(minecraft_dir, version, version_name, bmclapi=bmclapi)
         jsonfile = fabric_merge_json(f'{minecraft_dir}/versions/{version_name}/Fabric.json', f'{minecraft_dir}/versions/{version_name}/{version_name}.json')
         with open(f'{minecraft_dir}/versions/{version_name}/{version_name}.json', 'w') as f:
             f.write(json.dumps(jsonfile))
     elif modloader == 'forge':
         if not os.path.exists(f'{minecraft_dir}/versions/{version_name}/{version_name}.json'):
-            download_forge_json(minecraft_dir, version, version_name, bmclapi=bmclapi)
+            download_forge_json(minecraft_dir, version, version_name, bmclapi=bmclapi, forge_version=modloader_version)
+    elif modloader == 'neoforge':
+        print('download neoforge json')
+        if not os.path.exists(f'{minecraft_dir}/versions/{version_name}/{version_name}.json'):
+            download_neoforge_json(minecraft_dir, version, version_name, bmclapi=bmclapi, neoforge_version=modloader_version)
     elif modloader == 'vanilla':
         download_version_json(minecraft_dir, version, version_name, bmclapi=bmclapi)
     else:
@@ -691,6 +786,8 @@ def get_minecraft_args(minecraft_dir, version, version_name) -> str:
         for key in version_data["arguments"]["game"]:
             if type(key) != dict:
                 args_list.append(key)
+        if not '-cp' in args_list:
+            args_list.insert(0,"-cp "+get_cp_args(minecraft_dir, version, version_name))
         return ' '.join(args_list)
 
 def is_library_required(library) -> bool:
@@ -787,6 +884,11 @@ def get_jvm_args(minecraft_dir, version, version_name):
         d_args.append("--add-exports cpw.mods.bootstraplauncher/cpw.mods.bootstraplauncher=ALL-UNNAMED")
     if "arguments" in version_json and "jvm" in version_json["arguments"]:
         args = version_json["arguments"]["jvm"]
+        # fix for neoforge '-p' argument
+        if '-p' in args:
+            position = args.index('-p')
+            args.pop(position) # pop -p
+            args.pop(position) # pop "${library_directory}/net/neoforged/fancymodloader/bootstraplauncher/9.0.18/bootstraplauncher-9.0.18.jar${classpath_separator}${library_directory}/net/neoforged/fancymodloader/securejarhandler/9.0.18/securejarhandler-9.0.18.jar${classpath_separator}${library_directory}/net/neoforged/JarJarFileSystems/0.4.1/JarJarFileSystems-0.4.1.jar"
         replacer = {"${natives_directory}": f'{minecraft_dir}/versions/{version_name}/{version_name}-natives',
                     "${classpath}": cp_args,
                     "${launcher_name}": "minecraft-launcher",
@@ -841,6 +943,9 @@ def remove_version(minecraft_dir, version_name):
     '''删除指定版本Minecraft的natives,jar,json文件，libraries与assets将保留，返回None'''
     shutil.rmtree(f'{minecraft_dir}/versions/{version_name}')
 
+def get_installed_versions(minecraft_dir):
+    return os.listdir(minecraft_dir+'/versions')
+
 def get_minecraft_version(minecraft_dir, version_name):
     '''从json中获取Minecraft版本，返回str'''
     with open(f'{minecraft_dir}/versions/{version_name}/{version_name}.json', 'r') as f:
@@ -852,10 +957,11 @@ def get_minecraft_version(minecraft_dir, version_name):
     else:
         raise FileNotFoundError("version.json seems invalid")
 
-def launch(javaw, xmx, minecraft_dir, version, version_name, javawrapper=None, username="steve", xmn="256M") -> str:
+def launch(javaw, xmx, minecraft_dir, version_name, javawrapper=None, username="steve", xmn="256M") -> str:
     '''生成启动脚本，返回str'''
     # all of the items in lists are NOT ended with space!!!
     # -x args (JVM stuff)
+    version = get_minecraft_version(minecraft_dir, version_name)
     minecraft_dir = minecraft_dir.replace('\\', '/')
     x_args = [f"-Xmx{xmx}", 
             f"-Xmn{xmn}", 
@@ -908,7 +1014,37 @@ def launch(javaw, xmx, minecraft_dir, version, version_name, javawrapper=None, u
     else:
         final_pt2 = f'{javawrapper_arg} {minecraft_args}'
     # final = final.replace('/', '\\')
-    return final_pt1+' '+final_pt2
+    final = final_pt1+' '+final_pt2
+    final = final.replace('${version_name}', version_name)
+    final = final.replace('${library_directory}',f'{minecraft_dir}/libraries')
+    return final
+
+# Manager stuff
+def get_saves(minecraft_dir, version_name):
+    saves_path = f'{minecraft_dir}/versions/{version_name}/saves'
+    if os.path.exists(saves_path):
+        return os.listdir(saves_path)
+    else:
+        return []
+
+def remove_save(minecraft_dir, version_name, save):
+    path = f'{minecraft_dir}/versions/{version_name}/saves/{save}'
+    if os.path.exists(path):
+        shutil.rmtree(path)
+
+def get_resourcepacks(minecraft_dir, version_name):
+    path = f'{minecraft_dir}/versions/{version_name}/resourcepacks'
+    if os.path.exists(path):
+        return os.listdir(path)
+    else:
+        return []
+
+def remove_resourcepack(minecraft_dir, version_name, pack):
+    path = f'{minecraft_dir}/versions/{version_name}/resourcepacks/{pack}'
+    if os.path.exists(path):
+        shutil.rmtree(path)
+
+
 
 if __name__ == '__main__':
     print(parse_xml('https://maven.fabricmc.net/net/fabricmc/fabric-api/fabric-api/maven-metadata.xml'))
