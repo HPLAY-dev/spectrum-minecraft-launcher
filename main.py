@@ -5,7 +5,6 @@ import json
 import mclauncher_core as launcher
 import shutil
 import zipfile as z
-from PyQt5 import QtWidgets
 from PyQt5.QtCore import Qt, QStringListModel, QSize
 from PyQt5.QtWidgets import QApplication, QMainWindow
 from PyQt5.QtGui import QStandardItemModel, QIcon, QStandardItem
