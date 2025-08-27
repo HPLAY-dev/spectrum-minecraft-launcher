@@ -264,6 +264,8 @@ class MainWindow(QMainWindow, Ui_MainWindow):
 
     def update_installed_versions(self):
         minecraft_dir = self.lineEdit.text().replace('\\', '/')
+        if minecraft_dir == '':
+            return 1
         if minecraft_dir[-1] == '/':
             minecraft_dir = minecraft_dir[:-1]
         if os.path.exists(minecraft_dir+'/versions'):
