@@ -9,7 +9,7 @@ import subprocess as s
 import locale
 import xml.etree.ElementTree as ET
 import zipfile as zipf
-from distutils.version import LooseVersion
+from packaging.version import Version
 from pathlib import Path
 
 
@@ -108,7 +108,7 @@ def download_forge_json(minecraft_dir, version, version_name, forge_version='lat
         versions = []
         for ver in forge_versions:
             versions.append(ver["version"])
-        sorted([LooseVersion(v) for v in versions], reverse=True)
+        sorted([Version(v) for v in versions], reverse=True)
         forge_version = versions[0]
 
     url = 'https://bmclapi2.bangbang93.com/forge/download'
