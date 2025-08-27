@@ -10,7 +10,7 @@ from PyQt5.QtWidgets import QApplication, QMainWindow
 from PyQt5.QtGui import QStandardItemModel, QIcon, QStandardItem
 from ui import Ui_MainWindow
 from tkinter import messagebox as msgbox
-from qt_material import apply_stylesheet
+# from qt_material import apply_stylesheet
 
 
 def app_path():
@@ -31,7 +31,7 @@ def fpath(path):
         path = path[:-1]
     return path
 
-default_save_icon = app_path()+'/assets/default_save_icon.png'
+default_icon = app_path()+'/assets/default_icon.png'
 if not os.path.exists(app_path()+'/assets/default_save_icon.png'):
     msgbox.showerror('Assets load fail', '/assets/default_save_icon.png')
 class MainWindow(QMainWindow, Ui_MainWindow):
@@ -69,6 +69,8 @@ class MainWindow(QMainWindow, Ui_MainWindow):
         self.pushButton_5.clicked.connect(self.remove_save) # Remove save
 
         self.pushButton_6.clicked.connect(self.remove_respack) # Remove respack
+
+        self.DownloadFixBtn.clicked.connect(self.download_fix)
         
         self.load_config()
 
@@ -123,10 +125,10 @@ class MainWindow(QMainWindow, Ui_MainWindow):
             return 1
         ver = self.comboBox_5.currentText()
 
-        if len(self.listView_respack.selectionModel().selectedIndexes()) == 0:
+        if len(self.listView_respacks.selectionModel().selectedIndexes()) == 0:
             msgbox.showerror('Spectrum 启动器', '你必须选择一个资源包。')
             return 1
-        respack = self.listView_respack.selectionModel().selectedIndexes()[0].data()
+        respack = self.listView_respacks.selectionModel().selectedIndexes()[0].data()
 
         msgbox.showinfo('Spectrum 启动器', f'“{respack}”将会永久消失！（真的很久！）')
         launcher.remove_resourcepack(minecraft_dir, ver, respack)
@@ -153,7 +155,7 @@ class MainWindow(QMainWindow, Ui_MainWindow):
             if os.path.exists(save_icon):
                 self.model_saves.appendRow(QStandardItem(QIcon(save_icon), i))
             else:
-                self.model_saves.appendRow(QStandardItem(QIcon(default_save_icon), i))
+                self.model_saves.appendRow(QStandardItem(QIcon(default_icon), i))
         self.listView_saves.setModel(self.model_saves) # 版本列表
 
         # 设置资源包列表
@@ -165,8 +167,24 @@ class MainWindow(QMainWindow, Ui_MainWindow):
             if os.path.exists(save_icon):
                 self.model_respacks.appendRow(QStandardItem(QIcon(save_icon), i))
             else:
-                self.model_respacks.appendRow(QStandardItem(QIcon(default_save_icon), i))
-        self.listView_respack.setModel(self.model_respacks) # 版本列表
+                self.model_respacks.appendRow(QStandardItem(QIcon(default_icon), i))
+        self.listView_respacks.setModel(self.model_respacks) # 版本列表
+
+        # 设置Mod列表
+        self.model_mods = QStandardItemModel()
+        data = launcher.get_mods(minecraft_dir, version_name)
+
+        for i in data:
+            self.model_mods.appendRow(QStandardItem(QIcon(default_icon), i))
+        self.listView_mods.setModel(self.model_mods) # 版本列表
+
+        # 设置光影d列表
+        self.model_shaderpacks = QStandardItemModel()
+        data = launcher.get_shaderpacks(minecraft_dir, version_name)
+
+        for i in data:
+            self.model_shaderpacks.appendRow(QStandardItem(QIcon(default_icon), i))
+        self.listView_shaderpacks.setModel(self.model_shaderpacks) # 版本列表
 
     def dragEnterEvent(self, event):
         if event.mimeData().hasUrls():
@@ -199,7 +217,6 @@ class MainWindow(QMainWindow, Ui_MainWindow):
         widget_under_cursor = self.childAt(pos)
         while widget_under_cursor and widget_under_cursor.metaObject().className() == 'QWidget':
             widget_under_cursor = widget_under_cursor.parent()
-        print()
         if not event.mimeData().hasUrls():
             event.ignore()
         elif widget_under_cursor.objectName() == 'listView_saves':
@@ -220,7 +237,7 @@ class MainWindow(QMainWindow, Ui_MainWindow):
                     except zipfile.BadZipFile:
                         msgbox.showwarning('Spectrum 启动器', '文件不是存档文件夹或压缩为.zip的存档文件夹')
             event.accept()
-        elif widget_under_cursor.objectName() == 'listView_respack':
+        elif widget_under_cursor.objectName() == 'listView_respacks':
             files = [url.toLocalFile() for url in event.mimeData().urls()]
             for file in files:
                 file = fpath(file)
@@ -337,6 +354,24 @@ class MainWindow(QMainWindow, Ui_MainWindow):
             msgbox.showwarning('Spectrum 启动器', '下载的modloader与minecraft版本不被Spectrum启动器所兼容')
         self.update_installed_versions()
 
+    def download_fix(self):
+        if len(self.comboBox_3.currentText()) == 0:
+            msgbox.showerror('Spectrum 启动器', '你必须选择一个版本来补全。')
+            return 1
+        version_name = self.comboBox_3.currentText()
+
+        minecraft_dir = self.lineEdit.text().replace('\\', '/')
+        if minecraft_dir[-1] == '/':
+            minecraft_dir = minecraft_dir[:-1]
+        if not os.path.exists(minecraft_dir):
+            msgbox.showerror('Spectrum 启动器', 'Minecraft路径不存在。')
+            return 1
+
+        r = launcher.auto_download(minecraft_dir=minecraft_dir, version=get_minecraft_version(minecraft_dir, version_name), version_name=version_name, modloader=modloader, modloader_version=modloader_version, progress_callback=self.progress_callback)
+        if r == 721:
+            msgbox.showwarning('Spectrum 启动器', '下载的modloader与minecraft版本不被Spectrum启动器所兼容')
+        self.update_installed_versions()
+
     def progress_callback(self, current, total, description):
         if description[1:-1].split('][')[0] == 'LIB':
             self.progressBar.setValue(int(current/total*100))
@@ -398,7 +433,7 @@ class MainWindow(QMainWindow, Ui_MainWindow):
 if __name__ == "__main__":
     QApplication.setAttribute(Qt.AA_EnableHighDpiScaling)
     app = QApplication(sys.argv)
-    apply_stylesheet(app, theme='light_blue.xml')
+    # apply_stylesheet(app, theme='light_blue.xml')
     myWin = MainWindow()
     myWin.show()
     sys.exit(app.exec_())

@@ -1044,6 +1044,30 @@ def remove_resourcepack(minecraft_dir, version_name, pack):
     if os.path.exists(path):
         shutil.rmtree(path)
 
+def get_mods(minecraft_dir, version_name):
+    path = f'{minecraft_dir}/versions/{version_name}/mods'
+    if os.path.exists(path):
+        return os.listdir(path)
+    else:
+        return []
+
+def remove_mod(minecraft_dir, version_name, mod):
+    path = f'{minecraft_dir}/versions/{version_name}/mods/{mod}'
+    if os.path.exists(path):
+        shutil.rmtree(path)
+
+def get_shaderpacks(minecraft_dir, version_name):
+    path = f'{minecraft_dir}/versions/{version_name}/shaderpacks'
+    if os.path.exists(path):
+        return os.listdir(path)
+    else:
+        return []
+
+def remove_shaderpack(minecraft_dir, version_name, pack):
+    path = f'{minecraft_dir}/versions/{version_name}/shaderpacks/{pack}'
+    if os.path.exists(path):
+        shutil.rmtree(path)
+
 
 
 if __name__ == '__main__':
