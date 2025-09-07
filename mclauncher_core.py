@@ -9,10 +9,249 @@ import subprocess as s
 import locale
 import xml.etree.ElementTree as ET
 import zipfile as zipf
+import oauth
 from packaging.version import Version
 from pathlib import Path
 
 
+# OAuth
+client_id = "7000942a-0525-4e21-a817-faf950ab6bc4"
+def code_to_token(auth_code: str, redirect_uri=oauth.redirect_uri):
+    token_url = 'https://login.microsoftonline.com/consumers/oauth2/v2.0/token'
+    token_data = {
+        'client_id': client_id,
+        'code': auth_code,
+        'redirect_uri': redirect_uri,
+        'grant_type': 'authorization_code',
+        'scope': 'XboxLive.signin offline_access'
+    }
+    headers = {
+        'Content-Type': 'application/x-www-form-urlencoded',
+        'Accept': 'application/json'
+    }
+    response = requests.post(token_url, data=token_data, headers=headers)
+    return response.json()
+
+def refresh_token(refresh_token: str):
+    url = 'https://login.microsoftonline.com/consumers/oauth2/v2.0/token'
+    token_data = {
+        { "client_id", client_id},
+        { "scope", "XboxLive.signin offline_access" },
+        { "refresh_token", refresh_token},
+        { "grant_type", "refresh_token"}
+    }
+    response = requests.post(url, data=token_data)
+    return response.json()
+
+def access_token_to_xbl(access_token: str):
+    url = 'https://user.auth.xboxlive.com/user/authenticate'
+    data = {
+        "Properties": {
+            "AuthMethod": "RPS",
+            "SiteName": "user.auth.xboxlive.com",
+            "RpsTicket": f"d={access_token}"  # 确保有 d= 前缀
+        },
+        "RelyingParty": "http://auth.xboxlive.com",  # 使用 http 而不是 https
+        "TokenType": "JWT"
+    }
+    headers = {
+        'Content-Type': 'application/json',
+        'Accept': 'application/json'
+    }
+    
+    # 添加详细的调试信息
+    print(f"Making XBL request with access token: {access_token[:50]}...")
+    
+    try:
+        response = requests.post(url, json=data, headers=headers, timeout=30)
+        
+        print(f"XBL Response Status: {response.status_code}")
+        print(f"XBL Response Headers: {dict(response.headers)}")
+        
+        if response.status_code != 200:
+            print(f"XBL Error Response: {response.text}")
+            raise Exception(f"XBL auth failed: {response.status_code}")
+        
+        response_data = response.json()
+        
+        if "Token" not in response_data:
+            print("Error: Token not found in response:", response_data)
+            raise KeyError('Failed to get XBL token')
+        
+        result = {
+            "token": response_data["Token"],
+            'uhs': response_data["DisplayClaims"]["xui"][0]['uhs']
+        }
+        print("XBL Auth Success")
+        return result
+        
+    except requests.exceptions.RequestException as e:
+        print(f"Request failed: {e}")
+        raise
+    except json.JSONDecodeError as e:
+        print(f"JSON decode failed: {e}")
+        print(f"Response content: {response.text}")
+        raise
+    
+    # response = requests.post(url, json=data, headers=headers)
+    # response_data = response.json()
+    # 1
+    # 1
+    # if "Token" not in response_data:
+    #     print("Error response:", response_data)
+    #     raise KeyError('Failed to get XBL token')
+    
+    # returns = {
+    #     "token": response_data["Token"],
+    #     'uhs': response_data["DisplayClaims"]["xui"][0]['uhs']
+    # }
+    # print(returns)
+    # return returns
+
+def xbl_to_xsts(xbl_return: dict):
+    url = 'https://xsts.auth.xboxlive.com/xsts/authorize'
+    xbl = xbl_return['token']
+    data = {
+        "Properties": {
+            "SandboxId": "RETAIL",
+            "UserTokens": [
+                xbl
+            ]
+        },
+        "RelyingParty": "rp://api.minecraftservices.com/",
+        "TokenType": "JWT"
+    }
+    headers = {
+        'Content-Type': 'application/json',
+        'Accept': 'application/json'
+    }
+    
+    # 发送请求并获取响应
+    response = requests.post(url, json=data, headers=headers)
+    
+    # 检查状态码
+    if response.status_code != 200:
+        print(f"XSTS Error: {response.status_code}")
+        print(f"Response: {response.text}")
+        raise Exception(f"XSTS auth failed: {response.status_code}")
+    
+    # 解析JSON响应
+    response_data = response.json()
+    
+    # 创建返回字典
+    returns = {}
+    returns['uhs'] = response_data['DisplayClaims']['xui'][0]['uhs']
+    returns['xsts_token'] = response_data['Token']
+    
+    return returns
+
+def xsts_to_mc_token(xsts_return: dict):
+    url = 'https://api.minecraftservices.com/authentication/login_with_xbox'
+    uhs = xsts_return['uhs']
+    xsts_token = xsts_return['xsts_token']
+    data = {
+        "identityToken": f"XBL3.0 x={uhs};{xsts_token}"
+    }
+    
+    # 添加调试信息
+    print(f"Making Minecraft auth request with XSTS token")
+    print(f"Identity token: XBL3.0 x={uhs};{xsts_token[:50]}...")
+    
+    try:
+        response = requests.post(url, json=data)
+        
+        print(f"Minecraft Auth Status: {response.status_code}")
+        print(f"Minecraft Auth Response: {response.text}")
+        
+        if response.status_code != 200:
+            print(f"Minecraft auth failed with status: {response.status_code}")
+            raise Exception(f"Minecraft auth failed: {response.status_code}")
+        
+        response_data = response.json()
+        
+        # 检查access_token是否存在
+        if 'access_token' not in response_data:
+            print(f"Access token not found in response: {response_data}")
+            # 检查是否有错误信息
+            if 'error' in response_data:
+                print(f"Error: {response_data.get('error')}")
+                print(f"Error description: {response_data.get('error_description', 'No description')}")
+            raise KeyError('access_token not found in Minecraft auth response')
+        
+        access_token = response_data['access_token']
+        print(f"Successfully obtained Minecraft access token")
+        return access_token
+        
+    except requests.exceptions.RequestException as e:
+        print(f"Minecraft auth request failed: {e}")
+        raise
+    except json.JSONDecodeError as e:
+        print(f"Failed to parse Minecraft auth response: {e}")
+        print(f"Raw response: {response.text}")
+        raise
+
+def get_mc_token(custom_auth_code=None):
+    print('Getting auth_code')
+    if custom_auth_code == None:
+        auth_code = oauth.get_auth_code()
+    else:
+        auth_code = custom_auth_code
+    print('Getting access_token')
+    access_token = code_to_token(auth_code)['access_token']
+    print('Getting xbl')
+    xbl = access_token_to_xbl(access_token)
+    print('Getting xsts')
+    xsts = xbl_to_xsts(xbl)
+    print('Getting mc_token')
+    mc_token = xsts_to_mc_token(xsts)
+    print('Finish')
+    return mc_token
+
+def is_owned(mc_token):
+    headers = {
+        'Authorization': f'Bearer {mc_token}',
+        'Accept': 'application/json'
+    }
+    
+    # 检查Minecraft权限
+    entitlements_url = "https://api.minecraftservices.com/entitlements/mcstore"
+    try:
+        entitlements_response = requests.get(entitlements_url, headers=headers)
+        entitlements_response.raise_for_status()
+        entitlements_data = entitlements_response.json()
+        
+        # 获取物品列表
+        items = entitlements_data.get('items', [])
+        
+        # 获取用户资料
+        profile_url = "https://api.minecraftservices.com/minecraft/profile"
+        profile_response = requests.get(profile_url, headers=headers)
+        profile_data = profile_response.json() if profile_response.status_code == 200 else {}
+        
+        # 检查是否拥有Minecraft
+        # 条件：有权限物品 且 个人资料不包含NOT_FOUND错误
+        has_minecraft = (len(items) > 0 and 
+                        profile_response.status_code == 200 and
+                        'error' not in profile_data)
+        return has_minecraft
+            
+    except:
+        return False
+
+def get_uuid(access_token: str):
+    if is_owned(access_token):
+        # 提取用户信息
+        uuid = profile_data.get('id', '')
+        name = profile_data.get('name', '')
+        print(f"uuid={uuid}")
+        print(f"name={name}")
+        
+        return uuid
+    else:
+        raise Exception('No Minecraft license found or profile not available')
+        if profile_response.status_code != 200:
+            raise Exception(f"Profile API error: {profile_response.status_code} - {profile_response.text}")
+    
 # Tools
 def get_file_path() -> str:
     '''获取当前Python文件路径'''
@@ -957,68 +1196,6 @@ def get_minecraft_version(minecraft_dir, version_name):
     else:
         raise FileNotFoundError("version.json seems invalid")
 
-def launch(javaw, xmx, minecraft_dir, version_name, javawrapper=None, username="steve", xmn="256M") -> str:
-    '''生成启动脚本，返回str'''
-    # all of the items in lists are NOT ended with space!!!
-    # -x args (JVM stuff)
-    version = get_minecraft_version(minecraft_dir, version_name)
-    minecraft_dir = minecraft_dir.replace('\\', '/')
-    x_args = [f"-Xmx{xmx}", 
-            f"-Xmn{xmn}", 
-            "-XX:+UseG1GC", 
-            "-XX:-UseAdaptiveSizePolicy", 
-            "-XX:-OmitStackTraceInFastThrow"]
-    # -d args (jvm system properties)
-    d_args = get_jvm_args(minecraft_dir, version, version_name)
-    # minecraft args
-    uuid = gen_random_uuid()
-    minecraft_args = get_minecraft_args(minecraft_dir, version, version_name)
-    
-    if type(minecraft_args) == list:
-        minecraft_args_cp = minecraft_args[0]
-        minecraft_args_minecraft = minecraft_args[1]
-        split_cp_from_minecraft_args = True
-    else:
-        minecraft_args_minecraft = minecraft_args
-        split_cp_from_minecraft_args = False
-    mainClass = get_mainclass(minecraft_dir, version, version_name)
-    minecraft_args = mainClass + ' ' + minecraft_args_minecraft + " -width 854 -height 480"
-    replacer = {"${auth_player_name}": username,
-                "${version_name}": version_name, 
-                "${auth_session}": uuid, 
-                "${game_directory}": minecraft_dir+'/versions/'+version_name,
-                "${assets_root}": minecraft_dir+'/assets',
-                "${game_assets}": minecraft_dir+f'/versions/{version_name}/resources', # C:\Users\magic\Documents\projects\LauncherX\.minecraft\1.0\resources
-                "${assets_index_name}": get_assetIndex(minecraft_dir, version_name),
-                "${auth_uuid}": uuid,
-                "${auth_access_token}": uuid,
-                "${user_properties}": "{}",
-                "${user_type}": "msa",
-                "${version_type}": '"Bilibili@Q-Magnet"'}
-    for i in replacer:
-        if split_cp_from_minecraft_args:
-            minecraft_args_minecraft = minecraft_args_minecraft.replace(i, replacer[i])
-        else:
-            minecraft_args = minecraft_args.replace(i, replacer[i])
-    x_args = ' '.join(x_args)
-    final_pt1 = f'{javaw} {x_args} {d_args}'
-    if native() == 'windows':
-        if javawrapper != None:
-            javawrapper_arg = f'-jar "{javawrapper}"'
-        else:
-            raise SyntaxError("Unspecified JavaWrapper on Windows Platform.")
-    else:
-        javawrapper_arg = ''
-    if split_cp_from_minecraft_args:
-        final_pt2 = f'{minecraft_args_cp} {javawrapper_arg} {mainClass} {minecraft_args_minecraft}'
-    else:
-        final_pt2 = f'{javawrapper_arg} {minecraft_args}'
-    # final = final.replace('/', '\\')
-    final = final_pt1+' '+final_pt2
-    final = final.replace('${version_name}', version_name)
-    final = final.replace('${library_directory}',f'{minecraft_dir}/libraries')
-    return final
-
 # Manager stuff
 def get_saves(minecraft_dir, version_name):
     saves_path = f'{minecraft_dir}/versions/{version_name}/saves'
@@ -1068,7 +1245,75 @@ def remove_shaderpack(minecraft_dir, version_name, pack):
     if os.path.exists(path):
         shutil.rmtree(path)
 
+# Launch
+def launch(javaw, xmx, minecraft_dir, version_name, javawrapper=None, username="steve", xmn="256M", ms_login=False, access_token=None) -> str:
+    '''生成启动脚本，返回str'''
+    # all of the items in lists are NOT ended with space!!!
+    # -x args (JVM stuff)
+    version = get_minecraft_version(minecraft_dir, version_name)
+    minecraft_dir = minecraft_dir.replace('\\', '/')
+    x_args = [f"-Xmx{xmx}", 
+            f"-Xmn{xmn}", 
+            "-XX:+UseG1GC", 
+            "-XX:-UseAdaptiveSizePolicy", 
+            "-XX:-OmitStackTraceInFastThrow"]
+    # -d args (jvm system properties)
+    d_args = get_jvm_args(minecraft_dir, version, version_name)
+    # minecraft args
+    # 处理正版登录
+    if ms_login:
+        if access_token == None:
+            access_token = get_mc_token()
+        uuid = get_uuid(access_token)
+    else:
+        uuid = gen_random_uuid()
+    minecraft_args = get_minecraft_args(minecraft_dir, version, version_name)
+    
+    if type(minecraft_args) == list:
+        minecraft_args_cp = minecraft_args[0]
+        minecraft_args_minecraft = minecraft_args[1]
+        split_cp_from_minecraft_args = True
+    else:
+        minecraft_args_minecraft = minecraft_args
+        split_cp_from_minecraft_args = False
+    mainClass = get_mainclass(minecraft_dir, version, version_name)
+    minecraft_args = mainClass + ' ' + minecraft_args_minecraft + " -width 854 -height 480"
+    replacer = {"${auth_player_name}": username,
+                "${version_name}": version_name, 
+                "${auth_session}": uuid, 
+                "${game_directory}": minecraft_dir+'/versions/'+version_name,
+                "${assets_root}": minecraft_dir+'/assets',
+                "${game_assets}": minecraft_dir+f'/versions/{version_name}/resources',
+                "${assets_index_name}": get_assetIndex(minecraft_dir, version_name),
+                "${auth_uuid}": uuid,
+                "${auth_access_token}": uuid,
+                "${user_properties}": "{}",
+                "${user_type}": "msa",
+                "${version_type}": '"Ciallo uwu."'}
+    for i in replacer:
+        if split_cp_from_minecraft_args:
+            minecraft_args_minecraft = minecraft_args_minecraft.replace(i, replacer[i])
+        else:
+            minecraft_args = minecraft_args.replace(i, replacer[i])
+    x_args = ' '.join(x_args)
+    final_pt1 = f'{javaw} {x_args} {d_args}'
+    if native() == 'windows':
+        if javawrapper != None:
+            javawrapper_arg = f'-jar "{javawrapper}"'
+        else:
+            raise SyntaxError("Unspecified JavaWrapper on Windows Platform.")
+    else:
+        javawrapper_arg = ''
+    if split_cp_from_minecraft_args:
+        final_pt2 = f'{minecraft_args_cp} {javawrapper_arg} {mainClass} {minecraft_args_minecraft}'
+    else:
+        final_pt2 = f'{javawrapper_arg} {minecraft_args}'
+    # final = final.replace('/', '\\')
+    final = final_pt1+' '+final_pt2
+    final = final.replace('${version_name}', version_name)
+    final = final.replace('${library_directory}',f'{minecraft_dir}/libraries')
+    return final
 
-
-if __name__ == '__main__':
-    print(parse_xml('https://maven.fabricmc.net/net/fabricmc/fabric-api/fabric-api/maven-metadata.xml'))
+# if __name__ == '__main__':
+#     # print(get_token())
+#     print(get_mc_token('M.C547_BAY.2.U.e9711e6e-3a35-6556-6fdd-13313454319b'))

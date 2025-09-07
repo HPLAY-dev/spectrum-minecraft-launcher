@@ -69,7 +69,7 @@
        </attribute>
        <widget class="QPushButton" name="pushButton_2">
         <property name="enabled">
-         <bool>false</bool>
+         <bool>true</bool>
         </property>
         <property name="geometry">
          <rect>
@@ -218,12 +218,26 @@
        <string>补全文件</string>
       </property>
      </widget>
+     <widget class="QPushButton" name="DEBUG_REMOVE_RELEASE">
+      <property name="geometry">
+       <rect>
+        <x>250</x>
+        <y>20</y>
+        <width>75</width>
+        <height>23</height>
+       </rect>
+      </property>
+      <property name="text">
+       <string>DEBUG</string>
+      </property>
+     </widget>
      <zorder>tabWidget</zorder>
      <zorder>comboBox_4</zorder>
      <zorder>label_10</zorder>
      <zorder>comboBox_3</zorder>
      <zorder>DownloadFixBtn</zorder>
      <zorder>LaunchBtn</zorder>
+     <zorder>DEBUG_REMOVE_RELEASE</zorder>
     </widget>
     <widget class="QWidget" name="tab_2">
      <attribute name="title">

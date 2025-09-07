@@ -10,7 +10,7 @@ from PyQt5.QtWidgets import QApplication, QMainWindow
 from PyQt5.QtGui import QStandardItemModel, QIcon, QStandardItem
 from ui import Ui_MainWindow
 from tkinter import messagebox as msgbox
-# from qt_material import apply_stylesheet
+import time
 
 
 def app_path():
@@ -38,7 +38,11 @@ class MainWindow(QMainWindow, Ui_MainWindow):
     def __init__(self, parent=None):    
         super(MainWindow, self).__init__(parent)
         self.setupUi(self)
-        
+
+        # Stuff
+        self.using_mc_login = False
+        self.mc_token = None
+
         # 设置版本列表
         self.model = QStringListModel()
         data = launcher.get_version_list()
@@ -72,9 +76,31 @@ class MainWindow(QMainWindow, Ui_MainWindow):
 
         self.DownloadFixBtn.clicked.connect(self.download_fix)
         
+        self.pushButton_2.clicked.connect(self.oauth)
+        self.lineEdit_6.textChanged.connect(self.disable_mslogin)
+        self.DEBUG_REMOVE_RELEASE.clicked.connect(self.DEBUGPRINT)
+        
         self.load_config()
 
         self.update_installed_versions()
+
+    def DEBUGPRINT(self, b=''):
+        print(b)
+        print(self.using_mc_login)
+        print(self.mc_token)
+
+    def disable_mslogin():
+        self.using_mc_login = False
+        
+    def oauth(self):
+        launcher.get_mc_token() # REMOVE
+        try:
+            self.using_mc_login = True
+            self.mc_token = launcher.get_mc_token()
+        except Exception as e:
+            print('EXCEPTION: '+str(e))
+            self.using_mc_login = False
+            self.mc_token = None
 
     def remove_version(self):
         minecraft_dir = self.lineEdit.text().replace('\\', '/')
@@ -317,7 +343,7 @@ class MainWindow(QMainWindow, Ui_MainWindow):
             msgbox.showerror('Spectrum 启动器', 'JavaWrapper路径不存在。')
             return 1
 
-        cmd = launcher.launch(javaw=javaw, xmx=xmx, minecraft_dir=minecraft_dir, version_name=version_name, javawrapper=javawrapper, username=username)
+        cmd = launcher.launch(javaw=javaw, xmx=xmx, minecraft_dir=minecraft_dir, version_name=version_name, javawrapper=javawrapper, username=username, ms_login=self.using_mc_login, access_token=self.mc_token)
         with open(app_path()+'/launch.bat', 'w') as f:
             f.write('@echo off\n'+cmd)
         os.system(app_path()+'/launch.bat')
@@ -435,7 +461,12 @@ class MainWindow(QMainWindow, Ui_MainWindow):
 if __name__ == "__main__":
     QApplication.setAttribute(Qt.AA_EnableHighDpiScaling)
     app = QApplication(sys.argv)
-    # apply_stylesheet(app, theme='light_blue.xml')
     myWin = MainWindow()
     myWin.show()
     sys.exit(app.exec_())
+
+
+"""CHENshidi2021@outlook.com
+
+
+CHENshidi2025"""
