@@ -28,13 +28,20 @@
       <height>461</height>
      </rect>
     </property>
+    <property name="tabPosition">
+     <enum>QTabWidget::West</enum>
+    </property>
     <property name="currentIndex">
-     <number>4</number>
+     <number>3</number>
     </property>
     <property name="documentMode">
      <bool>false</bool>
     </property>
     <widget class="QWidget" name="tab_1">
+     <attribute name="icon">
+      <iconset>
+       <normaloff>assets/launch_tab.svg</normaloff>assets/launch_tab.svg</iconset>
+     </attribute>
      <attribute name="title">
       <string>启动</string>
      </attribute>
@@ -226,6 +233,10 @@
      <zorder>LaunchBtn</zorder>
     </widget>
     <widget class="QWidget" name="tab_2">
+     <attribute name="icon">
+      <iconset>
+       <normaloff>assets/download_tab.svg</normaloff>assets/download_tab.svg</iconset>
+     </attribute>
      <attribute name="title">
       <string>下载</string>
      </attribute>
@@ -448,6 +459,10 @@
      </widget>
     </widget>
     <widget class="QWidget" name="tab_5">
+     <attribute name="icon">
+      <iconset>
+       <normaloff>assets/manage_tab.svg</normaloff>assets/manage_tab.svg</iconset>
+     </attribute>
      <attribute name="title">
       <string>版本管理</string>
      </attribute>
@@ -672,6 +687,10 @@
      </widget>
     </widget>
     <widget class="QWidget" name="tab_3">
+     <attribute name="icon">
+      <iconset>
+       <normaloff>assets/settings_tab.svg</normaloff>assets/settings_tab.svg</iconset>
+     </attribute>
      <attribute name="title">
       <string>设置</string>
      </attribute>
@@ -862,6 +881,10 @@
      </widget>
     </widget>
     <widget class="QWidget" name="tab_6">
+     <attribute name="icon">
+      <iconset>
+       <normaloff>assets/about_tab.svg</normaloff>assets/about_tab.svg</iconset>
+     </attribute>
      <attribute name="title">
       <string>关于</string>
      </attribute>
