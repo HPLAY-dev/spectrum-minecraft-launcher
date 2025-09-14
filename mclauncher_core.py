@@ -1314,6 +1314,6 @@ def launch(javaw, xmx, minecraft_dir, version_name, javawrapper=None, username="
     final = final.replace('${library_directory}',f'{minecraft_dir}/libraries')
     return final
 
-# if __name__ == '__main__':
-#     # print(get_token())
-#     print(get_mc_token('M.C547_BAY.2.U.e9711e6e-3a35-6556-6fdd-13313454319b'))
+if __name__ == '__main__':
+    # print(get_token())
+    print(get_mc_token())

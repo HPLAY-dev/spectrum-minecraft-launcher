@@ -78,7 +78,6 @@ class MainWindow(QMainWindow, Ui_MainWindow):
         
         self.pushButton_2.clicked.connect(self.oauth)
         self.lineEdit_6.textChanged.connect(self.disable_mslogin)
-        self.DEBUG_REMOVE_RELEASE.clicked.connect(self.DEBUGPRINT)
         
         self.load_config()
 
@@ -338,10 +337,13 @@ class MainWindow(QMainWindow, Ui_MainWindow):
         if bool(pattern.search(username)):
             msgbox.showwarning('Spectrum 启动器', '玩家名称含有其他语言字符，可能出现问题。')
 
-        javawrapper = self.lineEdit_5.text()
-        if not os.path.exists(javawrapper):
-            msgbox.showerror('Spectrum 启动器', 'JavaWrapper路径不存在。')
-            return 1
+        if launcher.native() == 'windows':
+            javawrapper = self.lineEdit_5.text()
+            if not os.path.exists(javawrapper):
+                msgbox.showerror('Spectrum 启动器', 'JavaWrapper路径不存在。')
+                return 1
+        else:
+            javawrapper = None
 
         cmd = launcher.launch(javaw=javaw, xmx=xmx, minecraft_dir=minecraft_dir, version_name=version_name, javawrapper=javawrapper, username=username, ms_login=self.using_mc_login, access_token=self.mc_token)
         with open(app_path()+'/launch.bat', 'w') as f:
