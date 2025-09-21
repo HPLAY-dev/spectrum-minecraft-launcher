@@ -1,51 +1,8 @@
-# Spectrum Minecraft Launcher
-An open-source lightweight Minecraft Launcher in Python3. Currently focusing on Modloaders.
-
-## 1.0 Files
-**mclauncher_core.py** Core Functions
-
-**main.py**            UI Processor
-
-**ui.py**              UI converted to py
-
-**qt.ui**              UI by Qt Designer
-
-**JavaWrapper.jar**    see 1.1
-
-### 1.1 JavaWrapper
-Fixes Unicode problems on Windows.
-> 如果你的 Windows 系统启用了 Beta 版：使用Unicode UTF-8提供全球语言支持，Java 可能会在读取命令行参数时使用错误的编码进行解码，导致一系列问题。
-> Bug 参考 JDK-8272352，已在 Java19 修复
-> 使用此 Wrapper 可用于修复 Class Path, -D 参数 和 App 参数 中的乱码，解决大部分因此Bug无法运行的情况。
-> From: [GitHub/00ll00/java_launch_wrapper](https://github.com/00ll00/java_launch_wrapper)
-
-## 2.0 Launcher Core
-Launcher functions. *Forgive me for not writing comment~*.
-
-## 3.0 ModLoader Support
-Fabric & Forge is currently 100% support. Neoforge working.
-
-## 4.0 Multi-Language
-Only zh_CN
-
-## 5.0 Problems
-1.0 *and other ancient versions too* is unable to load assets.
-
-## 6.0 To do list
-- [x] Fabric ModLoader
-- [x] Forge ModLoader
-- [ ] Neoforge ModLoader
-- [ ] Saves Manager & Shaders(Optifine & Iris) Manager & Resourcepack Manager & ...
-- [ ] Modpacks support
-- [ ] Liteloader
-- [ ] Quilt
-
-......
 
 
 # Spectrum Launcher 正版登录对接详细文档
 
-##  系统架构概览
+## 1️⃣ 系统架构概览
 
 ```
 +-----------------+         HTTP         +--------------------+
@@ -80,9 +37,9 @@ Only zh_CN
 
 ---
 
-## 登录器安装与启动
+## 2️⃣ 登录器安装与启动
 
-###  环境要求
+### 2.1 环境要求
 
 * Python ≥ 3.10
 * PyQt6
@@ -96,7 +53,7 @@ Only zh_CN
 pip install PyQt6 PyQt6-WebEngine Flask requests
 ```
 
-###  启动登录器
+### 2.2 启动登录器
 
 ```bash
 python launcher_login.py
@@ -110,7 +67,7 @@ python launcher_login.py
 
 ---
 
-##  Flask API 对接接口
+## 3️⃣ Flask API 对接接口
 
 | 接口           | 方法  | 参数           | 返回说明                                                                                                         |
 | ------------ | --- | ------------ | ------------------------------------------------------------------------------------------------------------ |
@@ -119,7 +76,7 @@ python launcher_login.py
 
 ---
 
-##  对接模块
+## 4️⃣ 对接模块
 
 **文件：`mc_auth_api.py`**
 
@@ -158,7 +115,7 @@ def get_minecraft_token():
 
 ---
 
-##  启动器调用示例
+## 5️⃣ 启动器调用示例
 
 **文件：`launcher_example.py`**
 
@@ -208,7 +165,7 @@ if __name__ == "__main__":
 
 ---
 
-##  对接流程说明
+## 6️⃣ 对接流程说明
 
 1. **调用 `start_login()`**
 
@@ -234,7 +191,7 @@ if __name__ == "__main__":
 
 ---
 
-##  注意事项
+## 7️⃣ 注意事项
 
 1. **端口与 Redirect URI**
 
@@ -262,7 +219,7 @@ if __name__ == "__main__":
 
 ---
 
-## 可扩展功能建议
+## 8️⃣ 可扩展功能建议
 
 * **多账号支持**：管理多个 Minecraft 账户
 * **自动记住登录状态**：Token 缓存
@@ -271,7 +228,7 @@ if __name__ == "__main__":
 
 ---
 
- **总结**
+✅ **总结**
 
 * 登录器提供完整 Microsoft → Xbox Live → XSTS → Minecraft 登录流程
 * 对接模块通过 HTTP API 获取 Minecraft Token
