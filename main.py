@@ -42,6 +42,7 @@ class MainWindow(QMainWindow, Ui_MainWindow):
         # Stuff
         self.using_mc_login = False
         self.mc_token = None
+        self.autodl_fabric_api = False
 
         # 设置版本列表
         self.model = QStringListModel()
@@ -79,9 +80,14 @@ class MainWindow(QMainWindow, Ui_MainWindow):
         self.pushButton_2.clicked.connect(self.oauth)
         self.lineEdit_6.textChanged.connect(self.disable_mslogin)
         
+        self.checkBox_5.clicked.connect(self.toggle_fabric_api_autodownload)
+
         self.load_config()
 
         self.update_installed_versions()
+
+    def toggle_fabric_api_autodownload(self, stat=''):
+        self.autodl_fabric_api = stat
 
     def DEBUGPRINT(self, b=''):
         print(b)
@@ -380,6 +386,8 @@ class MainWindow(QMainWindow, Ui_MainWindow):
             return 1
 
         r = launcher.auto_download(minecraft_dir=minecraft_dir, version=version, version_name=version_name, modloader=modloader, modloader_version=modloader_version, progress_callback=self.progress_callback)
+        if self.autodl_fabric_api == True:
+            launcher.download_fabric_api(minecraft_dir, version, version_name)
         if r == 721:
             msgbox.showwarning('Spectrum 启动器', '下载的modloader与minecraft版本不被Spectrum启动器所兼容')
         self.update_installed_versions()
@@ -469,6 +477,4 @@ if __name__ == "__main__":
 
 
 """CHENshidi2021@outlook.com
-
-
 CHENshidi2025"""
