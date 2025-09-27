@@ -14,8 +14,11 @@ mkdir build
 
 :BUILD
 cd build
-%pyinstaller% --noconfirm --onedir --windowed .\..\%PROJECT%.py
+rem %pyinstaller% --noconfirm --onedir --windowed .\..\%PROJECT%.py
+%pyinstaller% --noconfirm --onedir .\..\%PROJECT%.py
 xcopy .\dist\%PROJECT% .\..\builds\build-%Version% /E /I /Q
+mkdir .\..\builds\build-%Version%\assets
+xcopy .\..\assets .\..\builds\build-%Version%\assets /E /I /Q
 
 :ARCHIVE
 7z a -mx0 .\..\builds\%Prefix%-%Version%-%Suffix%.7z .\..\builds\build-%Version%\*

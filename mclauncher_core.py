@@ -1416,7 +1416,7 @@ def launch(javaw, xmx, minecraft_dir, version_name, javawrapper=None, username="
         else:
             minecraft_args = minecraft_args.replace(i, replacer[i])
     x_args = ' '.join(x_args)
-    final_pt1 = f'{javaw} {x_args} {d_args}'
+    final_pt1 = f'"{javaw}" {x_args} {d_args}'
     if native() == 'windows':
         if javawrapper != None:
             javawrapper_arg = f'-jar "{javawrapper}"'
