@@ -1,3 +1,6 @@
+USE_OS_SYSTEM_TO_EXECUTE = 0
+version = '3.5.0'
+
 import sys
 import os
 import re
@@ -5,7 +8,7 @@ import json
 import mclauncher_core as launcher
 import shutil
 import zipfile as z
-from PyQt5.QtCore import Qt, QStringListModel, QSize
+from PyQt5.QtCore import Qt, QStringListModel, QSize, QProcess
 from PyQt5.QtWidgets import QApplication, QMainWindow
 from PyQt5.QtGui import QStandardItemModel, QIcon, QStandardItem
 from ui import Ui_MainWindow
@@ -13,6 +16,28 @@ from tkinter import messagebox as msgbox
 import time
 
 
+def check_update():
+    pass
+    # import requests
+    # try:
+    #     release_info = requests.get('https://api.github.com/repos/hplay-dev/spectrum-minecraft-launcher/releases/latest')
+    #     if release_info.status_code == 403:
+    #         return 0
+    #     if release_info.status_code != 200:
+    #         raise BaseException('非200的状态码: '+str(release_info.status_code))
+    #     release_info = release_info.json()
+    #     latest_version = release_info['tag_name']
+    #     latest_url = release_info['assets'][0]["browser_download_url"]
+    #     1
+    #     1
+    #     if version == latest_version:
+    #         return True
+    #     else:
+    #         msgbox.showinfo('检查更新', '请下载最新二进制文件: \n'+latest_url)
+    #         return 
+    # except Exception as e:
+    #     msgbox.showwarning('检查更新', '失败: '+str(e))
+    
 def app_path():
     if getattr(sys, 'frozen', False):
         path = os.path.dirname(sys.executable)
@@ -35,7 +60,9 @@ default_icon = app_path()+'/assets/default_icon.png'
 if not os.path.exists(app_path()+'/assets/default_save_icon.png'):
     msgbox.showerror('Assets load fail', '/assets/default_save_icon.png')
 class MainWindow(QMainWindow, Ui_MainWindow):
-    def __init__(self, parent=None):    
+    def __init__(self, parent=None):
+        check_update()
+
         super(MainWindow, self).__init__(parent)
         self.setupUi(self)
 
@@ -89,7 +116,7 @@ class MainWindow(QMainWindow, Ui_MainWindow):
     def toggle_fabric_api_autodownload(self, stat=''):
         self.autodl_fabric_api = stat
 
-    def DEBUGPRINT(self, b=''):
+    def debug_print(self, b=''):
         print(b)
         print(self.using_mc_login)
         print(self.mc_token)
@@ -98,12 +125,11 @@ class MainWindow(QMainWindow, Ui_MainWindow):
         self.using_mc_login = False
         
     def oauth(self):
-        launcher.get_mc_token() # REMOVE
         try:
             self.using_mc_login = True
             self.mc_token = launcher.get_mc_token()
         except Exception as e:
-            print('EXCEPTION: '+str(e))
+            input('EXCEPTION: '+str(e))
             self.using_mc_login = False
             self.mc_token = None
 
@@ -113,11 +139,12 @@ class MainWindow(QMainWindow, Ui_MainWindow):
             minecraft_dir = minecraft_dir[:-1]
         if not os.path.exists(minecraft_dir):
             return 1
-
-        if len(self.listView.selectionModel().selectedIndexes()) == 0:
+        print(str(self.comboBox_5.currentText()))
+        if len(str(self.comboBox_5.currentText())) == 0:
+            
             msgbox.showerror('Spectrum 启动器', '你必须选择一个版本。')
             return 1
-        ver = self.listView.selectionModel().selectedIndexes()[0].data()
+        ver = str(self.comboBox_5.currentText())
 
         msgbox.showinfo('Spectrum 启动器', f'“{ver}”将会永久消失！（真的很久！）')
         launcher.remove_version(minecraft_dir, ver)
@@ -351,10 +378,42 @@ class MainWindow(QMainWindow, Ui_MainWindow):
         else:
             javawrapper = None
 
-        cmd = launcher.launch(javaw=javaw, xmx=xmx, minecraft_dir=minecraft_dir, version_name=version_name, javawrapper=javawrapper, username=username, ms_login=self.using_mc_login, access_token=self.mc_token)
-        with open(app_path()+'/launch.bat', 'w') as f:
-            f.write('@echo off\n'+cmd)
-        os.system(app_path()+'/launch.bat')
+        # 使用QProcess启动Minecraft而不阻塞UI\
+        print(self.mc_token)
+        cmd = launcher.launch(javaw=javaw, xmx=xmx, minecraft_dir=minecraft_dir, 
+                            version_name=version_name, javawrapper=javawrapper, 
+                            username=username, ms_login=self.using_mc_login, 
+                            access_token=self.mc_token)
+        with open('launch.bat', 'w') as f:
+            f.write(cmd)
+        if USE_OS_SYSTEM_TO_EXECUTE:
+            os.system(cmd)
+        else:
+            # 创建QProcess对象
+            self.minecraft_process = QProcess()
+            self.minecraft_process.readyReadStandardOutput.connect(self.handle_minecraft_output)
+            self.minecraft_process.readyReadStandardError.connect(self.handle_minecraft_error)
+            self.minecraft_process.finished.connect(self.handle_minecraft_finished)
+            
+            # 如果是Windows，使用cmd.exe来执行命令
+            if launcher.native() == 'windows':
+                self.minecraft_process.start(app_path()+'/launch.bat')
+            else:
+                # 对于Linux/Mac，使用bash
+                self.minecraft_process.start('bash', ['-c', cmd])
+
+    def handle_minecraft_output(self):
+        data = self.minecraft_process.readAllStandardOutput()
+        stdout = bytes(data).decode("gbk", errors='ignore')
+        print(f"Minecraft输出: {stdout}")
+
+    def handle_minecraft_error(self):
+        data = self.minecraft_process.readAllStandardError()
+        stderr = bytes(data).decode("gbk", errors='ignore')
+        print(f"Minecraft错误: {stderr}")
+
+    def handle_minecraft_finished(self, exit_code, exit_status):
+        print(f"Minecraft进程结束，退出码: {exit_code}")
         
 
     def download(self):
@@ -405,7 +464,7 @@ class MainWindow(QMainWindow, Ui_MainWindow):
             msgbox.showerror('Spectrum 启动器', 'Minecraft路径不存在。')
             return 1
 
-        r = launcher.auto_download(minecraft_dir=minecraft_dir, version=get_minecraft_version(minecraft_dir, version_name), version_name=version_name, modloader=modloader, modloader_version=modloader_version, progress_callback=self.progress_callback)
+        r = launcher.auto_download(minecraft_dir=minecraft_dir, version=launcher.get_minecraft_version(minecraft_dir, version_name), version_name=version_name, progress_callback=self.progress_callback)
         if r == 721:
             msgbox.showwarning('Spectrum 启动器', '下载的modloader与minecraft版本不被Spectrum启动器所兼容')
         self.update_installed_versions()

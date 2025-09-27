@@ -60,7 +60,7 @@ def send_auth_request():
         'client_id': client_id,
         'response_type': 'code',
         'redirect_uri': redirect_uri,
-        'scope': 'XboxLive.signin offline_access',
+        'scope': 'XboxLive.signin XboxLive.offline_access',
         'response_mode': 'query'
     }
     # https://login.microsoftonline.com/consumers/oauth2/v2.0/authorize?client_id=7000942a-0525-4e21-a817-faf950ab6bc4&response_type=code&redirect_uri=http://localhost:8080/callback&scope=XboxLive.signin%20offline_access&response_mode=query

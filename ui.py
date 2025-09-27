@@ -22,6 +22,11 @@ class Ui_MainWindow(object):
         self.centralwidget.setObjectName("centralwidget")
         self.mainTabWidget = QtWidgets.QTabWidget(self.centralwidget)
         self.mainTabWidget.setGeometry(QtCore.QRect(0, 0, 781, 461))
+        sizePolicy = QtWidgets.QSizePolicy(QtWidgets.QSizePolicy.Fixed, QtWidgets.QSizePolicy.Fixed)
+        sizePolicy.setHorizontalStretch(0)
+        sizePolicy.setVerticalStretch(0)
+        sizePolicy.setHeightForWidth(self.mainTabWidget.sizePolicy().hasHeightForWidth())
+        self.mainTabWidget.setSizePolicy(sizePolicy)
         self.mainTabWidget.setTabPosition(QtWidgets.QTabWidget.West)
         self.mainTabWidget.setDocumentMode(False)
         self.mainTabWidget.setObjectName("mainTabWidget")
@@ -277,13 +282,13 @@ class Ui_MainWindow(object):
         MainWindow.setStatusBar(self.statusbar)
 
         self.retranslateUi(MainWindow)
-        self.mainTabWidget.setCurrentIndex(3)
+        self.mainTabWidget.setCurrentIndex(0)
         self.tabWidget.setCurrentIndex(1)
         QtCore.QMetaObject.connectSlotsByName(MainWindow)
 
     def retranslateUi(self, MainWindow):
         _translate = QtCore.QCoreApplication.translate
-        MainWindow.setWindowTitle(_translate("MainWindow", "Spectrum Launcher v3.4.0"))
+        MainWindow.setWindowTitle(_translate("MainWindow", "Spectrum Launcher"))
         self.LaunchBtn.setText(_translate("MainWindow", "启动"))
         self.pushButton_2.setText(_translate("MainWindow", "使用浏览器进行下一步操作"))
         self.tabWidget.setTabText(self.tabWidget.indexOf(self.tab), _translate("MainWindow", "正版登录"))
