@@ -282,7 +282,7 @@ def download_javawrapper() -> None:
     if obj.status_code != 200:
         raise Exception('Connection error while downloading javawrapper')
     else:
-        with open('JavaWrapper.jar', 'w') as f:
+        with open('JavaWrapper.jar', 'wb') as f:
             f.write(obj.content)
 
 # ModLoader/NeoForge
