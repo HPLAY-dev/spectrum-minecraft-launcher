@@ -1,3 +1,4 @@
+import fnmatch
 import sys
 import shutil
 import json
@@ -17,17 +18,17 @@ from concurrent.futures import ThreadPoolExecutor, as_completed
 from functools import partial
 import threading
 
-
 # OAuth
 client_id = "7000942a-0525-4e21-a817-faf950ab6bc4"
+
 def code_to_token(auth_code: str, redirect_uri=oauth.redirect_uri):
     token_url = 'https://login.microsoftonline.com/consumers/oauth2/v2.0/token'
     token_data = {
         'client_id': client_id,
+        'scope': 'XboxLive.signin offline_access',
         'code': auth_code,
         'redirect_uri': redirect_uri,
-        'grant_type': 'authorization_code',
-        'scope': 'XboxLive.signin offline_access'
+        'grant_type': 'authorization_code'
     }
     headers = {
         'Content-Type': 'application/x-www-form-urlencoded',
@@ -39,14 +40,116 @@ def code_to_token(auth_code: str, redirect_uri=oauth.redirect_uri):
 def refresh_token(refresh_token: str):
     url = 'https://login.microsoftonline.com/consumers/oauth2/v2.0/token'
     token_data = {
-        { "client_id", client_id},
-        { "scope", "XboxLive.signin XboxLive.offline_access" },
-        { "refresh_token", refresh_token},
-        { "grant_type", "refresh_token"}
+        'client_id': client_id,
+        'scope': 'XboxLive.signin offline_access',
+        'refresh_token': refresh_token,
+        'grant_type': 'refresh_token'
     }
     response = requests.post(url, data=token_data)
     return response.json()
 
+def access_token_to_xbl(access_token: str):
+    url = 'https://user.auth.xboxlive.com/user/authenticate'
+    data = {
+        "Properties": {
+            "AuthMethod": "RPS",
+            "SiteName": "user.auth.xboxlive.com",
+            "RpsTicket": f"d={access_token}"
+        },
+        "RelyingParty": "http://auth.xboxlive.com",
+        "TokenType": "JWT"
+    }
+    headers = {
+        'Content-Type': 'application/json',
+        'Accept': 'application/json'
+    }
+
+    response = requests.post(url, json=data, headers=headers)
+    response_data = response.json()
+
+    if "Token" not in response_data:
+        raise KeyError("Failed to get XBL token")
+
+    return {
+        "token": response_data["Token"],
+        "uhs": response_data["DisplayClaims"]["xui"][0]["uhs"]
+    }
+
+def xbl_to_xsts(xbl_return: dict):
+    url = 'https://xsts.auth.xboxlive.com/xsts/authorize'
+    data = {
+        "Properties": {
+            "SandboxId": "RETAIL",
+            "UserTokens": [xbl_return['token']]
+        },
+        "RelyingParty": "rp://api.minecraftservices.com/",
+        "TokenType": "JWT"
+    }
+    headers = {
+        'Content-Type': 'application/json',
+        'Accept': 'application/json'
+    }
+
+    response = requests.post(url, json=data, headers=headers)
+    response_data = response.json()
+
+    return {
+        "uhs": response_data["DisplayClaims"]["xui"][0]["uhs"],
+        "xsts_token": response_data["Token"]
+    }
+
+def xsts_to_mc_token(xsts_return: dict):
+    url = 'https://api.minecraftservices.com/authentication/login_with_xbox'
+    data = {
+        "identityToken": f"XBL3.0 x={xsts_return['uhs']};{xsts_return['xsts_token']}"
+    }
+
+    response = requests.post(url, json=data)
+    response_data = response.json()
+
+    if "access_token" not in response_data:
+        raise KeyError("Failed to get Minecraft access token")
+
+    return response_data["access_token"]
+
+def get_mc_token(custom_auth_code=None):
+    if custom_auth_code is None:
+        auth_code = oauth.get_auth_code()
+    else:
+        auth_code = custom_auth_code
+    access_token = code_to_token(auth_code)["access_token"]
+    xbl = access_token_to_xbl(access_token)
+    xsts = xbl_to_xsts(xbl)
+    mc_token = xsts_to_mc_token(xsts)
+    return mc_token
+
+def is_owned(mc_token, with_profile_data=False):
+    headers = {
+        'Authorization': f'Bearer {mc_token}',
+        'Accept': 'application/json'
+    }
+    entitlements_url = "https://api.minecraftservices.com/entitlements/mcstore"
+    entitlements_response = requests.get(entitlements_url, headers=headers)
+    entitlements_data = entitlements_response.json()
+
+    items = entitlements_data.get('items', [])
+    profile_url = "https://api.minecraftservices.com/minecraft/profile"
+    profile_response = requests.get(profile_url, headers=headers)
+    profile_data = profile_response.json()
+
+    has_minecraft = len(items) > 0 and profile_response.status_code == 200 and "error" not in profile_data
+    if with_profile_data:
+        return [has_minecraft, profile_data]
+    return has_minecraft
+
+def get_mslogin_uuid_name(access_token: str):
+    data = is_owned(access_token, True)
+    if data[0]:
+        uuid = data[1].get("id", "")
+        name = data[1].get("name", "")
+        return [uuid, name]
+    else:
+        raise Exception("No Minecraft license found or profile not available")
 def access_token_to_xbl(access_token: str):
     url = 'https://user.auth.xboxlive.com/user/authenticate'
     data = {
@@ -274,16 +377,6 @@ def get_system_bits() -> str:
 def native() -> str:
     '''获取系统native, Windows为windows MacOS为osx GNU/Linux为linux'''
     return platform.system().lower()
-
-def download_javawrapper() -> None:
-    # url = 'https://github.com/00ll00/java_launch_wrapper/releases/download/v1.4.4/java_launch_wrapper-1.4.4.jar'
-    url = 'https://gitlab.com/HPLAY-dev/javawrapper-binary/-/raw/main/JavaWrapper.jar?inline=false'
-    obj = requests.get(url)
-    if obj.status_code != 200:
-        raise Exception('Connection error while downloading javawrapper')
-    else:
-        with open('JavaWrapper.jar', 'wb') as f:
-            f.write(obj.content)
 
 # ModLoader/NeoForge
 def get_neoforge_version(version) -> dict:
@@ -577,7 +670,8 @@ def check_java_available(java_binary_path, minecraft_dir, version_name) -> bool:
     version_json = json.loads(raw)
     if "javaVersion" in version_json and "majorVersion" in version_json["javaVersion"]:
         required_version = version_json["javaVersion"]["majorVersion"]
-        return get_java_version(java_binary_path)[0] == required_version
+        major = int(get_java_version(java_binary_path)[0])
+        return major == required_version
     else:
         return False
 
@@ -677,8 +771,8 @@ def get_mainclass(minecraft_dir, version, version_name) -> str:
 # Download Minecraft Function
 def download_jar(minecraft_dir, version_name, bmclapi=False) -> None:
     '''下载Minecraft为指定版本的jar，返回None'''
-    if os.path.exists(f'{minecraft_dir}/{version_name}/{version_name}.jar'):
-        return 'AlE'
+    # if os.path.exists(f'{minecraft_dir}/{version}/{version}.jar'):
+    #     return 'AlE'
     with open(f'{minecraft_dir}/versions/{version_name}/{version_name}.json', 'r') as f:
         version_json = f.read()
     version_json = json.loads(version_json)
@@ -723,9 +817,6 @@ def download_libraries(minecraft_dir, version, version_name, print_status=True, 
             current += 1
             if progress_callback:
                 progress_callback(current, file_amount, f"[LIB][{current}/{file_amount}]")
-            # result = future.result()
-            # if print_status:
-            #     print(f'{current}/{file_amount}\n- {lib.get("name", "Unknown")}: {result}')
             
             try:
                 result = future.result()
@@ -749,9 +840,9 @@ def download_fallback_library(minecraft_dir, lib, bmclapi):
     name = "$SEP$".join(name)  # org$SEP$ow2$SEP$asm$SEP$asm$SEP$9.8
     path = name.replace("$SEP$", '/')  # org/ow2/asm/asm/9.8
     
-    # # 仍然不知道如何下载qaq
-    # if lib['name'].split(':')[0] == 'net.minecraftforge':
-    #     filename = filename.replace('.jar', '-universal.jar')
+    # 为forge设置特例(byd forge)
+    if lib['name'].split(':')[0] == 'net.minecraftforge':
+        filename = filename.replace('.jar', '-universal.jar')
     
     if bmclapi:
         url_base = "https://bmclapi2.bangbang93.com/maven/"
@@ -790,35 +881,19 @@ def download_modern_library(minecraft_dir, version_name, lib, bmclapi):
     if_artifact = "downloads" in lib and "artifact" in lib["downloads"]
     if_natives = "natives" in lib
     late = "artifact" in lib["downloads"]
-    try:
-        if_natives_late_versions = late and f"-natives-{native()}.jar" in lib["downloads"]["artifact"]["path"].lower()
-    except:
-        if_natives_late_versions = False
+    if_natives_late_versions = late and f"-natives-{native()}.jar" in lib["downloads"]["artifact"]["path"].lower()
     
-    if if_artifact:
-        relative_path = lib["downloads"]["artifact"]["path"]
-        url = lib["downloads"]["artifact"]["url"]
-
-    elif 'classifiers' in lib['downloads'] and 'natives-'+native() in lib['downloads']['classifiers']:
-        relative_path = lib['downloads']['classifiers']['natives-'+native()]['path']
-        url = lib["downloads"]['classifiers']['natives-'+native()]['url']
-
-    elif 'classifiers' in lib['downloads'] and 'natives-'+native()+'-'+get_system_bits() in lib['downloads']['classifiers']:
-        relative_path = lib['downloads']['classifiers']['natives-'+native()+'-'+get_system_bits()]['path']
-        url = lib['downloads']['classifiers']['natives-'+native()+'-'+get_system_bits()]["url"]
-    else:
-        return 1
-
-    path = f'{minecraft_dir}/libraries/{relative_path}'
-    path = path.split('/')[:-1]
+    path = minecraft_dir + '/libraries/' + lib["downloads"]["artifact"]["path"]
+    path = path.split('/')[0:-1]
     path = '/'.join(path)
     os.makedirs(path, exist_ok=True)
-    local_path = f'{minecraft_dir}/libraries/{relative_path}'
+    local_path = f'{minecraft_dir}/libraries/{lib["downloads"]["artifact"]["path"]}'
     
     if os.path.exists(local_path) and not if_natives and not if_natives_late_versions and os.path.getsize(local_path) == lib['downloads']['artifact']['size']:
         return f"已存在: {local_path}"
     
-    with open(f'{minecraft_dir}/libraries/{relative_path}', 'wb') as f:
+    with open(f'{minecraft_dir}/libraries/{lib["downloads"]["artifact"]["path"]}', 'wb') as f:
+        url = lib["downloads"]["artifact"]["url"]
         if bmclapi:
             fallback_url = url
             url = url.replace("https://libraries.minecraft.net/", "https://bmclapi2.bangbang93.com/maven/")
@@ -829,52 +904,86 @@ def download_modern_library(minecraft_dir, version_name, lib, bmclapi):
         f.write(item.content)
     
     if if_natives or if_natives_late_versions:
-        return download_native_library(minecraft_dir, version_name, lib, if_natives, if_natives_late_versions, url, bmclapi)
+        return download_native_library(minecraft_dir, version_name, lib, if_natives, if_natives_late_versions, bmclapi)
     
     return "下载成功"
 
-def download_native_library(minecraft_dir, version_name, lib, if_natives, if_natives_late_versions, url='', bmclapi=False):
+def download_native_library(minecraft_dir, version_name, lib, if_natives, if_natives_late_versions, bmclapi):
     '''处理原生库文件'''
-    if "natives-" + native() in lib["downloads"]["classifiers"]:
+    if if_natives_late_versions:
+        natives = []
+    elif "natives-" + native() in lib["downloads"]["classifiers"]:
         natives = lib["downloads"]["classifiers"]["natives-" + native()]
-        url = natives['url']
     elif "natives-" + native() + '-' + get_system_bits() in lib["downloads"]["classifiers"]:
         natives = lib["downloads"]["classifiers"]["natives-" + native() + '-' + get_system_bits()]
-        url = natives['url']
-    elif if_natives_late_versions:
-        natives = []
     else:
+        1
         return "无法找到原生库"
 
     natives_path = f'{minecraft_dir}/versions/{version_name}/{version_name}-natives'
     os.makedirs(natives_path, exist_ok=True)
     
-    keep_going = True
-    i = 0
-    while keep_going:
-        i += 1
-        temp_zip = natives_path + f'/temp{i}.zip'
-        if not os.path.exists(temp_zip):
-            keep_going = False
+    # 获取排除规则
+    if if_natives:
+        excludes = []
+        if 'extract' in lib and 'exclude' in lib['extract']:
+            for exclude in lib["extract"]["exclude"]:
+                excludes.append(exclude)
+            excludes = '-x ' + ' '.join(excludes)
+        else:
+            excludes = ''
+    elif if_natives_late_versions:
+        excludes = '-x META-INF/*'
+    
+    late = "artifact" in lib["downloads"] and "path" in lib["downloads"]["artifact"]
+    if late:
+        filename = lib["downloads"]["artifact"]["path"].split('/')[-1]
+    else:
+        filename = "temp.zip"
+    
+    temp_zip = natives_path + '/' + filename
     
     # 下载临时zip文件
     with open(temp_zip, 'wb') as f:
+        if if_natives:
+            url = natives["url"]
+        elif if_natives_late_versions:
+            url = lib["downloads"]["artifact"]["url"]
+        
         item = requests.get(url)
         if item.status_code != 200:
             raise Exception(f"Request Fail: {item.status_code}\nurl: {url}")
         f.write(item.content)
     
+    # 确保目标目录存在
+    os.makedirs(natives_path, exist_ok=True)
+    
     # 解压文件到natives目录
     with zipf.ZipFile(temp_zip, 'r') as f:
-        f.extractall(natives_path)
+        # 获取所有文件列表
+        file_list = f.namelist()
+        
+        # 应用排除规则
+        if excludes:
+            exclude_patterns = excludes.replace('-x ', '').split()
+            filtered_files = []
+            for file in file_list:
+                exclude_file = False
+                for pattern in exclude_patterns:
+                    if fnmatch.fnmatch(file, pattern):
+                        exclude_file = True
+                        break
+                if not exclude_file:
+                    filtered_files.append(file)
+        else:
+            filtered_files = file_list
+        
+        # 解压过滤后的文件
+        for file in filtered_files:
+            f.extract(file, natives_path)
+    
     # 清理临时文件
-    keep_remove = True
-    while keep_remove:
-        try:
-            os.remove(temp_zip)
-            keep_remove = False
-        except PermissionError:
-            keep_remove = True
+    os.remove(temp_zip)
     
     # 处理特定库文件（如lwjgl）
     if 'name' in lib and lib['name'].startswith('lwjgl'):
@@ -1018,31 +1127,26 @@ def download_assets(minecraft_dir, version_name, print_status=True, bmclapi=Fals
 
 def auto_download(minecraft_dir, version, version_name, modloader='vanilla', bmclapi=False, modloader_version='latest', progress_callback=None):
     '''下载整个Minecraft版本，返回None'''
-    if not os.path.exists(f'{minecraft_dir}/versions/{version_name}/{version_name}.json'):
-        modloader = modloader.lower()
-        if modloader == 'fabric':
-            fabric_json = f'{minecraft_dir}/versions/{version_name}/Fabric.json'
-            if not os.path.exists(fabric_json):
-                download_fabric_json(minecraft_dir, version, version_name, loader_version='latest')
-            download_version_json(minecraft_dir, version, version_name, bmclapi=bmclapi)
-            jsonfile = fabric_merge_json(f'{minecraft_dir}/versions/{version_name}/Fabric.json', f'{minecraft_dir}/versions/{version_name}/{version_name}.json')
-            with open(f'{minecraft_dir}/versions/{version_name}/{version_name}.json', 'w') as f:
-                f.write(json.dumps(jsonfile))
-
-        elif modloader == 'forge':
-            if not os.path.exists(f'{minecraft_dir}/versions/{version_name}/{version_name}.json'):
-                download_forge_json(minecraft_dir, version, version_name, bmclapi=bmclapi, forge_version=modloader_version)
-
-        elif modloader == 'neoforge':
-            print('download neoforge json')
-            if not os.path.exists(f'{minecraft_dir}/versions/{version_name}/{version_name}.json'):
-                download_neoforge_json(minecraft_dir, version, version_name, bmclapi=bmclapi, neoforge_version=modloader_version)
-
-        elif modloader == 'vanilla':
-            download_version_json(minecraft_dir, version, version_name, bmclapi=bmclapi)
-
-        else:
-            raise Exception('Modloader not found '+modloader)
+    modloader = modloader.lower()
+    if modloader == 'fabric':
+        fabric_json = f'{minecraft_dir}/versions/{version_name}/Fabric.json'
+        if not os.path.exists(fabric_json):
+            download_fabric_json(minecraft_dir, version, version_name, loader_version='latest')
+        download_version_json(minecraft_dir, version, version_name, bmclapi=bmclapi)
+        jsonfile = fabric_merge_json(f'{minecraft_dir}/versions/{version_name}/Fabric.json', f'{minecraft_dir}/versions/{version_name}/{version_name}.json')
+        with open(f'{minecraft_dir}/versions/{version_name}/{version_name}.json', 'w') as f:
+            f.write(json.dumps(jsonfile))
+    elif modloader == 'forge':
+        if not os.path.exists(f'{minecraft_dir}/versions/{version_name}/{version_name}.json'):
+            download_forge_json(minecraft_dir, version, version_name, bmclapi=bmclapi, forge_version=modloader_version)
+    elif modloader == 'neoforge':
+        print('download neoforge json')
+        if not os.path.exists(f'{minecraft_dir}/versions/{version_name}/{version_name}.json'):
+            download_neoforge_json(minecraft_dir, version, version_name, bmclapi=bmclapi, neoforge_version=modloader_version)
+    elif modloader == 'vanilla':
+        download_version_json(minecraft_dir, version, version_name, bmclapi=bmclapi)
+    else:
+        raise Exception('Modloader not found '+modloader)
 
     download_jar(minecraft_dir, version_name, bmclapi=bmclapi)
 

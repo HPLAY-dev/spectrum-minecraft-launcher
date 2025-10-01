@@ -238,8 +238,15 @@ class Ui_MainWindow(object):
         self.lineEdit_4 = QtWidgets.QLineEdit(self.tab_3)
         self.lineEdit_4.setGeometry(QtCore.QRect(110, 130, 351, 31))
         self.lineEdit_4.setObjectName("lineEdit_4")
+        self.lineEdit_5 = QtWidgets.QLineEdit(self.tab_3)
+        self.lineEdit_5.setGeometry(QtCore.QRect(110, 210, 351, 31))
+        self.lineEdit_5.setObjectName("lineEdit_5")
+        self.label_5 = QtWidgets.QLabel(self.tab_3)
+        self.label_5.setGeometry(QtCore.QRect(10, 215, 111, 21))
+        self.label_5.setAlignment(QtCore.Qt.AlignLeading|QtCore.Qt.AlignLeft|QtCore.Qt.AlignVCenter)
+        self.label_5.setObjectName("label_5")
         self.pushButton = QtWidgets.QPushButton(self.tab_3)
-        self.pushButton.setGeometry(QtCore.QRect(10, 240, 121, 31))
+        self.pushButton.setGeometry(QtCore.QRect(10, 310, 121, 31))
         self.pushButton.setObjectName("pushButton")
         self.lineEdit_8 = QtWidgets.QLineEdit(self.tab_3)
         self.lineEdit_8.setGeometry(QtCore.QRect(110, 170, 351, 31))
@@ -248,8 +255,11 @@ class Ui_MainWindow(object):
         self.label_11.setGeometry(QtCore.QRect(10, 175, 111, 21))
         self.label_11.setAlignment(QtCore.Qt.AlignLeading|QtCore.Qt.AlignLeft|QtCore.Qt.AlignVCenter)
         self.label_11.setObjectName("label_11")
+        self.label_18 = QtWidgets.QLabel(self.tab_3)
+        self.label_18.setGeometry(QtCore.QRect(10, 260, 251, 16))
+        self.label_18.setObjectName("label_18")
         self.checkBox_5 = QtWidgets.QCheckBox(self.tab_3)
-        self.checkBox_5.setGeometry(QtCore.QRect(10, 220, 171, 16))
+        self.checkBox_5.setGeometry(QtCore.QRect(10, 290, 171, 16))
         self.checkBox_5.setChecked(True)
         self.checkBox_5.setObjectName("checkBox_5")
         icon3 = QtGui.QIcon()
@@ -272,7 +282,7 @@ class Ui_MainWindow(object):
         MainWindow.setStatusBar(self.statusbar)
 
         self.retranslateUi(MainWindow)
-        self.mainTabWidget.setCurrentIndex(3)
+        self.mainTabWidget.setCurrentIndex(0)
         self.tabWidget.setCurrentIndex(1)
         QtCore.QMetaObject.connectSlotsByName(MainWindow)
 
@@ -326,9 +336,96 @@ class Ui_MainWindow(object):
         self.label_2.setText(_translate("MainWindow", "Java 8 路径"))
         self.label_3.setText(_translate("MainWindow", "Java 17 路径"))
         self.label_4.setText(_translate("MainWindow", "Java 21 路径"))
+        self.lineEdit_5.setText(_translate("MainWindow", "./JavaWrapper.jar"))
+        self.label_5.setText(_translate("MainWindow", "Wrapper路径"))
         self.pushButton.setText(_translate("MainWindow", "保存设置"))
         self.label_11.setText(_translate("MainWindow", "回退 Java 路径"))
+        self.label_18.setText(_translate("MainWindow", "在非Windows平台上无需填写Wrapper路径"))
         self.checkBox_5.setText(_translate("MainWindow", "自动下载 Fabric-API(mod)"))
         self.mainTabWidget.setTabText(self.mainTabWidget.indexOf(self.tab_3), _translate("MainWindow", "设置"))
         self.label_17.setText(_translate("MainWindow", "<html><head/><body><p><span style=\" font-size:24pt; font-weight:600;\">Spectrum Launcher</span></p><p>Spectrum Launcher 是一个轻量化，开源的 Minecraft 启动器，基于 Python 与 PyQt5。兼容Fabric, Forge</p><p>等 Mod 加载器。当前正在完善 Mod 加载器的兼容。</p><p>Github: <a href=\"https://github.com/HPLAY-dev/spectrum-minecraft/launcher\"><span style=\" text-decoration: underline; color:#0000ff;\">HPLAY-dev/spectrum-minecraft/launcher</span></a></p><p>Bilibili: <a href=\"https://space.bilibili.com/3493108044007466\"><span style=\" text-decoration: underline; color:#0000ff;\">UID: 3493108044007466</span></a></p><p>开源协议: GNU GPL v3.0</p></body></html>"))
         self.mainTabWidget.setTabText(self.mainTabWidget.indexOf(self.tab_6), _translate("MainWindow", "关于"))
+        self.tab_plugins = QtWidgets.QWidget()
+        self.verticalLayout_plugins = QtWidgets.QVBoxLayout(self.tab_plugins)
+        self.list_plugins = QtWidgets.QListWidget(self.tab_plugins)
+        self.verticalLayout_plugins.addWidget(self.list_plugins)
+        self.label_plugin_info = QtWidgets.QLabel(self.tab_plugins)
+        self.label_plugin_info.setWordWrap(True)
+        self.label_plugin_info.setText("插件信息将在这里显示")
+        self.verticalLayout_plugins.addWidget(self.label_plugin_info)
+        self.horizontalLayout_plugins = QtWidgets.QHBoxLayout()
+        self.btn_plugin_reload = QtWidgets.QPushButton(self.tab_plugins)
+        self.btn_plugin_reload.setText("刷新插件")
+        self.horizontalLayout_plugins.addWidget(self.btn_plugin_reload)
+        self.btn_plugin_unload = QtWidgets.QPushButton(self.tab_plugins)
+        self.btn_plugin_unload.setText("卸载插件")
+        self.horizontalLayout_plugins.addWidget(self.btn_plugin_unload)
+        self.verticalLayout_plugins.addLayout(self.horizontalLayout_plugins)
+        self.mainTabWidget.addTab(self.tab_plugins, "插件")
+
+# === 新增 Mods 与 Shaders 加载支持 ===
+from PyQt5.QtGui import QIcon, QPixmap
+import zipfile as z
+import json
+
+def load_mods(mods_path, default_icon):
+    mods = []
+    if not os.path.exists(mods_path):
+        return mods
+    for file in os.listdir(mods_path):
+        if not file.endswith(".jar"):
+            continue
+        file_path = os.path.join(mods_path, file)
+        name = file
+        icon = QIcon(default_icon)
+
+        try:
+            with z.ZipFile(file_path) as jar:
+                if "fabric.mod.json" in jar.namelist():
+                    with jar.open("fabric.mod.json") as f:
+                        data = json.load(f)
+                        name = data.get("name", file)
+                        if "icon.png" in jar.namelist():
+                            with jar.open("icon.png") as img:
+                                pixmap = QPixmap()
+                                pixmap.loadFromData(img.read())
+                                icon = QIcon(pixmap)
+                elif "META-INF/mods.toml" in jar.namelist():
+                    with jar.open("META-INF/mods.toml") as f:
+                        lines = f.read().decode("utf-8", errors="ignore").splitlines()
+                        for line in lines:
+                            if line.strip().startswith("displayName"):
+                                name = line.split("=")[-1].strip().strip('"')
+                                break
+        except Exception:
+            pass
+
+        mods.append((name, icon, file_path))
+    return mods
+
+
+def load_shaders(shaders_path, default_icon):
+    shaders = []
+    if not os.path.exists(shaders_path):
+        return shaders
+    for file in os.listdir(shaders_path):
+        file_path = os.path.join(shaders_path, file)
+        icon = QIcon(default_icon)
+
+        if file.endswith(".zip"):
+            try:
+                with z.ZipFile(file_path) as zp:
+                    if "icon.png" in zp.namelist():
+                        with zp.open("icon.png") as img:
+                            pixmap = QPixmap()
+                            pixmap.loadFromData(img.read())
+                            icon = QIcon(pixmap)
+            except Exception:
+                pass
+        elif os.path.isdir(file_path):
+            icon_file = os.path.join(file_path, "icon.png")
+            if os.path.exists(icon_file):
+                icon = QIcon(icon_file)
+
+        shaders.append((file, icon, file_path))
+    return shaders
