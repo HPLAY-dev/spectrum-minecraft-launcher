@@ -27,7 +27,7 @@ def code_to_token(auth_code: str, redirect_uri=oauth.redirect_uri):
         'code': auth_code,
         'redirect_uri': redirect_uri,
         'grant_type': 'authorization_code',
-        'scope': 'XboxLive.signin XboxLive.offline_access'
+        'scope': 'XboxLive.signin offline_access'
     }
     headers = {
         'Content-Type': 'application/x-www-form-urlencoded',
