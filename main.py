@@ -527,12 +527,10 @@ class MainWindow(QMainWindow, Ui_MainWindow):
         
 
 if __name__ == "__main__":
+    if not os.path.exists(app_path()+'/JavaWrapper.jar'):
+        launcher.download_javawrapper()
     QApplication.setAttribute(Qt.AA_EnableHighDpiScaling)
     app = QApplication(sys.argv)
     myWin = MainWindow()
     myWin.show()
     sys.exit(app.exec_())
-
-
-"""CHENshidi2021@outlook.com
-CHENshidi2025"""
