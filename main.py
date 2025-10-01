@@ -275,8 +275,11 @@ class MainWindow(QMainWindow, Ui_MainWindow):
         widget_under_cursor = self.childAt(pos)
         while widget_under_cursor and widget_under_cursor.metaObject().className() == 'QWidget':
             widget_under_cursor = widget_under_cursor.parent()
+
+
         if not event.mimeData().hasUrls():
             event.ignore()
+
         elif widget_under_cursor.objectName() == 'listView_saves':
             files = [url.toLocalFile() for url in event.mimeData().urls()]
             for file in files:
@@ -295,6 +298,7 @@ class MainWindow(QMainWindow, Ui_MainWindow):
                     except z.BadZipFile:
                         msgbox.showwarning('Spectrum 启动器', '文件不是存档文件夹或压缩为.zip的存档文件夹')
             event.accept()
+            
         elif widget_under_cursor.objectName() == 'listView_respacks':
             files = [url.toLocalFile() for url in event.mimeData().urls()]
             for file in files:
