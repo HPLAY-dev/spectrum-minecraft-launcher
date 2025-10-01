@@ -723,6 +723,9 @@ def download_libraries(minecraft_dir, version, version_name, print_status=True, 
             current += 1
             if progress_callback:
                 progress_callback(current, file_amount, f"[LIB][{current}/{file_amount}]")
+            # result = future.result()
+            # if print_status:
+            #     print(f'{current}/{file_amount}\n- {lib.get("name", "Unknown")}: {result}')
             
             try:
                 result = future.result()
@@ -834,8 +837,10 @@ def download_native_library(minecraft_dir, version_name, lib, if_natives, if_nat
     '''处理原生库文件'''
     if "natives-" + native() in lib["downloads"]["classifiers"]:
         natives = lib["downloads"]["classifiers"]["natives-" + native()]
+        url = natives['url']
     elif "natives-" + native() + '-' + get_system_bits() in lib["downloads"]["classifiers"]:
         natives = lib["downloads"]["classifiers"]["natives-" + native() + '-' + get_system_bits()]
+        url = natives['url']
     elif if_natives_late_versions:
         natives = []
     else:
@@ -844,7 +849,13 @@ def download_native_library(minecraft_dir, version_name, lib, if_natives, if_nat
     natives_path = f'{minecraft_dir}/versions/{version_name}/{version_name}-natives'
     os.makedirs(natives_path, exist_ok=True)
     
-    temp_zip = natives_path + '/temp.zip'
+    keep_going = True
+    i = 0
+    while keep_going:
+        i += 1
+        temp_zip = natives_path + f'/temp{i}.zip'
+        if not os.path.exists(temp_zip):
+            keep_going = False
     
     # 下载临时zip文件
     with open(temp_zip, 'wb') as f:
@@ -856,7 +867,6 @@ def download_native_library(minecraft_dir, version_name, lib, if_natives, if_nat
     # 解压文件到natives目录
     with zipf.ZipFile(temp_zip, 'r') as f:
         f.extractall(natives_path)
-    
     # 清理临时文件
     keep_remove = True
     while keep_remove:
@@ -1008,26 +1018,31 @@ def download_assets(minecraft_dir, version_name, print_status=True, bmclapi=Fals
 
 def auto_download(minecraft_dir, version, version_name, modloader='vanilla', bmclapi=False, modloader_version='latest', progress_callback=None):
     '''下载整个Minecraft版本，返回None'''
-    # modloader = modloader.lower()
-    # if modloader == 'fabric':
-    #     fabric_json = f'{minecraft_dir}/versions/{version_name}/Fabric.json'
-    #     if not os.path.exists(fabric_json):
-    #         download_fabric_json(minecraft_dir, version, version_name, loader_version='latest')
-    #     download_version_json(minecraft_dir, version, version_name, bmclapi=bmclapi)
-    #     jsonfile = fabric_merge_json(f'{minecraft_dir}/versions/{version_name}/Fabric.json', f'{minecraft_dir}/versions/{version_name}/{version_name}.json')
-    #     with open(f'{minecraft_dir}/versions/{version_name}/{version_name}.json', 'w') as f:
-    #         f.write(json.dumps(jsonfile))
-    # elif modloader == 'forge':
-    #     if not os.path.exists(f'{minecraft_dir}/versions/{version_name}/{version_name}.json'):
-    #         download_forge_json(minecraft_dir, version, version_name, bmclapi=bmclapi, forge_version=modloader_version)
-    # elif modloader == 'neoforge':
-    #     print('download neoforge json')
-    #     if not os.path.exists(f'{minecraft_dir}/versions/{version_name}/{version_name}.json'):
-    #         download_neoforge_json(minecraft_dir, version, version_name, bmclapi=bmclapi, neoforge_version=modloader_version)
-    # elif modloader == 'vanilla':
-    #     download_version_json(minecraft_dir, version, version_name, bmclapi=bmclapi)
-    # else:
-    #     raise Exception('Modloader not found '+modloader)
+    if not os.path.exists(f'{minecraft_dir}/versions/{version_name}/{version_name}.json'):
+        modloader = modloader.lower()
+        if modloader == 'fabric':
+            fabric_json = f'{minecraft_dir}/versions/{version_name}/Fabric.json'
+            if not os.path.exists(fabric_json):
+                download_fabric_json(minecraft_dir, version, version_name, loader_version='latest')
+            download_version_json(minecraft_dir, version, version_name, bmclapi=bmclapi)
+            jsonfile = fabric_merge_json(f'{minecraft_dir}/versions/{version_name}/Fabric.json', f'{minecraft_dir}/versions/{version_name}/{version_name}.json')
+            with open(f'{minecraft_dir}/versions/{version_name}/{version_name}.json', 'w') as f:
+                f.write(json.dumps(jsonfile))
+
+        elif modloader == 'forge':
+            if not os.path.exists(f'{minecraft_dir}/versions/{version_name}/{version_name}.json'):
+                download_forge_json(minecraft_dir, version, version_name, bmclapi=bmclapi, forge_version=modloader_version)
+
+        elif modloader == 'neoforge':
+            print('download neoforge json')
+            if not os.path.exists(f'{minecraft_dir}/versions/{version_name}/{version_name}.json'):
+                download_neoforge_json(minecraft_dir, version, version_name, bmclapi=bmclapi, neoforge_version=modloader_version)
+
+        elif modloader == 'vanilla':
+            download_version_json(minecraft_dir, version, version_name, bmclapi=bmclapi)
+
+        else:
+            raise Exception('Modloader not found '+modloader)
 
     download_jar(minecraft_dir, version_name, bmclapi=bmclapi)
 
