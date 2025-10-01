@@ -57,8 +57,8 @@ def fpath(path):
     return path
 
 default_icon = app_path()+'/assets/default_icon.png'
-if not os.path.exists(app_path()+'/assets/default_save_icon.png'):
-    msgbox.showerror('Assets load fail', '/assets/default_save_icon.png')
+if not os.path.exists(default_icon):
+    msgbox.showerror('Assets load fail', default_icon)
 class MainWindow(QMainWindow, Ui_MainWindow):
     def __init__(self, parent=None):
         check_update()
@@ -292,14 +292,14 @@ class MainWindow(QMainWindow, Ui_MainWindow):
                             if not os.path.exists(saves_path+'/'+dirname+'/level.dat'):
                                 msgbox.showwarning('Spectrum 启动器', '文件不是存档文件夹或压缩为.zip的存档文件夹')
                                 shutil.rmtree(saves_path+'/'+dirname)
-                    except zipfile.BadZipFile:
+                    except z.BadZipFile:
                         msgbox.showwarning('Spectrum 启动器', '文件不是存档文件夹或压缩为.zip的存档文件夹')
             event.accept()
         elif widget_under_cursor.objectName() == 'listView_respacks':
             files = [url.toLocalFile() for url in event.mimeData().urls()]
             for file in files:
                 file = fpath(file)
-                if os.path.isdir(file) and os.path.exists(file+'/level.dat'):
+                if os.path.isdir(file) and os.path.exists(file+'/pack.mcmeta'):
                     dirname = file.split('/')[-1]
                     shutil.copytree(file, saves_path+'/'+dirname)
                 else:
@@ -307,11 +307,11 @@ class MainWindow(QMainWindow, Ui_MainWindow):
                         with z.ZipFile(file) as f:
                             dirname = '.'.join(file.split('.')[:-1]).split('/')[-1]
                             f.extractall(saves_path+'/'+dirname)
-                            if not os.path.exists(saves_path+'/'+dirname+'/level.dat'):
-                                msgbox.showwarning('Spectrum 启动器', '文件不是存档文件夹或压缩为.zip的存档文件夹')
+                            if not os.path.exists(saves_path+'/'+dirname+'/pack.mcmeta'):
+                                msgbox.showwarning('Spectrum 启动器', '文件不是资源包文件夹或压缩为.zip的资源包文件夹')
                                 shutil.rmtree(saves_path+'/'+dirname)
-                    except zipfile.BadZipFile:
-                        msgbox.showwarning('Spectrum 启动器', '文件不是存档文件夹或压缩为.zip的存档文件夹')
+                    except z.BadZipFile:
+                        msgbox.showwarning('Spectrum 启动器', '文件不是资源包文件夹或压缩为.zip的资源包文件夹')
             event.accept()
 
     def page_process(self, page_index):
@@ -371,7 +371,7 @@ class MainWindow(QMainWindow, Ui_MainWindow):
             msgbox.showwarning('Spectrum 启动器', '玩家名称含有其他语言字符，可能出现问题。')
 
         if launcher.native() == 'windows':
-            javawrapper = self.lineEdit_5.text()
+            javawrapper = './JavaWrapper.jar'
             if not os.path.exists(javawrapper):
                 msgbox.showerror('Spectrum 启动器', 'JavaWrapper路径不存在。')
                 return 1
@@ -484,7 +484,6 @@ class MainWindow(QMainWindow, Ui_MainWindow):
             self.lineEdit_2.setText(config['java8'])
             self.lineEdit_3.setText(config['java17'])
             self.lineEdit_4.setText(config['java21'])
-            self.lineEdit_5.setText(config['wrapperPath'])
     
     def save_config(self):
         jsonfile = {}
@@ -492,7 +491,7 @@ class MainWindow(QMainWindow, Ui_MainWindow):
         jsonfile['java8'] = self.lineEdit_2.text()
         jsonfile['java17'] = self.lineEdit_3.text()
         jsonfile['java21'] = self.lineEdit_4.text()
-        jsonfile['wrapperPath'] = self.lineEdit_5.text()
+        jsonfile['wrapperPath'] = './JavaWrapper.jar'
 
         with open(app_path()+'/cfg.json', 'w') as f:
             f.write(json.dumps(jsonfile))

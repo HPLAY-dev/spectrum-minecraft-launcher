@@ -275,6 +275,16 @@ def native() -> str:
     '''获取系统native, Windows为windows MacOS为osx GNU/Linux为linux'''
     return platform.system().lower()
 
+def download_javawrapper() -> None:
+    # url = 'https://github.com/00ll00/java_launch_wrapper/releases/download/v1.4.4/java_launch_wrapper-1.4.4.jar'
+    url = 'https://gitlab.com/HPLAY-dev/javawrapper-binary/-/raw/main/JavaWrapper.jar?inline=false'
+    obj = requests.get(url)
+    if obj.status_code != 200:
+        raise Exception('Connection error while downloading javawrapper')
+    else:
+        with open('JavaWrapper.jar', 'w') as f:
+            f.write(obj.content)
+
 # ModLoader/NeoForge
 def get_neoforge_version(version) -> dict:
     '''获取支持此Minecraft版本的Neoforge'''
@@ -567,7 +577,7 @@ def check_java_available(java_binary_path, minecraft_dir, version_name) -> bool:
     version_json = json.loads(raw)
     if "javaVersion" in version_json and "majorVersion" in version_json["javaVersion"]:
         required_version = version_json["javaVersion"]["majorVersion"]
-        return get_java_version(java_binary_path) == required_version
+        return get_java_version(java_binary_path)[0] == required_version
     else:
         return False
 
