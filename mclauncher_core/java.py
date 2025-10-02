@@ -68,6 +68,19 @@ def get_url(java_major_version: int, java_type, arch=get_arch(), platform=platfo
                 return asset['browser_download_url']
         return None
 
+def find_javas() -> list:
+    javas = []
+    for path in os.getenv("path").split(';'):
+        try:
+            if 'java.exe' in os.listdir(path):
+                fpath = path.replace('\\', '/')
+                if fpath[-1]=='/':
+                    fpath = fpath[:-1]
+                javas.append(fpath+'/java.exe')
+        except:
+            pass
+    return javas
+
 if __name__ == '__main__':
     print(get_arch())
     print(get_url(8, 'jdk'))
