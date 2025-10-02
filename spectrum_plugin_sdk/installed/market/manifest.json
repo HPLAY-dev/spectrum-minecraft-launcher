@@ -1,8 +1,0 @@
-{
-    "id": "plugin_market",
-    "name": "插件市场",
-    "version": "1.0.0",
-    "entry": "PluginMarket",
-    "author": "Spectrum Team",
-    "description": "提供插件市场界面，支持在线浏览和下载插件"
-}
