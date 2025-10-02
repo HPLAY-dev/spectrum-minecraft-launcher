@@ -1,0 +1,8 @@
+{
+    "id": "system_monitor",
+    "name": "系统监控",
+    "version": "1.0.0",
+    "entry": "SystemMonitorPlugin",
+    "author": "Spectrum Team",
+    "description": "显示 CPU、内存、GPU、网络和硬盘占用情况"
+}
