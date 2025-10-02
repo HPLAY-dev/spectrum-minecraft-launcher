@@ -7,6 +7,7 @@ import sys
 import os
 import re
 import json
+from mclauncher_core.javawrapper import download_javawrapper
 import mclauncher_core.launcher_funcs as launcher
 import mclauncher_core.manager as manager
 import mclauncher_core.download_funcs as downloader
@@ -603,7 +604,7 @@ if __name__ == "__main__":
     # load_plugins()
     # for control in controls:
     if not os.path.exists(app_path()+'/JavaWrapper.jar'):
-        launcher.download_javawrapper()
+        download_javawrapper()
     QApplication.setAttribute(Qt.AA_EnableHighDpiScaling)
     app = QApplication(sys.argv)
     myWin = MainWindow()
