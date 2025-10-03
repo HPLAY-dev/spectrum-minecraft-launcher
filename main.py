@@ -5,6 +5,9 @@ version = '3.5.0'
 
 import sys
 import os
+from PyQt5.QtCore import Qt, QStringListModel, QProcess
+from PyQt5.QtWidgets import QApplication, QMainWindow, QMessageBox, QFileDialog
+from PyQt5.QtGui import QStandardItemModel, QIcon, QStandardItem
 import re
 import json
 from mclauncher_core.javawrapper import download_javawrapper
@@ -15,9 +18,6 @@ import mclauncher_core.java as java
 import shutil
 import zipfile as z
 import requests
-from PyQt5.QtCore import Qt, QStringListModel, QProcess
-from PyQt5.QtWidgets import QApplication, QMainWindow, QMessageBox
-from PyQt5.QtGui import QStandardItemModel, QIcon, QStandardItem
 from ui import Ui_MainWindow
 
 
@@ -121,8 +121,29 @@ class MainWindow(QMainWindow, Ui_MainWindow):
         self.pushButton_11.clicked.connect(lambda: self.download_java(17, callback=self.progressBar_3.setValue))
         self.pushButton_12.clicked.connect(lambda: self.download_java(21, callback=self.progressBar_3.setValue))
 
+        self.pushButton_9.clicked.connect(self.rename_version)
+
+        self.pushButton_13.clicked.connect(lambda: self.lineEdit.setText(self.open_folder()))
+
         self.load_config()
 
+        self.update_installed_versions()
+
+    def open_folder(self):
+        return QFileDialog.getExistingDirectory(self, "选择文件夹", app_path())
+    def open_file(self):
+        return QFileDialog.getOpenFileName(self, self, "选择文件", app_path())
+    def rename_version(self):
+        if self.lineEdit_5.text() == "":
+            QMessageBox.warning(None, 'Spectrum 启动器', '你必须输入一个名称。')
+        new_name = self.lineEdit_5.text()
+        version_name = self.comboBox_5.currentText()
+        minecraft_dir = self.lineEdit.text().replace('\\', '/')
+        if minecraft_dir[-1] == '/':
+            minecraft_dir = minecraft_dir[:-1]
+        if not os.path.exists(minecraft_dir):
+            return 1
+        manager.rename_version(minecraft_dir, version_name, new_name)
         self.update_installed_versions()
 
     def download_java(self, major_version: int, callback=None):
@@ -551,14 +572,14 @@ class MainWindow(QMainWindow, Ui_MainWindow):
         else:
             self.lineEdit.setText('.minecraft')
             javas = java.find_javas()
-            for java in javas:
-                java_ver = get_java_version(java)[0]
+            for java_exe in javas:
+                java_ver = get_java_version(java_exe)[0]
                 if java_ver == 21:
-                    self.lineEdit_4.setText(java)
+                    self.lineEdit_4.setText(java_exe)
                 elif java_ver == 17:
-                    self.lineEdit_3.setText(java)
+                    self.lineEdit_3.setText(java_exe)
                 elif java_ver == 8:
-                    self.lineEdit_2.setText(java)
+                    self.lineEdit_2.setText(java_exe)
     
     def save_config(self):
         jsonfile = {}
