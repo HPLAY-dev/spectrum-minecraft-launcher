@@ -1,19 +1,20 @@
 @echo off
 
+:Environment
+echo [make] Setting up environment
+set PROJECT=main
+set PYINSTALLER=pyinstaller
+set Prefix=build
+set Suffix=python-x86_64
+set seven_zip=7z
+
 :: Check what to do
 if "%1"=="clean" goto clean
-if "%1"=="build" goto BUILD_ADD
-if "%1"=="7z" goto ARCHIVE
+if "%1"=="build" goto BUILD_ALL
+if "%1"=="7z" goto ARCHIVE_ALL
 goto HELP
 
 :BUILD_ALL
-	:Environment
-	echo [make] Setting up environment
-	set PROJECT=main
-	set PYINSTALLER=pyinstaller
-	set PREFIX=build
-	set SUFFIX=python-x86_64
-	set 7z=7z
 	set /p VERSION=Version: 
 	
 	:CLEAN
@@ -34,8 +35,13 @@ goto HELP
 	goto EOF
 	
 	
-:ARCHIVE
-	%7z% a -mx0 .\..\builds\%Prefix%-%Version%-%Suffix%.7z .\..\builds\build-%Version%\*
+:ARCHIVE_ALL
+	if defined VERSION goto archive
+		set /p VERSION=Version: 
+	:archive
+	cd build
+	%seven_zip% a -mx0 .\builds\%Prefix%-%Version%-%Suffix%.7z .\builds\build-%Version%\*
+	goto EOF
 
 :clean
 	rd /s /q .\build
