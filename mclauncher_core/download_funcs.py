@@ -72,7 +72,6 @@ def download_jar(minecraft_dir, version_name, bmclapi=False) -> None:
                 raise Exception(f"Request Fail: {item.status_code}\nurl: {url}")
             f.write(item.content)
 
-
 def download_libraries(minecraft_dir, version, version_name, print_status=True, bmclapi=False, progress_callback=None,
                        max_workers=5):
     """下载Minecraft为指定版本的libraries(库)，返回None"""
@@ -114,9 +113,8 @@ def download_libraries(minecraft_dir, version, version_name, print_status=True, 
             except Exception as e:
                 print(f'下载失败: {lib.get("name", "Unknown")}, 错误: {str(e)}')
 
-
 def download_single_library(minecraft_dir, version_name, lib, bmclapi, print_status):
-    """下载单个库文件"""
+    """下载单个库文件，返回None"""
     if not "downloads" in lib:  # Fallback
         return download_fallback_library(minecraft_dir, lib, bmclapi)
     else:
@@ -124,7 +122,7 @@ def download_single_library(minecraft_dir, version_name, lib, bmclapi, print_sta
 
 
 def download_fallback_library(minecraft_dir, lib, bmclapi):
-    """处理旧版格式的库文件"""
+    """处理旧版格式的库文件，返回None"""
     name = lib['name'].split(':')  # [org.ow2.asm,asm,9.8]
     name[0] = name[0].replace('.', '$SEP$')  # [org$SEP$ow2$SEP$asm,asm,9.8]
     filename = '-'.join(name[1:]) + '.jar'  # asm-9.8.jar
@@ -157,18 +155,10 @@ def download_fallback_library(minecraft_dir, lib, bmclapi):
 
 
 def download_modern_library(minecraft_dir, version_name, lib, bmclapi):
-    """处理新版格式的库文件"""
+    """处理新版格式的库文件，返回None"""
     # 检查规则
-    if 'natives-' + native() in lib['name']:
-        pass
-    elif "rules" in lib:
-        for rule in lib["rules"]:
-            if rule["action"] == "allow":
-                if "os" in rule and not native() in rule["os"]:
-                    return "跳过: 不符合规则"
-            elif rule["action"] == "disallow":
-                if "os" in rule and native() in rule["os"]:
-                    return "跳过: 不符合规则"
+    if not is_library_required(lib):
+        return "跳过: 不符合规则"
 
     if_artifact = "downloads" in lib and "artifact" in lib["downloads"]
     if_natives = "natives" in lib
@@ -219,10 +209,9 @@ def download_modern_library(minecraft_dir, version_name, lib, bmclapi):
 
     return "下载成功"
 
-
 def download_native_library(minecraft_dir, version_name, lib, if_natives, if_natives_late_versions, url='',
                             bmclapi=False):
-    """处理原生库文件"""
+    """处理natives(原生)库文件，返回None"""
     if "natives-" + native() in lib["downloads"]["classifiers"]:
         natives = lib["downloads"]["classifiers"]["natives-" + native()]
         url = natives['url']
@@ -279,10 +268,18 @@ def download_native_library(minecraft_dir, version_name, lib, if_natives, if_nat
     return f"原生库处理完成: {url}"
 
 
-# 辅助函数（需要根据实际情况实现）
 def is_library_required(lib):
-    """检查库是否是必需的"""
-    # 这里需要根据实际情况实现
+    """检查库是否是必需的，返回bool"""
+    if 'natives-' + native() in lib['name']:
+        pass
+    elif "rules" in lib:
+        for rule in lib["rules"]:
+            if rule["action"] == "allow":
+                if "os" in rule and not native() in rule["os"]:
+                    return False
+            elif rule["action"] == "disallow":
+                if "os" in rule and native() in rule["os"]:
+                    return False
     return True
 
 
@@ -292,11 +289,11 @@ def download_assets(minecraft_dir, version_name, print_status=True, bmclapi=Fals
     with open(f'{minecraft_dir}/versions/{version_name}/{version_name}.json', 'r') as f:
         version_json = f.read()
     version_json = json.loads(version_json)
-    assetIndex = get_assetIndex(minecraft_dir, version_name)
+    asset_index = get_assetIndex(minecraft_dir, version_name)
     os.makedirs(f'{minecraft_dir}/assets/indexes', exist_ok=True)
 
     # 下载asset索引文件
-    with open(f'{minecraft_dir}/assets/indexes/{assetIndex}.json', "wb") as f:
+    with open(f'{minecraft_dir}/assets/indexes/{asset_index}.json', "wb") as f:
         url = version_json["assetIndex"]["url"]
         if bmclapi:
             url = url.replace("http://resources.download.minecraft.net/", "https://bmclapi2.bangbang93.com/assets/")
@@ -305,7 +302,7 @@ def download_assets(minecraft_dir, version_name, print_status=True, bmclapi=Fals
             raise Exception(f"Request Fail: {item.status_code}\nurl: {url}")
         f.write(item.content)
 
-    with open(f'{minecraft_dir}/assets/indexes/{assetIndex}.json', 'r') as f:
+    with open(f'{minecraft_dir}/assets/indexes/{asset_index}.json', 'r') as f:
         asset_json = f.read()
     asset_json = json.loads(asset_json)
 
@@ -333,7 +330,7 @@ def download_assets(minecraft_dir, version_name, print_status=True, bmclapi=Fals
         if bmclapi:
             url = url.replace("https://resources.download.minecraft.net/", "https://bmclapi2.bangbang93.com/assets/")
 
-        if "map_to_resources" in asset_json and asset_json["map_to_resources"] == True:
+        if ("map_to_resources" in asset_json) and (asset_json["map_to_resources"] == True):
             local = f'{minecraft_dir}/versions/{version_name}/resources/{object_name}'
             current_directory = '/'.join(local.split('/')[0:-1])
             os.makedirs(current_directory, exist_ok=True)
