@@ -1,4 +1,3 @@
-import requests
 from urllib.parse import urlparse, parse_qs
 from http.server import HTTPServer, BaseHTTPRequestHandler
 import threading

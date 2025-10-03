@@ -2,6 +2,8 @@
 # https://mirrors.tuna.tsinghua.edu.cn/Adoptium/21/jre/x64/windows/OpenJDK21U-jre_x64_windows_hotspot_21.0.8_9.msi
 import requests
 import platform
+import os
+
 
 java_major_versions = ['8',
                        '17',
