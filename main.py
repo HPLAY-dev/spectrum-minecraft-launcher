@@ -15,6 +15,10 @@ import mclauncher_core.launcher_funcs as launcher
 import mclauncher_core.manager as manager
 import mclauncher_core.download_funcs as downloader
 import mclauncher_core.java as java
+import mclauncher_core.modloader_fabric as fabric
+import mclauncher_core.modloader_forge as forge
+import mclauncher_core.modloader_neoforge as neoforge
+
 import shutil
 import zipfile as z
 import requests
@@ -529,9 +533,9 @@ class MainWindow(QMainWindow, Ui_MainWindow):
             QMessageBox.critical(None, 'Spectrum 启动器', '请选择模组加载器的版本。')
             return 1
 
-        r = launcher.auto_download(minecraft_dir=minecraft_dir, version=version, version_name=version_name, modloader=modloader, modloader_version=modloader_version, progress_callback=self.progress_callback)
+        r = downloader.auto_download(minecraft_dir=minecraft_dir, version=version, version_name=version_name, modloader=modloader, modloader_version=modloader_version, progress_callback=self.progress_callback)
         if self.autodl_fabric_api == True:
-            launcher.download_fabric_api(minecraft_dir, version, version_name)
+            fabric.download_fabric_api(minecraft_dir, version, version_name)
         if r == 721:
             QMessageBox.warning(None, 'Spectrum 启动器', '下载的modloader与minecraft版本不被Spectrum启动器所兼容')
         self.update_installed_versions()
@@ -549,7 +553,7 @@ class MainWindow(QMainWindow, Ui_MainWindow):
             QMessageBox.critical(None, 'Spectrum 启动器', 'Minecraft路径不存在。')
             return 1
 
-        r = launcher.auto_download(minecraft_dir=minecraft_dir, version=launcher.get_minecraft_version(minecraft_dir, version_name), version_name=version_name, progress_callback=self.progress_callback)
+        r = downloader.auto_download(minecraft_dir=minecraft_dir, version=launcher.get_minecraft_version(minecraft_dir, version_name), version_name=version_name, progress_callback=self.progress_callback)
         if r == 721:
             QMessageBox.warning(None, 'Spectrum 启动器', '下载的modloader与minecraft版本不被Spectrum启动器所兼容')
         self.update_installed_versions()
@@ -594,7 +598,7 @@ class MainWindow(QMainWindow, Ui_MainWindow):
 
     def update_version_list(self, state):
         current_list = self.model.stringList()
-        current_list = launcher.get_version_list(self.checkBox_2.isChecked(), self.checkBox_3.isChecked(), self.checkBox_4.isChecked(), self.checkBox.isChecked())
+        current_list = downloader.get_version_list(self.checkBox_2.isChecked(), self.checkBox_3.isChecked(), self.checkBox_4.isChecked(), self.checkBox.isChecked())
         self.model.setStringList(current_list)
 
     def update_ml_version_list(self, state):
@@ -603,14 +607,14 @@ class MainWindow(QMainWindow, Ui_MainWindow):
         version = self.listView.selectionModel().selectedIndexes()[0].data()
         modloader = self.comboBox.currentText().lower()
         if modloader == 'forge':
-            current_dict = launcher.get_forge_version(version)
+            current_dict = forge.get_forge_version(version)
             current_list = []
             for item in current_dict:
                 current_list.append(item["version"])
         elif modloader == 'fabric':
-            current_list = launcher.get_fabric_versions()
+            current_list = fabric.get_fabric_versions()
         elif modloader == 'neoforge':
-            current_dict = launcher.get_neoforge_version(version)
+            current_dict = neoforge.get_neoforge_version(version)
             current_list = []
             for item in current_dict:
                 current_list.append(item["version"])
