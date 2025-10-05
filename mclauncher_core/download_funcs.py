@@ -19,8 +19,6 @@ def get_version_list(show_snapshot=False, show_old=False, show_release=True, bmc
     else:
         url = "https://launchermeta.mojang.com/mc/game/version_manifest.json"
     raw = requests.get(url)
-    if raw.status_code != 200:
-        raise Exception(f"Request Fail: {raw.status_code}\nurl: {url}")
     manifest = raw.json()
     returns = []
     for version in manifest['versions']:
@@ -113,6 +111,17 @@ def download_libraries(minecraft_dir, version, version_name, print_status=True, 
             except Exception as e:
                 print(f'下载失败: {lib.get("name", "Unknown")}, 错误: {str(e)}')
 
+    natives_path = f'{minecraft_dir}/versions/{version_name}/{version_name}-natives'
+    for root, dirs, files in os.walk(natives_path):
+        for name in files:
+            if name.endswith(('.dll', '.dylib', '.so')):
+                dest = os.path.join(natives_path, name)
+                if not os.path.exists(dest):
+                    src = os.path.join(root, name)
+                    shutil.copy(src, dest)
+    shutil.rmtree(os.path.join(natives_path, native()))
+    shutil.rmtree(os.path.join(natives_path, 'META-INF'))
+
 def download_single_library(minecraft_dir, version_name, lib, bmclapi, print_status):
     """下载单个库文件，返回None"""
     if not "downloads" in lib:  # Fallback
@@ -162,26 +171,23 @@ def download_modern_library(minecraft_dir, version_name, lib, bmclapi):
 
     if_artifact = "downloads" in lib and "artifact" in lib["downloads"]
     if_natives = "natives" in lib
-    late = "artifact" in lib["downloads"]
-    try:
-        if_natives_late_versions = late and f"-natives-{native()}.jar" in lib["downloads"]["artifact"]["path"].lower()
-    except:
-        if_natives_late_versions = False
+    if_natives_late_versions = if_artifact and f"natives-{native()}" in lib["name"].lower()
 
     if if_artifact:
         relative_path = lib["downloads"]["artifact"]["path"]
         url = lib["downloads"]["artifact"]["url"]
 
+    elif 'classifiers' in lib['downloads'] and 'natives-' + native() + '-' + get_system_bits() in lib['downloads']['classifiers']:
+        relative_path = lib['downloads']['classifiers']['natives-' + native() + '-' + get_system_bits()]['path']
+        url = lib['downloads']['classifiers']['natives-' + native() + '-' + get_system_bits()]["url"]
+
     elif 'classifiers' in lib['downloads'] and 'natives-' + native() in lib['downloads']['classifiers']:
         relative_path = lib['downloads']['classifiers']['natives-' + native()]['path']
         url = lib["downloads"]['classifiers']['natives-' + native()]['url']
-
-    elif 'classifiers' in lib['downloads'] and 'natives-' + native() + '-' + get_system_bits() in lib['downloads'][
-        'classifiers']:
-        relative_path = lib['downloads']['classifiers']['natives-' + native() + '-' + get_system_bits()]['path']
-        url = lib['downloads']['classifiers']['natives-' + native() + '-' + get_system_bits()]["url"]
     else:
         return 1
+    
+    print(url)
 
     path = f'{minecraft_dir}/libraries/{relative_path}'
     path = path.split('/')[:-1]
@@ -189,37 +195,41 @@ def download_modern_library(minecraft_dir, version_name, lib, bmclapi):
     os.makedirs(path, exist_ok=True)
     local_path = f'{minecraft_dir}/libraries/{relative_path}'
 
-    if os.path.exists(local_path) and not if_natives and not if_natives_late_versions and os.path.getsize(local_path) == \
-            lib['downloads']['artifact']['size']:
+    if os.path.exists(local_path):
+        if if_natives or if_natives_late_versions:
+            download_native_library(minecraft_dir, version_name, lib, if_natives_late_versions, url,
+                                       bmclapi)
         return f"已存在: {local_path}"
 
     with open(f'{minecraft_dir}/libraries/{relative_path}', 'wb') as f:
         if bmclapi:
-            fallback_url = url
             url = url.replace("https://libraries.minecraft.net/", "https://bmclapi2.bangbang93.com/maven/")
 
         item = requests.get(url)
-        if item.status_code != 200:
-            raise Exception(f"Request Fail: {item.status_code}\nurl: {url}")
         f.write(item.content)
+    
+    while os.path.getsize(f'{minecraft_dir}/libraries/{relative_path}') == 0:
+        download_modern_library(minecraft_dir, version_name, lib, bmclapi)
+
 
     if if_natives or if_natives_late_versions:
-        return download_native_library(minecraft_dir, version_name, lib, if_natives, if_natives_late_versions, url,
+        return download_native_library(minecraft_dir, version_name, lib, if_natives_late_versions, url,
                                        bmclapi)
 
     return "下载成功"
 
-def download_native_library(minecraft_dir, version_name, lib, if_natives, if_natives_late_versions, url='',
+def download_native_library(minecraft_dir, version_name, lib, if_natives_late_versions, url='',
                             bmclapi=False):
     """处理natives(原生)库文件，返回None"""
-    if "natives-" + native() in lib["downloads"]["classifiers"]:
-        natives = lib["downloads"]["classifiers"]["natives-" + native()]
-        url = natives['url']
-    elif "natives-" + native() + '-' + get_system_bits() in lib["downloads"]["classifiers"]:
-        natives = lib["downloads"]["classifiers"]["natives-" + native() + '-' + get_system_bits()]
-        url = natives['url']
-    elif if_natives_late_versions:
+    if if_natives_late_versions:
         natives = []
+    elif "classifiers" in lib["downloads"]:
+        if "natives-" + native() in lib["downloads"]["classifiers"]:
+            natives = lib["downloads"]["classifiers"]["natives-" + native()]
+            url = natives['url']
+        elif "natives-" + native() + '-' + get_system_bits() in lib["downloads"]["classifiers"]:
+            natives = lib["downloads"]["classifiers"]["natives-" + native() + '-' + get_system_bits()]
+            url = natives['url']
     else:
         return "无法找到原生库"
 
@@ -243,8 +253,13 @@ def download_native_library(minecraft_dir, version_name, lib, if_natives, if_nat
         f.write(item.content)
 
     # 解压文件到natives目录
-    with zipf.ZipFile(temp_zip, 'r') as f:
-        f.extractall(natives_path)
+    try:
+        with zipf.ZipFile(temp_zip, 'r') as f:
+            f.extractall(natives_path)
+    except zipf.BadZipFile as e:
+        1
+        2
+        4
     # 清理临时文件
     keep_remove = True
     while keep_remove:
@@ -319,7 +334,8 @@ def download_assets(minecraft_dir, version_name, print_status=True, bmclapi=Fals
             if progress_callback:
                 progress_callback(current_count, total_count, f"[AST][{current_count}/{total_count}]")
             if print_status:
-                print(f"{current_count}/{total_count}")
+                pass
+                # print(f"{current_count}/{total_count}")
 
     def download_file(object_info):
         """下载单个文件的函数"""
@@ -393,6 +409,8 @@ def download_assets(minecraft_dir, version_name, print_status=True, bmclapi=Fals
 def auto_download(minecraft_dir, version, version_name, modloader='vanilla', bmclapi=False, modloader_version='latest',
                   progress_callback=None):
     """下载整个Minecraft版本，返回None"""
+    if modloader == None:
+        modloader = 'vanilla'
     if not os.path.exists(f'{minecraft_dir}/versions/{version_name}/{version_name}.json'):
         modloader = modloader.lower()
         if modloader == 'fabric':
