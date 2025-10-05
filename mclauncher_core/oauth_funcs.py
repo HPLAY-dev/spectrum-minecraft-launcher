@@ -251,3 +251,7 @@ def get_mslogin_uuid_name(access_token: str):
         raise Exception('No Minecraft license found or profile not available')
         # if profile_response.status_code != 200:
         #     raise Exception(f"Profile API error: {profile_response.status_code} - {profile_response.text}")
+
+
+if __name__ == '__main__':
+    print(get_mc_token())

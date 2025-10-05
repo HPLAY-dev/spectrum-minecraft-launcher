@@ -12,6 +12,7 @@ import re
 import json
 from mclauncher_core.javawrapper import download_javawrapper
 import mclauncher_core.launcher_funcs as launcher
+import mclauncher_core.oauth_funcs as oa
 import mclauncher_core.manager as manager
 import mclauncher_core.download_funcs as downloader
 import mclauncher_core.java as java
@@ -77,7 +78,7 @@ class MainWindow(QMainWindow, Ui_MainWindow):
 
         super(MainWindow, self).__init__(parent)
         self.setupUi(self)
-
+        self.launch_version = None
         # Stuff
         self.using_mc_login = False
         self.mc_token = None
@@ -128,10 +129,30 @@ class MainWindow(QMainWindow, Ui_MainWindow):
         self.pushButton_9.clicked.connect(self.rename_version)
 
         self.pushButton_13.clicked.connect(lambda: self.lineEdit.setText(self.open_folder()))
+        self.pushButton_15.clicked.connect(self.ver_visibility_toggle)
+        self.listView_2.clicked.connect(self.launch_version_select)
+        
+        self.listView_2.setVisible(False)
+        
+        open_bin = 'explorer.exe' if downloader.native() == 'windows' else 'xdg-open'
+        self.pushButton_14.clicked.connect(lambda: os.system(f'{open_bin} {self.comboBox_5.currentText()}'))
 
         self.load_config()
 
         self.update_installed_versions()
+
+    def launch_version_select(self):
+        self.launch_version = self.listView_2.selectionModel().selectedIndexes()[0].data()
+        self.LaunchBtn.setText = "启动\n"+self.launch_version
+        self.ver_visibility_toggle()
+
+    def ver_visibility_toggle(self):
+        _ = self.listView_2.isVisible()
+        if _:
+            self.pushButton_15.setText('▴')
+        else:
+            self.pushButton_15.setText('▾')
+        self.listView_2.setVisible(not _)
 
     def open_folder(self):
         return QFileDialog.getExistingDirectory(self, "选择文件夹", app_path())
@@ -208,15 +229,18 @@ class MainWindow(QMainWindow, Ui_MainWindow):
 
     def disable_mslogin(self):
         self.using_mc_login = False
+        self.label_18.setText('欢迎: '+self.lineEdit_6.text())
         
     def oauth(self):
         try:
             self.using_mc_login = True
-            self.mc_token = launcher.get_mc_token()
+            self.mc_token = oa.get_mc_token()
+            self.label_18.setText('欢迎: '+oa.get_mslogin_uuid_name(self.mc_token)[1])
         except Exception as e:
             input('EXCEPTION: '+str(e))
             self.using_mc_login = False
             self.mc_token = None
+            self.label_18.setText('欢迎: '+self.lineEdit_6.text())
 
     def remove_version(self):
         minecraft_dir = self.lineEdit.text().replace('\\', '/')
@@ -419,13 +443,9 @@ class MainWindow(QMainWindow, Ui_MainWindow):
         if os.path.exists(minecraft_dir+'/versions'):
             versions = os.listdir(minecraft_dir+'/versions')
 
-            self.comboBox_3.clear()
-            for ver in versions:
-                self.comboBox_3.addItem(ver)
-
-            self.comboBox_5.clear()
-            for ver in versions:
-                self.comboBox_5.addItem(ver)
+            _ = QStringListModel()
+            _.setStringList(versions)
+            self.listView_2.setModel(_)
     
     def launch(self):
         minecraft_dir = self.lineEdit.text().replace('\\', '/')
@@ -435,10 +455,10 @@ class MainWindow(QMainWindow, Ui_MainWindow):
             QMessageBox.critical(None, 'Spectrum 启动器', 'Minecraft路径不存在。')
             return 1
         
-        if self.comboBox_3.currentText() == '':
+        if self.launch_version == None:
             QMessageBox.critical(None, 'Spectrum 启动器', '你必须选择一个版本来启动。')
             return 1
-        version_name = self.comboBox_3.currentText()
+        version_name = self.launch_version
 
         java_major_version = launcher.get_required_java_version(minecraft_dir, version_name)
         if java_major_version == 21:
@@ -541,10 +561,10 @@ class MainWindow(QMainWindow, Ui_MainWindow):
         self.update_installed_versions()
 
     def download_fix(self):
-        if len(self.comboBox_3.currentText()) == 0:
+        if self.launch_version == None:
             QMessageBox.critical(None, 'Spectrum 启动器', '你必须选择一个版本来补全。')
             return 1
-        version_name = self.comboBox_3.currentText()
+        version_name = self.launch_version
 
         minecraft_dir = self.lineEdit.text().replace('\\', '/')
         if minecraft_dir[-1] == '/':
