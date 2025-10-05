@@ -25,7 +25,6 @@ goto HELP
 
 	:BUILD
 	cd build
-	rem %pyinstaller% --noconfirm --onedir --windowed .\..\%PROJECT%.py
 	%pyinstaller% --noconfirm --onedir .\..\%PROJECT%.py
 	xcopy .\dist\%PROJECT% .\..\builds\build-%Version% /E /I /Q
 	mkdir .\..\builds\build-%Version%\assets
@@ -39,7 +38,7 @@ goto HELP
 	if defined VERSION goto archive
 		set /p VERSION=Version: 
 	:archive
-	cd build
+	echo %seven_zip% a -mx0 .\builds\%Prefix%-%Version%-%Suffix%.7z .\builds\build-%Version%\*
 	%seven_zip% a -mx0 .\builds\%Prefix%-%Version%-%Suffix%.7z .\builds\build-%Version%\*
 	goto EOF
 
