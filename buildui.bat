@@ -1,1 +1,1 @@
-pyuic5 -o .\ui.py .\qt.ui
+pyuic6 -o .\ui.py .\qt.ui

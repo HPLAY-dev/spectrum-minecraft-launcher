@@ -1,13 +1,13 @@
-from mclauncher_core.tool_funcs import get_java_version
+# from mclauncher_core.tool_funcs import get_java_version
 
 USE_OS_SYSTEM_TO_EXECUTE = 0
-version = '3.5.0'
+# version = '3.5.0'
 
 import sys
 import os
-from PyQt5.QtCore import Qt, QStringListModel, QProcess
-from PyQt5.QtWidgets import QApplication, QMainWindow, QMessageBox, QFileDialog
-from PyQt5.QtGui import QStandardItemModel, QIcon, QStandardItem
+from PyQt6.QtCore import Qt, QStringListModel, QProcess
+from PyQt6.QtWidgets import QApplication, QMainWindow, QMessageBox, QFileDialog
+from PyQt6.QtGui import QStandardItemModel, QIcon, QStandardItem
 import re
 import json
 from mclauncher_core.javawrapper import download_javawrapper
@@ -641,9 +641,9 @@ if __name__ == "__main__":
     # for control in controls:
     if not os.path.exists(app_path()+'/JavaWrapper.jar'):
         download_javawrapper()
-    QApplication.setAttribute(Qt.AA_EnableHighDpiScaling)
+    # QApplication.setAttribute(Qt.AA_EnableHighDpiScaling)
     app = QApplication(sys.argv)
     myWin = MainWindow()
     myWin.show()
     # myWin.load_controls(controls)
-    sys.exit(app.exec_())
+    sys.exit(app.exec())
