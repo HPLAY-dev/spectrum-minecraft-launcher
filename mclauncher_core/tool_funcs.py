@@ -22,9 +22,13 @@ def get_architecture():
         'ARM64': 'arm',
         'ARM': 'arm'
     }
+
     for r in replacer:
         if r == arch:
             arch = replacer[r]
+
+    if native() != 'linux' and arch == 'aarch_64':
+        arch = 'arm64'
     return arch
     ret
 
