@@ -595,15 +595,6 @@ class MainWindow(QMainWindow, Ui_MainWindow):
             self.lineEdit_4.setText(config['java21'])
         else:
             self.lineEdit.setText('.minecraft')
-            javas = java.find_javas()
-            for java_exe in javas:
-                java_ver = get_java_version(java_exe)[0]
-                if java_ver == 21:
-                    self.lineEdit_4.setText(java_exe)
-                elif java_ver == 17:
-                    self.lineEdit_3.setText(java_exe)
-                elif java_ver == 8:
-                    self.lineEdit_2.setText(java_exe)
     
     def save_config(self):
         jsonfile = {}
