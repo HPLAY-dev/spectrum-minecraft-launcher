@@ -177,17 +177,18 @@ def download_modern_library(minecraft_dir, version_name, lib, bmclapi):
         relative_path = lib["downloads"]["artifact"]["path"]
         url = lib["downloads"]["artifact"]["url"]
 
-    elif 'classifiers' in lib['downloads'] and 'natives-' + get_architecture_key() in lib['downloads']['classifiers']:
-        relative_path = lib['downloads']['classifiers']['natives-' + get_architecture_key()]['path']
-        url = lib['downloads']['classifiers']['natives-' + get_architecture_key()]["url"]
+    elif 'classifiers' in lib['downloads']:
+        if 'natives-' + get_architecture_key() in lib['downloads']['classifiers']:
+            relative_path = lib['downloads']['classifiers']['natives-' + get_architecture_key()]['path']
+            url = lib['downloads']['classifiers']['natives-' + get_architecture_key()]["url"]
 
-    elif 'classifiers' in lib['downloads'] and 'natives-' + native() + '-' + get_system_bits() in lib['downloads']['classifiers']:
-        relative_path = lib['downloads']['classifiers']['natives-' + native() + '-' + get_system_bits()]['path']
-        url = lib['downloads']['classifiers']['natives-' + native() + '-' + get_system_bits()]["url"]
+        elif 'natives-' + native() + '-' + get_system_bits() in lib['downloads']['classifiers']:
+            relative_path = lib['downloads']['classifiers']['natives-' + native() + '-' + get_system_bits()]['path']
+            url = lib['downloads']['classifiers']['natives-' + native() + '-' + get_system_bits()]["url"]
 
-    elif 'classifiers' in lib['downloads'] and 'natives-' + native() in lib['downloads']['classifiers']:
-        relative_path = lib['downloads']['classifiers']['natives-' + native()]['path']
-        url = lib["downloads"]['classifiers']['natives-' + native()]['url']
+        elif 'natives-' + native() in lib['downloads']['classifiers']:
+            relative_path = lib['downloads']['classifiers']['natives-' + native()]['path']
+            url = lib["downloads"]['classifiers']['natives-' + native()]['url']
     else:
         return 1
     
@@ -289,6 +290,8 @@ def download_native_library(minecraft_dir, version_name, lib, if_natives_late_ve
 
 def is_library_required(lib):
     """检查库是否是必需的，返回bool"""
+
+    # 从rules判断
     if 'natives-' + native() in lib['name']:
         pass
     elif "rules" in lib:
@@ -299,6 +302,19 @@ def is_library_required(lib):
             elif rule["action"] == "disallow":
                 if "os" in rule and native() in rule["os"]:
                     return False
+
+    # 从架构判断 (跨架构真难做啊啊啊啊啊啊啊啊啊啊啊啊啊啊啊啊)
+    exclude_archs = [
+        'arm64',
+        'aarch_64',
+        'x86',
+        'x86_64',
+        'arm'
+    ]
+    exclude_archs.pop(exclude_archs.index(get_architecture()))
+    for i in exclude_archs:
+        if i in lib['name']:
+            return False
     return True
 
 
