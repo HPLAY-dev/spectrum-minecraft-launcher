@@ -7,7 +7,7 @@ from concurrent.futures import ThreadPoolExecutor, as_completed
 from mclauncher_core.modloader_fabric import download_fabric_json, fabric_merge_json
 from mclauncher_core.modloader_forge import download_forge_json
 from mclauncher_core.modloader_neoforge import download_neoforge_json
-from mclauncher_core.tool_funcs import native, get_system_bits
+from mclauncher_core.tool_funcs import *
 import zipfile as zipf
 import shutil
 
@@ -176,6 +176,10 @@ def download_modern_library(minecraft_dir, version_name, lib, bmclapi):
     if if_artifact:
         relative_path = lib["downloads"]["artifact"]["path"]
         url = lib["downloads"]["artifact"]["url"]
+
+    elif 'classifiers' in lib['downloads'] and 'natives-' + get_architecture_key() in lib['downloads']['classifiers']:
+        relative_path = lib['downloads']['classifiers']['natives-' + get_architecture_key()]['path']
+        url = lib['downloads']['classifiers']['natives-' + get_architecture_key()]["url"]
 
     elif 'classifiers' in lib['downloads'] and 'natives-' + native() + '-' + get_system_bits() in lib['downloads']['classifiers']:
         relative_path = lib['downloads']['classifiers']['natives-' + native() + '-' + get_system_bits()]['path']

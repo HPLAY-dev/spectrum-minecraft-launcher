@@ -3,6 +3,31 @@ import platform
 import os
 import sys
 
+def get_architecture_key():
+    os_type = platform.system().lower()
+    arch = get_architecture()
+    return os_type + '-' + arch
+
+def get_architecture():
+    arch = platform.machine()
+    replacer = {
+        'amd64': 'x86_64',
+        'i686': 'x86',
+        'i386': 'x86',
+        'aarch64': 'aarch_64',
+        'armv8l': 'arm',
+        'armv7l': 'arm',
+        'armv7b': 'arm',
+        'AMD64': 'x86_64',
+        'ARM64': 'arm',
+        'ARM': 'arm'
+    }
+    for r in replacer:
+        if r == arch:
+            arch = replacer[r]
+    return arch
+    ret
+
 def get_file_path() -> str:
     """获取当前Python文件路径"""
     if getattr(sys, 'frozen', False):
