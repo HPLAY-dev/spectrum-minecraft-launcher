@@ -6,8 +6,8 @@
    <rect>
     <x>0</x>
     <y>0</y>
-    <width>721</width>
-    <height>480</height>
+    <width>715</width>
+    <height>409</height>
    </rect>
   </property>
   <property name="font">
@@ -25,7 +25,7 @@
       <x>0</x>
       <y>0</y>
       <width>721</width>
-      <height>461</height>
+      <height>381</height>
      </rect>
     </property>
     <property name="sizePolicy">
@@ -35,7 +35,7 @@
      </sizepolicy>
     </property>
     <property name="tabPosition">
-     <enum>QTabWidget::TabPosition::West</enum>
+     <enum>QTabWidget::TabPosition::North</enum>
     </property>
     <property name="currentIndex">
      <number>0</number>
@@ -45,8 +45,7 @@
     </property>
     <widget class="QWidget" name="tab_1">
      <attribute name="icon">
-      <iconset>
-       <normaloff>assets/launch_tab.svg</normaloff>assets/launch_tab.svg</iconset>
+      <iconset theme="media-playback-start"/>
      </attribute>
      <attribute name="title">
       <string>启动</string>
@@ -54,8 +53,8 @@
      <widget class="QPushButton" name="LaunchBtn">
       <property name="geometry">
        <rect>
-        <x>490</x>
-        <y>400</y>
+        <x>510</x>
+        <y>300</y>
         <width>171</width>
         <height>41</height>
        </rect>
@@ -74,7 +73,7 @@
        </rect>
       </property>
       <property name="currentIndex">
-       <number>1</number>
+       <number>0</number>
       </property>
       <widget class="QWidget" name="tab">
        <attribute name="title">
@@ -139,7 +138,7 @@
       <property name="geometry">
        <rect>
         <x>70</x>
-        <y>210</y>
+        <y>110</y>
         <width>161</width>
         <height>31</height>
        </rect>
@@ -199,7 +198,7 @@
       <property name="geometry">
        <rect>
         <x>10</x>
-        <y>210</y>
+        <y>110</y>
         <width>54</width>
         <height>31</height>
        </rect>
@@ -211,8 +210,8 @@
      <widget class="QPushButton" name="DownloadFixBtn">
       <property name="geometry">
        <rect>
-        <x>370</x>
-        <y>400</y>
+        <x>380</x>
+        <y>300</y>
         <width>121</width>
         <height>41</height>
        </rect>
@@ -224,8 +223,8 @@
      <widget class="QPushButton" name="pushButton_15">
       <property name="geometry">
        <rect>
-        <x>660</x>
-        <y>400</y>
+        <x>680</x>
+        <y>300</y>
         <width>21</width>
         <height>41</height>
        </rect>
@@ -237,9 +236,9 @@
      <widget class="QListView" name="listView_2">
       <property name="geometry">
        <rect>
-        <x>370</x>
-        <y>191</y>
-        <width>311</width>
+        <x>510</x>
+        <y>90</y>
+        <width>191</width>
         <height>201</height>
        </rect>
       </property>
@@ -250,9 +249,9 @@
      <widget class="QLabel" name="label_18">
       <property name="geometry">
        <rect>
-        <x>10</x>
-        <y>399</y>
-        <width>321</width>
+        <x>260</x>
+        <y>10</y>
+        <width>231</width>
         <height>41</height>
        </rect>
       </property>
@@ -264,9 +263,13 @@
        </font>
       </property>
       <property name="text">
-       <string>欢迎: alpha</string>
+       <string/>
+      </property>
+      <property name="alignment">
+       <set>Qt::AlignmentFlag::AlignRight|Qt::AlignmentFlag::AlignTrailing|Qt::AlignmentFlag::AlignVCenter</set>
       </property>
      </widget>
+     <zorder>label_18</zorder>
      <zorder>tabWidget</zorder>
      <zorder>comboBox_4</zorder>
      <zorder>label_10</zorder>
@@ -274,12 +277,10 @@
      <zorder>LaunchBtn</zorder>
      <zorder>pushButton_15</zorder>
      <zorder>listView_2</zorder>
-     <zorder>label_18</zorder>
     </widget>
     <widget class="QWidget" name="tab_2">
      <attribute name="icon">
-      <iconset>
-       <normaloff>assets/download_tab.svg</normaloff>assets/download_tab.svg</iconset>
+      <iconset theme="emblem-downloads"/>
      </attribute>
      <attribute name="title">
       <string>下载</string>
@@ -288,9 +289,9 @@
       <property name="geometry">
        <rect>
         <x>90</x>
-        <y>20</y>
+        <y>10</y>
         <width>241</width>
-        <height>171</height>
+        <height>181</height>
        </rect>
       </property>
       <property name="editTriggers">
@@ -300,8 +301,8 @@
      <widget class="QLabel" name="label_7">
       <property name="geometry">
        <rect>
-        <x>20</x>
-        <y>20</y>
+        <x>10</x>
+        <y>10</y>
         <width>54</width>
         <height>21</height>
        </rect>
@@ -316,8 +317,8 @@
      <widget class="QCheckBox" name="checkBox">
       <property name="geometry">
        <rect>
-        <x>350</x>
-        <y>120</y>
+        <x>340</x>
+        <y>110</y>
         <width>141</width>
         <height>16</height>
        </rect>
@@ -329,8 +330,8 @@
      <widget class="QCheckBox" name="checkBox_2">
       <property name="geometry">
        <rect>
-        <x>350</x>
-        <y>50</y>
+        <x>340</x>
+        <y>40</y>
         <width>141</width>
         <height>16</height>
        </rect>
@@ -342,8 +343,8 @@
      <widget class="QCheckBox" name="checkBox_3">
       <property name="geometry">
        <rect>
-        <x>350</x>
-        <y>80</y>
+        <x>340</x>
+        <y>70</y>
         <width>141</width>
         <height>16</height>
        </rect>
@@ -358,8 +359,8 @@
       </property>
       <property name="geometry">
        <rect>
-        <x>350</x>
-        <y>20</y>
+        <x>340</x>
+        <y>10</y>
         <width>141</width>
         <height>16</height>
        </rect>
@@ -504,8 +505,7 @@
     </widget>
     <widget class="QWidget" name="tab_5">
      <attribute name="icon">
-      <iconset>
-       <normaloff>assets/manage_tab.svg</normaloff>assets/manage_tab.svg</iconset>
+      <iconset theme="system-file-manager"/>
      </attribute>
      <attribute name="title">
       <string>版本管理</string>
@@ -531,7 +531,7 @@
        <rect>
         <x>110</x>
         <y>10</y>
-        <width>151</width>
+        <width>241</width>
         <height>31</height>
        </rect>
       </property>
@@ -539,201 +539,21 @@
      <widget class="QPushButton" name="pushButton_4">
       <property name="geometry">
        <rect>
-        <x>270</x>
+        <x>360</x>
         <y>10</y>
-        <width>61</width>
+        <width>51</width>
         <height>31</height>
        </rect>
       </property>
       <property name="text">
-       <string>删除版本</string>
-      </property>
-     </widget>
-     <widget class="QPushButton" name="pushButton_5">
-      <property name="geometry">
-       <rect>
-        <x>110</x>
-        <y>200</y>
-        <width>111</width>
-        <height>31</height>
-       </rect>
-      </property>
-      <property name="text">
-       <string>删除存档</string>
-      </property>
-     </widget>
-     <widget class="QListView" name="listView_saves">
-      <property name="geometry">
-       <rect>
-        <x>110</x>
-        <y>50</y>
-        <width>256</width>
-        <height>141</height>
-       </rect>
-      </property>
-      <property name="iconSize">
-       <size>
-        <width>64</width>
-        <height>64</height>
-       </size>
-      </property>
-     </widget>
-     <widget class="QListView" name="listView_respacks">
-      <property name="geometry">
-       <rect>
-        <x>110</x>
-        <y>240</y>
-        <width>256</width>
-        <height>141</height>
-       </rect>
-      </property>
-      <property name="iconSize">
-       <size>
-        <width>64</width>
-        <height>64</height>
-       </size>
-      </property>
-     </widget>
-     <widget class="QLabel" name="label_13">
-      <property name="geometry">
-       <rect>
-        <x>50</x>
-        <y>50</y>
-        <width>111</width>
-        <height>21</height>
-       </rect>
-      </property>
-      <property name="text">
-       <string>版本存档</string>
-      </property>
-      <property name="alignment">
-       <set>Qt::AlignmentFlag::AlignLeading|Qt::AlignmentFlag::AlignLeft|Qt::AlignmentFlag::AlignVCenter</set>
-      </property>
-     </widget>
-     <widget class="QPushButton" name="pushButton_6">
-      <property name="geometry">
-       <rect>
-        <x>110</x>
-        <y>390</y>
-        <width>111</width>
-        <height>31</height>
-       </rect>
-      </property>
-      <property name="text">
-       <string>删除资源包</string>
-      </property>
-     </widget>
-     <widget class="QLabel" name="label_14">
-      <property name="geometry">
-       <rect>
-        <x>46</x>
-        <y>240</y>
-        <width>111</width>
-        <height>21</height>
-       </rect>
-      </property>
-      <property name="text">
-       <string>资源包</string>
-      </property>
-      <property name="alignment">
-       <set>Qt::AlignmentFlag::AlignLeading|Qt::AlignmentFlag::AlignLeft|Qt::AlignmentFlag::AlignVCenter</set>
-      </property>
-     </widget>
-     <widget class="QPushButton" name="pushButton_7">
-      <property name="geometry">
-       <rect>
-        <x>430</x>
-        <y>200</y>
-        <width>111</width>
-        <height>31</height>
-       </rect>
-      </property>
-      <property name="text">
-       <string>删除Mod</string>
-      </property>
-     </widget>
-     <widget class="QListView" name="listView_mods">
-      <property name="geometry">
-       <rect>
-        <x>430</x>
-        <y>50</y>
-        <width>251</width>
-        <height>141</height>
-       </rect>
-      </property>
-      <property name="iconSize">
-       <size>
-        <width>64</width>
-        <height>64</height>
-       </size>
-      </property>
-     </widget>
-     <widget class="QLabel" name="label_15">
-      <property name="geometry">
-       <rect>
-        <x>380</x>
-        <y>50</y>
-        <width>111</width>
-        <height>21</height>
-       </rect>
-      </property>
-      <property name="text">
-       <string>Mod</string>
-      </property>
-      <property name="alignment">
-       <set>Qt::AlignmentFlag::AlignLeading|Qt::AlignmentFlag::AlignLeft|Qt::AlignmentFlag::AlignVCenter</set>
-      </property>
-     </widget>
-     <widget class="QLabel" name="label_16">
-      <property name="geometry">
-       <rect>
-        <x>380</x>
-        <y>240</y>
-        <width>111</width>
-        <height>21</height>
-       </rect>
-      </property>
-      <property name="text">
-       <string>光影包</string>
-      </property>
-      <property name="alignment">
-       <set>Qt::AlignmentFlag::AlignLeading|Qt::AlignmentFlag::AlignLeft|Qt::AlignmentFlag::AlignVCenter</set>
-      </property>
-     </widget>
-     <widget class="QListView" name="listView_shaderpacks">
-      <property name="geometry">
-       <rect>
-        <x>430</x>
-        <y>240</y>
-        <width>251</width>
-        <height>141</height>
-       </rect>
-      </property>
-      <property name="iconSize">
-       <size>
-        <width>64</width>
-        <height>64</height>
-       </size>
-      </property>
-     </widget>
-     <widget class="QPushButton" name="pushButton_8">
-      <property name="geometry">
-       <rect>
-        <x>430</x>
-        <y>390</y>
-        <width>111</width>
-        <height>31</height>
-       </rect>
-      </property>
-      <property name="text">
-       <string>删除光影</string>
+       <string>删除</string>
       </property>
      </widget>
      <widget class="QPushButton" name="pushButton_9">
       <property name="geometry">
        <rect>
-        <x>450</x>
-        <y>10</y>
+        <x>360</x>
+        <y>50</y>
         <width>111</width>
         <height>31</height>
        </rect>
@@ -745,9 +565,9 @@
      <widget class="QLineEdit" name="lineEdit_5">
       <property name="geometry">
        <rect>
-        <x>340</x>
-        <y>10</y>
-        <width>101</width>
+        <x>110</x>
+        <y>50</y>
+        <width>241</width>
         <height>31</height>
        </rect>
       </property>
@@ -755,21 +575,226 @@
      <widget class="QPushButton" name="pushButton_14">
       <property name="geometry">
        <rect>
-        <x>570</x>
+        <x>420</x>
         <y>10</y>
-        <width>111</width>
+        <width>51</width>
         <height>31</height>
        </rect>
       </property>
       <property name="text">
-       <string>打开版本文件夹</string>
+       <string>打开</string>
       </property>
+     </widget>
+     <widget class="QScrollArea" name="scrollArea">
+      <property name="geometry">
+       <rect>
+        <x>10</x>
+        <y>90</y>
+        <width>461</width>
+        <height>271</height>
+       </rect>
+      </property>
+      <property name="verticalScrollBarPolicy">
+       <enum>Qt::ScrollBarPolicy::ScrollBarAlwaysOn</enum>
+      </property>
+      <property name="widgetResizable">
+       <bool>false</bool>
+      </property>
+      <widget class="QWidget" name="scrollAreaWidgetContents">
+       <property name="geometry">
+        <rect>
+         <x>0</x>
+         <y>0</y>
+         <width>360</width>
+         <height>818</height>
+        </rect>
+       </property>
+       <widget class="QLabel" name="label_15">
+        <property name="geometry">
+         <rect>
+          <x>10</x>
+          <y>390</y>
+          <width>111</width>
+          <height>21</height>
+         </rect>
+        </property>
+        <property name="text">
+         <string>Mod</string>
+        </property>
+        <property name="alignment">
+         <set>Qt::AlignmentFlag::AlignLeading|Qt::AlignmentFlag::AlignLeft|Qt::AlignmentFlag::AlignVCenter</set>
+        </property>
+       </widget>
+       <widget class="QListView" name="listView_shaderpacks">
+        <property name="geometry">
+         <rect>
+          <x>70</x>
+          <y>580</y>
+          <width>251</width>
+          <height>141</height>
+         </rect>
+        </property>
+        <property name="iconSize">
+         <size>
+          <width>64</width>
+          <height>64</height>
+         </size>
+        </property>
+       </widget>
+       <widget class="QLabel" name="label_13">
+        <property name="geometry">
+         <rect>
+          <x>10</x>
+          <y>10</y>
+          <width>111</width>
+          <height>21</height>
+         </rect>
+        </property>
+        <property name="text">
+         <string>版本存档</string>
+        </property>
+        <property name="alignment">
+         <set>Qt::AlignmentFlag::AlignLeading|Qt::AlignmentFlag::AlignLeft|Qt::AlignmentFlag::AlignVCenter</set>
+        </property>
+       </widget>
+       <widget class="QPushButton" name="pushButton_8">
+        <property name="geometry">
+         <rect>
+          <x>70</x>
+          <y>730</y>
+          <width>111</width>
+          <height>31</height>
+         </rect>
+        </property>
+        <property name="text">
+         <string>删除光影</string>
+        </property>
+       </widget>
+       <widget class="QPushButton" name="pushButton_5">
+        <property name="geometry">
+         <rect>
+          <x>70</x>
+          <y>160</y>
+          <width>111</width>
+          <height>31</height>
+         </rect>
+        </property>
+        <property name="text">
+         <string>删除存档</string>
+        </property>
+       </widget>
+       <widget class="QListView" name="listView_mods">
+        <property name="geometry">
+         <rect>
+          <x>70</x>
+          <y>390</y>
+          <width>251</width>
+          <height>141</height>
+         </rect>
+        </property>
+        <property name="iconSize">
+         <size>
+          <width>64</width>
+          <height>64</height>
+         </size>
+        </property>
+       </widget>
+       <widget class="QLabel" name="label_14">
+        <property name="geometry">
+         <rect>
+          <x>10</x>
+          <y>200</y>
+          <width>111</width>
+          <height>21</height>
+         </rect>
+        </property>
+        <property name="text">
+         <string>资源包</string>
+        </property>
+        <property name="alignment">
+         <set>Qt::AlignmentFlag::AlignLeading|Qt::AlignmentFlag::AlignLeft|Qt::AlignmentFlag::AlignVCenter</set>
+        </property>
+       </widget>
+       <widget class="QListView" name="listView_respacks">
+        <property name="geometry">
+         <rect>
+          <x>70</x>
+          <y>200</y>
+          <width>256</width>
+          <height>141</height>
+         </rect>
+        </property>
+        <property name="iconSize">
+         <size>
+          <width>64</width>
+          <height>64</height>
+         </size>
+        </property>
+       </widget>
+       <widget class="QListView" name="listView_saves">
+        <property name="geometry">
+         <rect>
+          <x>70</x>
+          <y>10</y>
+          <width>256</width>
+          <height>141</height>
+         </rect>
+        </property>
+        <property name="iconSize">
+         <size>
+          <width>64</width>
+          <height>64</height>
+         </size>
+        </property>
+       </widget>
+       <widget class="QPushButton" name="pushButton_6">
+        <property name="geometry">
+         <rect>
+          <x>70</x>
+          <y>350</y>
+          <width>111</width>
+          <height>31</height>
+         </rect>
+        </property>
+        <property name="text">
+         <string>删除资源包</string>
+        </property>
+       </widget>
+       <widget class="QPushButton" name="pushButton_7">
+        <property name="geometry">
+         <rect>
+          <x>70</x>
+          <y>540</y>
+          <width>111</width>
+          <height>31</height>
+         </rect>
+        </property>
+        <property name="text">
+         <string>删除Mod</string>
+        </property>
+       </widget>
+       <widget class="QLabel" name="label_16">
+        <property name="geometry">
+         <rect>
+          <x>10</x>
+          <y>580</y>
+          <width>111</width>
+          <height>21</height>
+         </rect>
+        </property>
+        <property name="text">
+         <string>光影包</string>
+        </property>
+        <property name="alignment">
+         <set>Qt::AlignmentFlag::AlignLeading|Qt::AlignmentFlag::AlignLeft|Qt::AlignmentFlag::AlignVCenter</set>
+        </property>
+       </widget>
+      </widget>
      </widget>
     </widget>
     <widget class="QWidget" name="tab_3">
      <attribute name="icon">
-      <iconset>
-       <normaloff>assets/settings_tab.svg</normaloff>assets/settings_tab.svg</iconset>
+      <iconset theme="utilities-system-monitor"/>
      </attribute>
      <attribute name="title">
       <string>设置</string>
@@ -882,7 +907,7 @@
       <property name="geometry">
        <rect>
         <x>10</x>
-        <y>300</y>
+        <y>310</y>
         <width>121</width>
         <height>31</height>
        </rect>
@@ -1014,8 +1039,7 @@
     </widget>
     <widget class="QWidget" name="tab_6">
      <attribute name="icon">
-      <iconset>
-       <normaloff>assets/about_tab.svg</normaloff>assets/about_tab.svg</iconset>
+      <iconset theme="insert-image"/>
      </attribute>
      <attribute name="title">
       <string>关于</string>
@@ -1025,12 +1049,12 @@
        <rect>
         <x>10</x>
         <y>10</y>
-        <width>761</width>
-        <height>381</height>
+        <width>481</width>
+        <height>361</height>
        </rect>
       </property>
       <property name="text">
-       <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;&lt;span style=&quot; font-size:24pt; font-weight:600;&quot;&gt;Spectrum Launcher&lt;/span&gt;&lt;/p&gt;&lt;p&gt;Spectrum Launcher 是一个轻量化，开源的 Minecraft 启动器，基于 Python 与 PyQt5。兼容Fabric, Forge&lt;/p&gt;&lt;p&gt;等 Mod 加载器。当前正在完善 Mod 加载器的兼容。&lt;/p&gt;&lt;p&gt;Github: &lt;a href=&quot;https://github.com/HPLAY-dev/spectrum-minecraft/launcher&quot;&gt;&lt;span style=&quot; text-decoration: underline; color:#0000ff;&quot;&gt;HPLAY-dev/spectrum-minecraft/launcher&lt;/span&gt;&lt;/a&gt;&lt;/p&gt;&lt;p&gt;Bilibili: &lt;a href=&quot;https://space.bilibili.com/3493108044007466&quot;&gt;&lt;span style=&quot; text-decoration: underline; color:#0000ff;&quot;&gt;UID: 3493108044007466&lt;/span&gt;&lt;/a&gt;&lt;/p&gt;&lt;p&gt;开源协议: GNU GPL v3.0&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+       <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;&lt;span style=&quot; font-size:24pt; font-weight:600;&quot;&gt;Spectrum Launcher&lt;/span&gt;&lt;/p&gt;&lt;p&gt;Spectrum Launcher 是一个轻量化，开源的 Minecraft 启动器，基于 Python 与PyQt5。&lt;/p&gt;&lt;p&gt;兼容Fabric, Forge等 Mod 加载器。当前正在完善 Mod 加载器的兼容。&lt;/p&gt;&lt;p&gt;Github: &lt;a href=&quot;https://github.com/HPLAY-dev/spectrum-minecraft/launcher&quot;&gt;&lt;span style=&quot; text-decoration: underline; color:#0000ff;&quot;&gt;HPLAY-dev/spectrum-minecraft/launcher&lt;/span&gt;&lt;/a&gt;&lt;/p&gt;&lt;p&gt;Bilibili: &lt;a href=&quot;https://space.bilibili.com/3493108044007466&quot;&gt;&lt;span style=&quot; text-decoration: underline; color:#0000ff;&quot;&gt;UID: 3493108044007466&lt;/span&gt;&lt;/a&gt;&lt;/p&gt;&lt;p&gt;开源协议: GNU GPL v3.0&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
       </property>
       <property name="textFormat">
        <enum>Qt::TextFormat::RichText</enum>
@@ -1044,6 +1068,30 @@
      </widget>
     </widget>
    </widget>
+   <widget class="QLabel" name="label_6">
+    <property name="geometry">
+     <rect>
+      <x>0</x>
+      <y>0</y>
+      <width>711</width>
+      <height>381</height>
+     </rect>
+    </property>
+    <property name="text">
+     <string/>
+    </property>
+    <property name="pixmap">
+     <pixmap>assets/bg.png</pixmap>
+    </property>
+    <property name="scaledContents">
+     <bool>false</bool>
+    </property>
+    <property name="alignment">
+     <set>Qt::AlignmentFlag::AlignCenter</set>
+    </property>
+   </widget>
+   <zorder>label_6</zorder>
+   <zorder>mainTabWidget</zorder>
   </widget>
   <widget class="QStatusBar" name="statusbar"/>
  </widget>

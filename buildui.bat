@@ -1,1 +1,1 @@
-pyuic6 -o .\ui.py .\qt.ui
+ pyside6-uic -o .\ui.py .\qt.ui

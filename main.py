@@ -5,9 +5,9 @@ USE_OS_SYSTEM_TO_EXECUTE = 0
 
 import sys
 import os
-from PyQt6.QtCore import Qt, QStringListModel, QProcess
-from PyQt6.QtWidgets import QApplication, QMainWindow, QMessageBox, QFileDialog
-from PyQt6.QtGui import QStandardItemModel, QIcon, QStandardItem
+from PySide6.QtCore import QStringListModel, QProcess
+from PySide6.QtWidgets import QApplication, QMainWindow, QMessageBox, QFileDialog
+from PySide6.QtGui import QStandardItemModel, QIcon, QStandardItem
 import re
 import json
 from mclauncher_core.javawrapper import download_javawrapper
@@ -19,6 +19,7 @@ import mclauncher_core.java as java
 import mclauncher_core.modloader_fabric as fabric
 import mclauncher_core.modloader_forge as forge
 import mclauncher_core.modloader_neoforge as neoforge
+import stylesheets
 
 import shutil
 import zipfile as z
@@ -74,7 +75,7 @@ if not os.path.exists(default_icon):
 
 class MainWindow(QMainWindow, Ui_MainWindow):
     def __init__(self, parent=None):
-        check_update()
+        # check_update()
 
         super(MainWindow, self).__init__(parent)
         self.setupUi(self)
@@ -83,6 +84,9 @@ class MainWindow(QMainWindow, Ui_MainWindow):
         self.using_mc_login = False
         self.mc_token = None
         self.autodl_fabric_api = False
+
+        self.setStyleSheet(stylesheets.main_window)
+        self.LaunchBtn.setStyleSheet(stylesheets.button1)
 
         # 设置版本列表
         self.model = QStringListModel()
@@ -143,7 +147,7 @@ class MainWindow(QMainWindow, Ui_MainWindow):
 
     def launch_version_select(self):
         self.launch_version = self.listView_2.selectionModel().selectedIndexes()[0].data()
-        self.LaunchBtn.setText = "启动\n"+self.launch_version
+        self.LaunchBtn.setText("启动\n"+self.launch_version)
         self.ver_visibility_toggle()
 
     def ver_visibility_toggle(self):
@@ -229,18 +233,18 @@ class MainWindow(QMainWindow, Ui_MainWindow):
 
     def disable_mslogin(self):
         self.using_mc_login = False
-        self.label_18.setText('欢迎: '+self.lineEdit_6.text())
+        self.label_18.setText(self.lineEdit_6.text())
         
     def oauth(self):
         try:
             self.using_mc_login = True
             self.mc_token = oa.get_mc_token()
-            self.label_18.setText('欢迎: '+oa.get_mslogin_uuid_name(self.mc_token)[1])
+            self.label_18.setText(oa.get_mslogin_uuid_name(self.mc_token)[1])
         except Exception as e:
             input('EXCEPTION: '+str(e))
             self.using_mc_login = False
             self.mc_token = None
-            self.label_18.setText('欢迎: '+self.lineEdit_6.text())
+            self.label_18.setText(self.lineEdit_6.text())
 
     def remove_version(self):
         minecraft_dir = self.lineEdit.text().replace('\\', '/')
@@ -250,7 +254,6 @@ class MainWindow(QMainWindow, Ui_MainWindow):
             return 1
         print(str(self.comboBox_5.currentText()))
         if len(str(self.comboBox_5.currentText())) == 0:
-            
             QMessageBox.critical(None, 'Spectrum 启动器', '你必须选择一个版本。')
             return 1
         ver = str(self.comboBox_5.currentText())
@@ -446,6 +449,7 @@ class MainWindow(QMainWindow, Ui_MainWindow):
             _ = QStringListModel()
             _.setStringList(versions)
             self.listView_2.setModel(_)
+            self.comboBox_5.setModel(_)
     
     def launch(self):
         minecraft_dir = self.lineEdit.text().replace('\\', '/')
@@ -643,7 +647,7 @@ if __name__ == "__main__":
         download_javawrapper()
     # QApplication.setAttribute(Qt.AA_EnableHighDpiScaling)
     app = QApplication(sys.argv)
-    myWin = MainWindow()
-    myWin.show()
+    win = MainWindow()
+    win.show()
     # myWin.load_controls(controls)
     sys.exit(app.exec())
