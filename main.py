@@ -29,7 +29,6 @@ from ui import Ui_MainWindow
 
 def check_update():
     pass
-    # import requests
     # try:
     #     release_info = requests.get('https://api.github.com/repos/hplay-dev/spectrum-minecraft-launcher/releases/latest')
     #     if release_info.status_code == 403:
@@ -640,7 +639,7 @@ class MainWindow(QMainWindow, Ui_MainWindow):
         for ver in current_list:
             self.comboBox_2.addItem(ver)
         
-if __name__ == "__main__":
+if __name__ in ("__main__", "__compiled__", "__mp_main__"):
     # load_plugins()
     # for control in controls:
     if not os.path.exists(app_path()+'/JavaWrapper.jar'):
