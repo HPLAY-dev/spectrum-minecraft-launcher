@@ -15,15 +15,16 @@ if "%1"=="7z" goto ARCHIVE_ALL
 goto HELP
 
 :BUILD_ALL
-	set /p VERSION=Version: 
 	
 	:CLEAN
 	if exist .\build rd /s /q .\build
 	if not exist .\builds mkdir builds
 	if not exist .\builds\build-%VERSION% mkdir .\builds\build-%VERSION%
 	mkdir build
+	goto EOF
 
 	:BUILD
+	set /p VERSION=Version: 
 	cd build
 	%pyinstaller% --noconfirm --onedir .\..\%PROJECT%.py
 	xcopy .\dist\%PROJECT% .\..\builds\build-%Version% /E /I /Q
@@ -58,3 +59,9 @@ goto HELP
 	echo to specify binaries path, edit this batch file.
 	goto EOF
 :EOF
+echo [make] cleaning environment
+set PROJECT=
+set PYINSTALLER=
+set Prefix=
+set Suffix=
+set seven_zip=

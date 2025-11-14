@@ -1,4 +1,6 @@
-# from mclauncher_core.tool_funcs import get_java_version
+from modrinth_api_wrapper import Client
+
+modrinth = Client()
 
 USE_OS_SYSTEM_TO_EXECUTE = 0
 # version = '3.5.0'
@@ -7,7 +9,7 @@ import sys
 import os
 from PySide6.QtCore import QStringListModel, QProcess
 from PySide6.QtWidgets import QApplication, QMainWindow, QMessageBox, QFileDialog
-from PySide6.QtGui import QStandardItemModel, QIcon, QStandardItem
+from PySide6.QtGui import QStandardItemModel, QIcon, QStandardItem, QPixmap
 import re
 import json
 from mclauncher_core.javawrapper import download_javawrapper
@@ -148,6 +150,13 @@ class MainWindow(QMainWindow, Ui_MainWindow):
         self.pushButton_16.clicked.connect(lambda: self.lineEdit_9.setText(self.open_file()))
 
         self.pushButton_17.clicked.connect(self.save_version_config)
+        
+        self.lineEdit_11.setText('')
+        
+
+        self.mods = []
+        self.pushButton_18.clicked.connect(self.search_modrinth)
+        self.pushButton_19.clicked.connect(self.install_modrinth)
         
         open_bin = 'explorer.exe' if downloader.native() == 'windows' else 'xdg-open'
         self.pushButton_14.clicked.connect(lambda: os.system(f'{open_bin} {self.comboBox_5.currentText()}'))
@@ -467,6 +476,7 @@ class MainWindow(QMainWindow, Ui_MainWindow):
             _.setStringList(versions)
             self.listView_2.setModel(_)
             self.comboBox_5.setModel(_)
+            self.comboBox_6.setModel(_)
     
     def launch(self):
         minecraft_dir = self.lineEdit.text().replace('\\', '/')
@@ -516,7 +526,10 @@ class MainWindow(QMainWindow, Ui_MainWindow):
         cmd = launcher.launch(javaw=javaw, xmx=xmx, minecraft_dir=minecraft_dir, 
                             version_name=version_name, javawrapper=javawrapper, 
                             username=username, ms_login=self.using_mc_login, 
-                            access_token=self.mc_token)
+                            access_token=self.mc_token,
+                            version_type=self.lineEdit_10.text(),
+                            jvm_args=self.lineEdit_11.text(),
+                            game_args_extend=self.lineEdit_12.text())
         with open('launch.bat', 'w') as f:
             f.write(cmd)
         if USE_OS_SYSTEM_TO_EXECUTE:
@@ -622,6 +635,9 @@ class MainWindow(QMainWindow, Ui_MainWindow):
             trydo(lambda: self.lineEdit_2.setText(config['launcher']['java8']))
             trydo(lambda: self.lineEdit_3.setText(config['launcher']['java17']))
             trydo(lambda: self.lineEdit_4.setText(config['launcher']['java21']))
+            trydo(lambda: self.lineEdit_10.setText(config['launcher']['launcher_info']))
+            trydo(lambda: self.lineEdit_11.setText(config['launcher']['jvm_args']))
+            trydo(lambda: self.lineEdit_12.setText(config['launcher']['game_extend']))
             trydo(lambda: self.checkBox_5.setChecked(config['launcher']['auto_download_fabric_api_mod']))
         else:
             self.lineEdit.setText('.minecraft')
@@ -641,6 +657,9 @@ class MainWindow(QMainWindow, Ui_MainWindow):
         jsonfile['launcher']['wrapperPath'] = './JavaWrapper.jar'
         jsonfile['launcher']['minecraftPath'] = self.lineEdit.text()
         jsonfile['launcher']['auto_download_fabric_api_mod'] = self.checkBox_5.isChecked()
+        jsonfile['launcher']['launcher_info'] = self.lineEdit_10.text()
+        jsonfile['launcher']['jvm_args'] = self.lineEdit_11.text()
+        jsonfile['launcher']['game_extend'] = self.lineEdit_12.text()
 
         with open(app_path()+'/cfg.json', 'w') as f:
             f.write(json.dumps(jsonfile))
@@ -692,6 +711,97 @@ class MainWindow(QMainWindow, Ui_MainWindow):
         self.comboBox_2.clear()
         for ver in current_list:
             self.comboBox_2.addItem(ver)
+
+    # Modrinth stuff (quite simple, thx for the api author)
+    def load_icon(self, url):
+        """同步加载图标（可能会阻塞UI）"""
+        try:
+            response = requests.get(url, timeout=10)
+            response.raise_for_status()
+            
+            # 将数据转换为QPixmap
+            pixmap = QPixmap()
+            pixmap.loadFromData(response.content)
+            
+            # 创建QIcon
+            icon = QIcon(pixmap)
+            return icon
+        except Exception as e:
+            print(f"加载图标失败: {e}")
+            return QIcon()
+
+    def search_modrinth(self):
+        AddMod = Exception
+        # Get arguments needed
+        keyword = self.lineEdit_13.text()
+        if len(keyword) <= 3:
+            log('Search keyword too short (<=3)')
+
+        minecraft_dir = self.lineEdit.text().replace('\\', '/')
+        if minecraft_dir[-1] == '/':
+            minecraft_dir = minecraft_dir[:-1]
+        if not os.path.exists(minecraft_dir):
+            return
+        
+        try:
+            version_name = self.comboBox_6.currentText()
+            mcversion = launcher.get_minecraft_version(minecraft_dir, version_name)
+        except Exception as E:
+            log('Cannot get mcversion')
+        log('mcversion is '+mcversion)
+
+        modloader = self.comboBox_3.currentText()
+
+        # Search
+        results = modrinth.search_project(query=keyword)
+        mods = []
+
+        _ = QStandardItemModel()
+        for project in results.hits:
+            versions = modrinth.list_project_versions(project.project_id)
+            try:
+                for ver in versions:
+                    if (mcversion in ver.game_versions and modloader.lower() in ver.loaders):
+                        raise AddMod()
+            except AddMod:
+                mods.append(project.project_id)
+                _.appendRow(QStandardItem(project.title+'\n'+project.description))
+        self.listView_3.setModel(_)
+        self.mods = mods
+
+    def install_modrinth(self):
+
+        minecraft_dir = self.lineEdit.text().replace('\\', '/')
+        if minecraft_dir[-1] == '/':
+            minecraft_dir = minecraft_dir[:-1]
+        if not os.path.exists(minecraft_dir):
+            return
+        
+        try:
+            version_name = self.comboBox_6.currentText()
+            mcversion = launcher.get_minecraft_version(minecraft_dir, version_name)
+        except Exception as E:
+            log('Cannot get mcversion')
+
+        modloader = self.comboBox_3.currentText()
+
+        
+        selected_indexes = self.listView_3.selectionModel().selectedIndexes()
+        if not selected_indexes:
+            return
+        
+        project_id = self.mods[selected_indexes[0].row()]
+        versions = modrinth.list_project_versions(project_id)
+        for ver in versions:
+            if (mcversion in ver.game_versions and modloader.lower() in ver.loaders):
+                mods_path = f'{minecraft_dir}/versions/{version_name}/mods'
+                os.makedirs(mods_path, exist_ok=True)
+                url = ver.files[0].url
+                destination = mods_path+'/'+ver.files[0].filename
+                raw = requests.get(url)
+                with open(destination, 'wb') as f:
+                    f.write(raw.content)
+
 
 log('Current __name__ is '+__name__)
 if __name__ in ("__main__", "__compiled__", "__mp_main__"):

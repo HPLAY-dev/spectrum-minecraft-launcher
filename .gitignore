@@ -22,6 +22,8 @@ build/
 .venv/
 .idea/
 __pycache__/
+mclauncher_core/__pycache__/
+modrinth/__pycache__/
 versions.json
 cfg.json
 build-*/

@@ -303,28 +303,44 @@ def get_minecraft_version(minecraft_dir, version_name):
     """从json中获取Minecraft版本，返回str"""
     with open(f'{minecraft_dir}/versions/{version_name}/{version_name}.json', 'r') as f:
         version_json = json.loads(f.read())
-    if 'id' in version_json:
-        return version_json['id']
-    elif "inheritsFrom" in version_json:
+    if "inheritsFrom" in version_json:
         return version_json["inheritsFrom"]
     else:
         raise FileNotFoundError("version.json seems invalid")
 
 
-def launch(javaw, xmx, minecraft_dir, version_name, javawrapper=None, username: str = "steve", xmn="256M", ms_login=False,
-           access_token=None, width: int = 854, height: int = 480) -> str:
+def launch(javaw, xmx, minecraft_dir, version_name, javawrapper=None, username: str = "steve", xmn: str="256M", ms_login=False,
+           access_token=None, width: int = 854, height: int = 480, version_type: str='§1R§2e§3d§4s§5t§6o§7n§8e §9C§ar§be§ca§dt§ei§fo§1n§2s', jvm_args: str='', game_args_extend: str='') -> str:
     """生成启动脚本，返回str"""
     # all of the items in lists are NOT ended with space!!!
     # -x args (JVM stuff)
     version = get_minecraft_version(minecraft_dir, version_name)
     minecraft_dir = minecraft_dir.replace('\\', '/')
-    x_args = [f"-Xmx{xmx}",
-              f"-Xmn{xmn}",
-              "-XX:+UseG1GC",
-              "-XX:-UseAdaptiveSizePolicy",
-              "-XX:-OmitStackTraceInFastThrow"]
-    # -d args (jvm system properties)
-    d_args = get_jvm_args(minecraft_dir, version, version_name)
+    if jvm_args == '':
+        x_args = ["-Xmx{xmx}",
+                "-Xmn{xmn}",
+                "-XX:+UseG1GC",
+                "-XX:-UseAdaptiveSizePolicy",
+                "-XX:-OmitStackTraceInFastThrow"]
+        if jvm_args_extend != '':
+            x_args.append(jvm_args_extend)
+        x_args = ' '.join(x_args)
+
+        # -d args (jvm system properties)
+        d_args = get_jvm_args(minecraft_dir, version, version_name)
+    jvm_args = x_args+' '+d_args
+    
+    replacer = {
+        '{xmx}': xmx,
+        '{xmn}': xmn,
+        '{minecraft_dir}': minecraft_dir,
+        '{version_name}': version_name,
+        '{version}': version,
+    }
+    for i in replacer:
+        jvm_args = jvm_args.replace(i, replacer[i])
+
+
     # minecraft args
     # 处理正版登录
     if ms_login:
@@ -335,11 +351,11 @@ def launch(javaw, xmx, minecraft_dir, version_name, javawrapper=None, username: 
         uuid = gen_random_uuid()
         access_token = uuid
     minecraft_args = get_minecraft_args(minecraft_dir, version, version_name)
-
-    minecraft_args_minecraft = minecraft_args
+    if game_args_extend != '':
+        minecraft_args.append(game_args_extend)
     # minecraft_args_cp = get_cp_args(minecraft_dir, version, version_name)
     mainClass = get_mainclass(minecraft_dir, version_name)
-    minecraft_args = mainClass + ' ' + minecraft_args_minecraft + f" -width {str(width)} -height {str(height)}"
+    minecraft_args = mainClass + ' ' + minecraft_args + f" -width {str(width)} -height {str(height)}"
 
     replacer = {"${auth_player_name}": username,
                 "${version_name}": version_name,
@@ -352,15 +368,14 @@ def launch(javaw, xmx, minecraft_dir, version_name, javawrapper=None, username: 
                 "${auth_access_token}": access_token,
                 "${user_properties}": "{}",
                 "${user_type}": "msa",
-                "${version_type}": '"Ciallo uwu."'}
+                "${version_type}": '"'+version_type+'"'}
 
     if ms_login:
         replacer['${auth_player_name}'] = get_mslogin_uuid_name(access_token)[1]
     print(ms_login)
     for i in replacer:
-        minecraft_args_minecraft = minecraft_args_minecraft.replace(i, replacer[i])
-    x_args = ' '.join(x_args)
-    final_pt1 = f'"{javaw}" {x_args} {d_args}'
+        minecraft_args = minecraft_args.replace(i, replacer[i])
+    final_pt1 = f'"{javaw}" {jvm_args}'
     if native() == 'windows':
         if javawrapper != None:
             javawrapper_arg = f'-jar "{javawrapper}"'
@@ -368,7 +383,7 @@ def launch(javaw, xmx, minecraft_dir, version_name, javawrapper=None, username: 
             raise SyntaxError("Unspecified JavaWrapper on Windows Platform.")
     else:
         javawrapper_arg = ''
-    final_pt2 = f'{javawrapper_arg} {mainClass} {minecraft_args_minecraft}'
+    final_pt2 = f'{javawrapper_arg} {mainClass} {minecraft_args}'
     # final = final.replace('/', '\\')
     final = final_pt1 + ' ' + final_pt2
     final = final.replace('${version_name}', version_name)
