@@ -1,3 +1,5 @@
+import time
+
 import threading
 
 import requests, json, os
@@ -14,12 +16,31 @@ import shutil
 
 def get_version_list(show_snapshot=False, show_old=False, show_release=True, bmclapi=False) -> list:
     """获取minecraft版本列表，返回list"""
-    if bmclapi:
-        url = "https://bmclapi2.bangbang93.com/mc/game/version_manifest.json"
+
+    def _download_manifest():
+        if bmclapi:
+            url = "https://bmclapi2.bangbang93.com/mc/game/version_manifest.json"
+        else:
+            url = "https://launchermeta.mojang.com/mc/game/version_manifest.json"
+        raw = requests.get(url)
+        with open('version_manifest.temp', 'w') as f:
+            f.write(raw.text)
+        return raw.json()
+    if os.path.exists('version_manifest.temp'):
+        file_time = os.path.getmtime('version_manifest.temp')
+        current_time = time.time()
+        if current_time - file_time < 240:  # 240秒 = 4分钟
+            with open('version_manifest.temp', 'r') as f:
+                manifest = f.read()
+            # 这里需要将文件内容转换为JSON对象
+            try:
+                manifest = json.loads(manifest)
+            except:
+                manifest = _download_manifest()
+        else:
+            manifest = _download_manifest()
     else:
-        url = "https://launchermeta.mojang.com/mc/game/version_manifest.json"
-    raw = requests.get(url)
-    manifest = raw.json()
+        manifest = _download_manifest()
     returns = []
     for version in manifest['versions']:
         if version["type"] == "release" and not show_release:

@@ -27,6 +27,11 @@ import requests
 from ui import Ui_MainWindow
 
 
+def log(string: str, type='launcher'):
+    import time
+    t = time.strftime("%H:%M:%S", time.localtime(time.time()))
+    print(f'[{t}][{type}] {str(string)}')
+
 def check_update():
     pass
     # try:
@@ -84,8 +89,11 @@ class MainWindow(QMainWindow, Ui_MainWindow):
         self.mc_token = None
         self.autodl_fabric_api = False
 
-        self.setStyleSheet(stylesheets.main_window)
+        # self.setStyleSheet(stylesheets.main_window)
         self.LaunchBtn.setStyleSheet(stylesheets.button1)
+        # self.label_6.setStyleSheet(stylesheets.bg_label)
+
+        self.load_config()
 
         # 设置版本列表
         self.model = QStringListModel()
@@ -136,11 +144,13 @@ class MainWindow(QMainWindow, Ui_MainWindow):
         self.listView_2.clicked.connect(self.launch_version_select)
         
         self.listView_2.setVisible(False)
+
+        self.pushButton_16.clicked.connect(lambda: self.lineEdit_9.setText(self.open_file()))
+
+        self.pushButton_17.clicked.connect(self.save_version_config)
         
         open_bin = 'explorer.exe' if downloader.native() == 'windows' else 'xdg-open'
         self.pushButton_14.clicked.connect(lambda: os.system(f'{open_bin} {self.comboBox_5.currentText()}'))
-
-        self.load_config()
 
         self.update_installed_versions()
 
@@ -175,10 +185,10 @@ class MainWindow(QMainWindow, Ui_MainWindow):
         self.update_installed_versions()
 
     def download_java(self, major_version: int, callback=None):
-        print('Retrieving url')
+        log('Retrieving url')
         url = java.get_url(major_version, 'jdk', tuna=False).replace('https://github.com/',
                                                                         'https://ghfast.top/https://github.com/')
-        print('Trying: ' + url)
+        log('Trying: ' + url)
 
         try:
 
@@ -204,19 +214,19 @@ class MainWindow(QMainWindow, Ui_MainWindow):
                             # 如果有回调函数，调用回调函数
                             if callback:
                                 callback(int(progress_percent))
-                                print(f"\r下载进度: {progress_percent}%", end='', flush=True)
+                                log(f"\r下载进度: {progress_percent}%", end='', flush=True)
                             else:
                                 # 默认行为：打印进度
-                                print(f"\r下载进度: {progress_percent}%", end='', flush=True)
+                                log(f"\r下载进度: {progress_percent}%", end='', flush=True)
 
             # 下载完成
             if callback:
                 callback(100)
             else:
-                print("\r下载进度: 100% - 下载完成!")
+                log("\r下载进度: 100% - 下载完成!")
 
         except Exception as e:
-            print(f"下载过程中出现错误: {e}")
+            log(f"下载过程中出现错误: {e}")
             raise
 
         os.system(f'cmd /c start msiexec /i {app_path()}/java_installer.msi')
@@ -225,10 +235,10 @@ class MainWindow(QMainWindow, Ui_MainWindow):
     def toggle_fabric_api_autodownload(self, stat=''):
         self.autodl_fabric_api = stat
 
-    def debug_print(self, b=''):
-        print(b)
-        print(self.using_mc_login)
-        print(self.mc_token)
+    def debug_log(self, b=''):
+        log(b)
+        log(self.using_mc_login)
+        log(self.mc_token)
 
     def disable_mslogin(self):
         self.using_mc_login = False
@@ -251,7 +261,7 @@ class MainWindow(QMainWindow, Ui_MainWindow):
             minecraft_dir = minecraft_dir[:-1]
         if not os.path.exists(minecraft_dir):
             return 1
-        print(str(self.comboBox_5.currentText()))
+        log(str(self.comboBox_5.currentText()))
         if len(str(self.comboBox_5.currentText())) == 0:
             QMessageBox.critical(None, 'Spectrum 启动器', '你必须选择一个版本。')
             return 1
@@ -306,6 +316,14 @@ class MainWindow(QMainWindow, Ui_MainWindow):
 
 
     def switch_manager_select_version(self, version_name):
+        self.checkBox_6.setChecked(False)
+        self.lineEdit_9.setText('')
+        if version_name in self.versions_config:
+            try:
+                self.checkBox_6.setChecked(self.versions_config[version_name]['if_override_java'])
+                self.lineEdit_9.setText(self.versions_config[version_name]['override_java_path'])
+            except:
+                pass
         minecraft_dir = self.lineEdit.text().replace('\\', '/')
         if minecraft_dir[-1] == '/':
             minecraft_dir = minecraft_dir[:-1]
@@ -463,15 +481,17 @@ class MainWindow(QMainWindow, Ui_MainWindow):
             return 1
         version_name = self.launch_version
 
-        java_major_version = launcher.get_required_java_version(minecraft_dir, version_name)
-        if java_major_version == 21:
-            javaw = self.lineEdit_4.text()
-        elif java_major_version == 17:
-            javaw = self.lineEdit_3.text()
-        elif java_major_version == 8:
-            javaw = self.lineEdit_2.text()
-        else:
-            javaw = self.lineEdit_8.text()
+        if version_name in self.versions_config and self.versions_config[version_name]['if_override_java']:
+            javaw = self.versions_config[version_name]['override_java_path']
+            java_major_version = launcher.get_required_java_version(minecraft_dir, version_name)
+            if java_major_version == 21:
+                javaw = self.lineEdit_4.text()
+            elif java_major_version == 17:
+                javaw = self.lineEdit_3.text()
+            elif java_major_version == 8:
+                javaw = self.lineEdit_2.text()
+            else:
+                javaw = self.lineEdit_8.text()
 
         xmx = self.comboBox_4.currentText()
 
@@ -492,7 +512,7 @@ class MainWindow(QMainWindow, Ui_MainWindow):
             javawrapper = None
 
         # 使用QProcess启动Minecraft而不阻塞UI\
-        print(self.mc_token)
+        log(self.mc_token)
         cmd = launcher.launch(javaw=javaw, xmx=xmx, minecraft_dir=minecraft_dir, 
                             version_name=version_name, javawrapper=javawrapper, 
                             username=username, ms_login=self.using_mc_login, 
@@ -518,15 +538,15 @@ class MainWindow(QMainWindow, Ui_MainWindow):
     def handle_minecraft_output(self):
         data = self.minecraft_process.readAllStandardOutput()
         stdout = bytes(data).decode("gbk", errors='ignore')
-        print(f"Minecraft输出: {stdout}")
+        log(f"Minecraft输出: {stdout}")
 
     def handle_minecraft_error(self):
         data = self.minecraft_process.readAllStandardError()
         stderr = bytes(data).decode("gbk", errors='ignore')
-        print(f"Minecraft错误: {stderr}")
+        log(f"Minecraft错误: {stderr}")
 
     def handle_minecraft_finished(self, exit_code, exit_status):
-        print(f"Minecraft进程结束，退出码: {exit_code}")
+        log(f"Minecraft进程结束，退出码: {exit_code}")
         
     def download(self):
         if len(self.listView.selectionModel().selectedIndexes()) == 0:
@@ -588,26 +608,60 @@ class MainWindow(QMainWindow, Ui_MainWindow):
             self.progressBar_2.setValue(int(current/total*100))
 
     def load_config(self):
+        def trydo(sth):
+            try:
+                sth()
+            except:
+                pass
+        
         if os.path.exists(app_path()+'/cfg.json'):
             with open(app_path()+'/cfg.json', 'r') as f:
                 config = json.loads(f.read())
 
-            self.lineEdit.setText(config['minecraftPath'])
-            self.lineEdit_2.setText(config['java8'])
-            self.lineEdit_3.setText(config['java17'])
-            self.lineEdit_4.setText(config['java21'])
+            trydo(lambda: self.lineEdit.setText(config['launcher']['minecraftPath']))
+            trydo(lambda: self.lineEdit_2.setText(config['launcher']['java8']))
+            trydo(lambda: self.lineEdit_3.setText(config['launcher']['java17']))
+            trydo(lambda: self.lineEdit_4.setText(config['launcher']['java21']))
+            trydo(lambda: self.checkBox_5.setChecked(config['launcher']['auto_download_fabric_api_mod']))
         else:
             self.lineEdit.setText('.minecraft')
+
+
+        if os.path.exists(app_path()+'/versions.json'):
+            with open(app_path()+'/versions.json', 'r') as f:        
+                self.versions_config = json.loads(f.read())
+        else:
+            self.versions_config = {}
     
     def save_config(self):
-        jsonfile = {}
-        jsonfile['minecraftPath'] = self.lineEdit.text()
-        jsonfile['java8'] = self.lineEdit_2.text()
-        jsonfile['java17'] = self.lineEdit_3.text()
-        jsonfile['java21'] = self.lineEdit_4.text()
-        jsonfile['wrapperPath'] = './JavaWrapper.jar'
+        jsonfile = {'launcher': {}}
+        jsonfile['launcher']['java8'] = self.lineEdit_2.text()
+        jsonfile['launcher']['java17'] = self.lineEdit_3.text()
+        jsonfile['launcher']['java21'] = self.lineEdit_4.text()
+        jsonfile['launcher']['wrapperPath'] = './JavaWrapper.jar'
+        jsonfile['launcher']['minecraftPath'] = self.lineEdit.text()
+        jsonfile['launcher']['auto_download_fabric_api_mod'] = self.checkBox_5.isChecked()
 
         with open(app_path()+'/cfg.json', 'w') as f:
+            f.write(json.dumps(jsonfile))
+
+    def save_version_config(self):
+        version=self.comboBox_5.currentText()
+        data = {
+            'if_override_java': self.checkBox_6.isChecked(),
+            'override_java_path': self.lineEdit_9.text()
+        }
+        jsonfile = {}
+        try:
+            if os.path.exists(app_path()+'/versions.json'):
+                with open(app_path()+'/versions.json', 'r') as f:
+                    jsonfile = json.loads(f.read())
+        except:
+            pass
+        jsonfile[version] = data
+        self.versions_config = jsonfile
+
+        with open(app_path()+'/versions.json', 'w') as f:
             f.write(json.dumps(jsonfile))
 
     def update_version_list(self, state):
@@ -638,15 +692,12 @@ class MainWindow(QMainWindow, Ui_MainWindow):
         self.comboBox_2.clear()
         for ver in current_list:
             self.comboBox_2.addItem(ver)
-        
+
+log('Current __name__ is '+__name__)
 if __name__ in ("__main__", "__compiled__", "__mp_main__"):
-    # load_plugins()
-    # for control in controls:
     if not os.path.exists(app_path()+'/JavaWrapper.jar'):
         download_javawrapper()
-    # QApplication.setAttribute(Qt.AA_EnableHighDpiScaling)
     app = QApplication(sys.argv)
     win = MainWindow()
     win.show()
-    # myWin.load_controls(controls)
     sys.exit(app.exec())

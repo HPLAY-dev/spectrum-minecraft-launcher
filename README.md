@@ -29,12 +29,11 @@ Only zh_CN is supported.
 
 To make all parts of this application work, you need to install the following packages.
 
-- PyQt5
-- PyQt5-Tools (Unneccesary for building)
+- PyQt6
+- Qt Creator
 - requests
 ```
-pip install PyQt5 PyQt5-Tools requests
+pip install PyQt6 PyQt6-Tools requests
 ```
-### 6.2 UI Modification
-Run `designer qt.ui` to modify the UI.
-Then, run `./buildui.bat`(Windows only) to build the ui. (On *nix OSes, run `pyuic5 -o .\ui.py .\qt.ui`)
+### 6.2 UI Modification 
+Run `./buildui.bat`(Windows only) to build the ui. (On *nix OSes, run `pyuic6 -o .\ui.py .\qt.ui`)

@@ -6,8 +6,8 @@
    <rect>
     <x>0</x>
     <y>0</y>
-    <width>715</width>
-    <height>409</height>
+    <width>724</width>
+    <height>402</height>
    </rect>
   </property>
   <property name="font">
@@ -35,17 +35,18 @@
      </sizepolicy>
     </property>
     <property name="tabPosition">
-     <enum>QTabWidget::TabPosition::North</enum>
+     <enum>QTabWidget::North</enum>
     </property>
     <property name="currentIndex">
-     <number>0</number>
+     <number>2</number>
     </property>
     <property name="documentMode">
      <bool>false</bool>
     </property>
     <widget class="QWidget" name="tab_1">
      <attribute name="icon">
-      <iconset theme="media-playback-start"/>
+      <iconset theme="media-playback-start">
+       <normaloff>.</normaloff>.</iconset>
      </attribute>
      <attribute name="title">
       <string>启动</string>
@@ -127,9 +128,6 @@
         </property>
         <property name="text">
          <string>名称</string>
-        </property>
-        <property name="alignment">
-         <set>Qt::AlignmentFlag::AlignLeading|Qt::AlignmentFlag::AlignLeft|Qt::AlignmentFlag::AlignVCenter</set>
         </property>
        </widget>
       </widget>
@@ -243,7 +241,7 @@
        </rect>
       </property>
       <property name="editTriggers">
-       <set>QAbstractItemView::EditTrigger::NoEditTriggers</set>
+       <set>QAbstractItemView::NoEditTriggers</set>
       </property>
      </widget>
      <widget class="QLabel" name="label_18">
@@ -259,14 +257,12 @@
        <font>
         <family>微软雅黑</family>
         <pointsize>18</pointsize>
+        <weight>75</weight>
         <bold>true</bold>
        </font>
       </property>
       <property name="text">
        <string/>
-      </property>
-      <property name="alignment">
-       <set>Qt::AlignmentFlag::AlignRight|Qt::AlignmentFlag::AlignTrailing|Qt::AlignmentFlag::AlignVCenter</set>
       </property>
      </widget>
      <zorder>label_18</zorder>
@@ -280,7 +276,8 @@
     </widget>
     <widget class="QWidget" name="tab_2">
      <attribute name="icon">
-      <iconset theme="emblem-downloads"/>
+      <iconset theme="emblem-downloads">
+       <normaloff>.</normaloff>.</iconset>
      </attribute>
      <attribute name="title">
       <string>下载</string>
@@ -295,7 +292,7 @@
        </rect>
       </property>
       <property name="editTriggers">
-       <set>QAbstractItemView::EditTrigger::NoEditTriggers</set>
+       <set>QAbstractItemView::NoEditTriggers</set>
       </property>
      </widget>
      <widget class="QLabel" name="label_7">
@@ -310,15 +307,12 @@
       <property name="text">
        <string>版本列表</string>
       </property>
-      <property name="alignment">
-       <set>Qt::AlignmentFlag::AlignBottom|Qt::AlignmentFlag::AlignLeading|Qt::AlignmentFlag::AlignLeft</set>
-      </property>
      </widget>
      <widget class="QCheckBox" name="checkBox">
       <property name="geometry">
        <rect>
         <x>340</x>
-        <y>110</y>
+        <y>100</y>
         <width>141</width>
         <height>16</height>
        </rect>
@@ -384,9 +378,6 @@
       <property name="text">
        <string>版本名称</string>
       </property>
-      <property name="alignment">
-       <set>Qt::AlignmentFlag::AlignBottom|Qt::AlignmentFlag::AlignLeading|Qt::AlignmentFlag::AlignLeft</set>
-      </property>
      </widget>
      <widget class="QLineEdit" name="lineEdit_7">
       <property name="geometry">
@@ -422,9 +413,6 @@
       </property>
       <property name="text">
        <string>模组加载器</string>
-      </property>
-      <property name="alignment">
-       <set>Qt::AlignmentFlag::AlignBottom|Qt::AlignmentFlag::AlignLeading|Qt::AlignmentFlag::AlignLeft</set>
       </property>
      </widget>
      <widget class="QComboBox" name="comboBox">
@@ -502,10 +490,27 @@
        <bool>false</bool>
       </property>
      </widget>
+     <widget class="QCheckBox" name="checkBox_5">
+      <property name="geometry">
+       <rect>
+        <x>340</x>
+        <y>130</y>
+        <width>171</width>
+        <height>16</height>
+       </rect>
+      </property>
+      <property name="text">
+       <string>自动下载 Fabric-API(mod)</string>
+      </property>
+      <property name="checked">
+       <bool>true</bool>
+      </property>
+     </widget>
     </widget>
     <widget class="QWidget" name="tab_5">
      <attribute name="icon">
-      <iconset theme="system-file-manager"/>
+      <iconset theme="system-file-manager">
+       <normaloff>.</normaloff>.</iconset>
      </attribute>
      <attribute name="title">
       <string>版本管理</string>
@@ -522,16 +527,13 @@
       <property name="text">
        <string>Minecraft 版本</string>
       </property>
-      <property name="alignment">
-       <set>Qt::AlignmentFlag::AlignLeading|Qt::AlignmentFlag::AlignLeft|Qt::AlignmentFlag::AlignVCenter</set>
-      </property>
      </widget>
      <widget class="QComboBox" name="comboBox_5">
       <property name="geometry">
        <rect>
         <x>110</x>
         <y>10</y>
-        <width>241</width>
+        <width>591</width>
         <height>31</height>
        </rect>
       </property>
@@ -539,9 +541,9 @@
      <widget class="QPushButton" name="pushButton_4">
       <property name="geometry">
        <rect>
-        <x>360</x>
-        <y>10</y>
-        <width>51</width>
+        <x>110</x>
+        <y>70</y>
+        <width>111</width>
         <height>31</height>
        </rect>
       </property>
@@ -552,50 +554,53 @@
      <widget class="QPushButton" name="pushButton_9">
       <property name="geometry">
        <rect>
-        <x>360</x>
-        <y>50</y>
-        <width>111</width>
+        <x>280</x>
+        <y>110</y>
+        <width>81</width>
         <height>31</height>
        </rect>
       </property>
       <property name="text">
-       <string>重命名版本</string>
+       <string>重命名</string>
       </property>
      </widget>
      <widget class="QLineEdit" name="lineEdit_5">
       <property name="geometry">
        <rect>
         <x>110</x>
-        <y>50</y>
-        <width>241</width>
+        <y>110</y>
+        <width>171</width>
         <height>31</height>
        </rect>
+      </property>
+      <property name="placeholderText">
+       <string>新名称</string>
       </property>
      </widget>
      <widget class="QPushButton" name="pushButton_14">
       <property name="geometry">
        <rect>
-        <x>420</x>
-        <y>10</y>
-        <width>51</width>
+        <x>230</x>
+        <y>70</y>
+        <width>131</width>
         <height>31</height>
        </rect>
       </property>
       <property name="text">
-       <string>打开</string>
+       <string>打开文件夹</string>
       </property>
      </widget>
      <widget class="QScrollArea" name="scrollArea">
       <property name="geometry">
        <rect>
         <x>10</x>
-        <y>90</y>
-        <width>461</width>
-        <height>271</height>
+        <y>150</y>
+        <width>351</width>
+        <height>201</height>
        </rect>
       </property>
-      <property name="verticalScrollBarPolicy">
-       <enum>Qt::ScrollBarPolicy::ScrollBarAlwaysOn</enum>
+      <property name="horizontalScrollBarPolicy">
+       <enum>Qt::ScrollBarAlwaysOff</enum>
       </property>
       <property name="widgetResizable">
        <bool>false</bool>
@@ -604,7 +609,7 @@
        <property name="geometry">
         <rect>
          <x>0</x>
-         <y>0</y>
+         <y>-584</y>
          <width>360</width>
          <height>818</height>
         </rect>
@@ -621,9 +626,6 @@
         <property name="text">
          <string>Mod</string>
         </property>
-        <property name="alignment">
-         <set>Qt::AlignmentFlag::AlignLeading|Qt::AlignmentFlag::AlignLeft|Qt::AlignmentFlag::AlignVCenter</set>
-        </property>
        </widget>
        <widget class="QListView" name="listView_shaderpacks">
         <property name="geometry">
@@ -633,6 +635,9 @@
           <width>251</width>
           <height>141</height>
          </rect>
+        </property>
+        <property name="editTriggers">
+         <set>QAbstractItemView::NoEditTriggers</set>
         </property>
         <property name="iconSize">
          <size>
@@ -652,9 +657,6 @@
         </property>
         <property name="text">
          <string>版本存档</string>
-        </property>
-        <property name="alignment">
-         <set>Qt::AlignmentFlag::AlignLeading|Qt::AlignmentFlag::AlignLeft|Qt::AlignmentFlag::AlignVCenter</set>
         </property>
        </widget>
        <widget class="QPushButton" name="pushButton_8">
@@ -692,6 +694,9 @@
           <height>141</height>
          </rect>
         </property>
+        <property name="editTriggers">
+         <set>QAbstractItemView::NoEditTriggers</set>
+        </property>
         <property name="iconSize">
          <size>
           <width>64</width>
@@ -711,9 +716,6 @@
         <property name="text">
          <string>资源包</string>
         </property>
-        <property name="alignment">
-         <set>Qt::AlignmentFlag::AlignLeading|Qt::AlignmentFlag::AlignLeft|Qt::AlignmentFlag::AlignVCenter</set>
-        </property>
        </widget>
        <widget class="QListView" name="listView_respacks">
         <property name="geometry">
@@ -723,6 +725,9 @@
           <width>256</width>
           <height>141</height>
          </rect>
+        </property>
+        <property name="editTriggers">
+         <set>QAbstractItemView::NoEditTriggers</set>
         </property>
         <property name="iconSize">
          <size>
@@ -739,6 +744,9 @@
           <width>256</width>
           <height>141</height>
          </rect>
+        </property>
+        <property name="editTriggers">
+         <set>QAbstractItemView::NoEditTriggers</set>
         </property>
         <property name="iconSize">
          <size>
@@ -785,236 +793,37 @@
         <property name="text">
          <string>光影包</string>
         </property>
-        <property name="alignment">
-         <set>Qt::AlignmentFlag::AlignLeading|Qt::AlignmentFlag::AlignLeft|Qt::AlignmentFlag::AlignVCenter</set>
-        </property>
        </widget>
       </widget>
      </widget>
-    </widget>
-    <widget class="QWidget" name="tab_3">
-     <attribute name="icon">
-      <iconset theme="utilities-system-monitor"/>
-     </attribute>
-     <attribute name="title">
-      <string>设置</string>
-     </attribute>
-     <widget class="QLineEdit" name="lineEdit">
+     <widget class="QLineEdit" name="lineEdit_9">
       <property name="geometry">
        <rect>
-        <x>110</x>
-        <y>10</y>
-        <width>291</width>
+        <x>450</x>
+        <y>100</y>
+        <width>191</width>
         <height>31</height>
        </rect>
       </property>
      </widget>
-     <widget class="QLabel" name="label">
+     <widget class="QLabel" name="label_21">
       <property name="geometry">
        <rect>
         <x>10</x>
-        <y>15</y>
-        <width>111</width>
-        <height>21</height>
-       </rect>
-      </property>
-      <property name="text">
-       <string>Minecraft 文件夹</string>
-      </property>
-      <property name="alignment">
-       <set>Qt::AlignmentFlag::AlignLeading|Qt::AlignmentFlag::AlignLeft|Qt::AlignmentFlag::AlignVCenter</set>
-      </property>
-     </widget>
-     <widget class="QLineEdit" name="lineEdit_2">
-      <property name="geometry">
-       <rect>
-        <x>110</x>
-        <y>50</y>
-        <width>291</width>
-        <height>31</height>
-       </rect>
-      </property>
-     </widget>
-     <widget class="QLabel" name="label_2">
-      <property name="geometry">
-       <rect>
-        <x>10</x>
-        <y>55</y>
-        <width>111</width>
-        <height>21</height>
-       </rect>
-      </property>
-      <property name="text">
-       <string>Java 8 路径</string>
-      </property>
-      <property name="alignment">
-       <set>Qt::AlignmentFlag::AlignLeading|Qt::AlignmentFlag::AlignLeft|Qt::AlignmentFlag::AlignVCenter</set>
-      </property>
-     </widget>
-     <widget class="QLabel" name="label_3">
-      <property name="geometry">
-       <rect>
-        <x>10</x>
-        <y>95</y>
-        <width>111</width>
-        <height>21</height>
-       </rect>
-      </property>
-      <property name="text">
-       <string>Java 17 路径</string>
-      </property>
-      <property name="alignment">
-       <set>Qt::AlignmentFlag::AlignLeading|Qt::AlignmentFlag::AlignLeft|Qt::AlignmentFlag::AlignVCenter</set>
-      </property>
-     </widget>
-     <widget class="QLineEdit" name="lineEdit_3">
-      <property name="geometry">
-       <rect>
-        <x>110</x>
-        <y>90</y>
-        <width>291</width>
-        <height>31</height>
-       </rect>
-      </property>
-     </widget>
-     <widget class="QLabel" name="label_4">
-      <property name="geometry">
-       <rect>
-        <x>10</x>
-        <y>135</y>
-        <width>111</width>
-        <height>21</height>
-       </rect>
-      </property>
-      <property name="text">
-       <string>Java 21 路径</string>
-      </property>
-      <property name="alignment">
-       <set>Qt::AlignmentFlag::AlignLeading|Qt::AlignmentFlag::AlignLeft|Qt::AlignmentFlag::AlignVCenter</set>
-      </property>
-     </widget>
-     <widget class="QLineEdit" name="lineEdit_4">
-      <property name="geometry">
-       <rect>
-        <x>110</x>
-        <y>130</y>
-        <width>291</width>
-        <height>31</height>
-       </rect>
-      </property>
-     </widget>
-     <widget class="QPushButton" name="pushButton">
-      <property name="geometry">
-       <rect>
-        <x>10</x>
-        <y>310</y>
-        <width>121</width>
-        <height>31</height>
-       </rect>
-      </property>
-      <property name="text">
-       <string>保存设置</string>
-      </property>
-     </widget>
-     <widget class="QLineEdit" name="lineEdit_8">
-      <property name="geometry">
-       <rect>
-        <x>110</x>
-        <y>200</y>
-        <width>351</width>
-        <height>31</height>
-       </rect>
-      </property>
-     </widget>
-     <widget class="QLabel" name="label_11">
-      <property name="geometry">
-       <rect>
-        <x>10</x>
-        <y>205</y>
-        <width>111</width>
-        <height>21</height>
-       </rect>
-      </property>
-      <property name="text">
-       <string>回退 Java 路径</string>
-      </property>
-      <property name="alignment">
-       <set>Qt::AlignmentFlag::AlignLeading|Qt::AlignmentFlag::AlignLeft|Qt::AlignmentFlag::AlignVCenter</set>
-      </property>
-     </widget>
-     <widget class="QCheckBox" name="checkBox_5">
-      <property name="geometry">
-       <rect>
-        <x>10</x>
-        <y>280</y>
-        <width>171</width>
+        <y>80</y>
+        <width>61</width>
         <height>16</height>
        </rect>
       </property>
       <property name="text">
-       <string>自动下载 Fabric-API(mod)</string>
-      </property>
-      <property name="checked">
-       <bool>true</bool>
+       <string>版本文件</string>
       </property>
      </widget>
-     <widget class="QPushButton" name="pushButton_10">
+     <widget class="QPushButton" name="pushButton_16">
       <property name="geometry">
        <rect>
-        <x>400</x>
-        <y>50</y>
-        <width>61</width>
-        <height>31</height>
-       </rect>
-      </property>
-      <property name="text">
-       <string>下载</string>
-      </property>
-     </widget>
-     <widget class="QPushButton" name="pushButton_11">
-      <property name="geometry">
-       <rect>
-        <x>400</x>
-        <y>90</y>
-        <width>61</width>
-        <height>31</height>
-       </rect>
-      </property>
-      <property name="text">
-       <string>下载</string>
-      </property>
-     </widget>
-     <widget class="QPushButton" name="pushButton_12">
-      <property name="geometry">
-       <rect>
-        <x>400</x>
-        <y>130</y>
-        <width>61</width>
-        <height>31</height>
-       </rect>
-      </property>
-      <property name="text">
-       <string>下载</string>
-      </property>
-     </widget>
-     <widget class="QLabel" name="label_5">
-      <property name="geometry">
-       <rect>
-        <x>10</x>
-        <y>250</y>
-        <width>451</width>
-        <height>16</height>
-       </rect>
-      </property>
-      <property name="text">
-       <string>注：Java下载将自动从github上下载Adoptium JDK的最新msi安装包</string>
-      </property>
-     </widget>
-     <widget class="QPushButton" name="pushButton_13">
-      <property name="geometry">
-       <rect>
-        <x>400</x>
-        <y>10</y>
+        <x>640</x>
+        <y>100</y>
         <width>61</width>
         <height>31</height>
        </rect>
@@ -1023,23 +832,281 @@
        <string>...</string>
       </property>
      </widget>
-     <widget class="QProgressBar" name="progressBar_3">
+     <widget class="QPushButton" name="pushButton_17">
       <property name="geometry">
        <rect>
-        <x>110</x>
-        <y>170</y>
-        <width>351</width>
-        <height>23</height>
+        <x>570</x>
+        <y>310</y>
+        <width>131</width>
+        <height>31</height>
        </rect>
       </property>
-      <property name="value">
-       <number>0</number>
+      <property name="text">
+       <string>保存该版本设置</string>
       </property>
+     </widget>
+     <widget class="QLabel" name="label_22">
+      <property name="geometry">
+       <rect>
+        <x>380</x>
+        <y>75</y>
+        <width>61</width>
+        <height>21</height>
+       </rect>
+      </property>
+      <property name="text">
+       <string>版本设置</string>
+      </property>
+     </widget>
+     <widget class="QCheckBox" name="checkBox_6">
+      <property name="geometry">
+       <rect>
+        <x>370</x>
+        <y>100</y>
+        <width>71</width>
+        <height>31</height>
+       </rect>
+      </property>
+      <property name="text">
+       <string>强制Java</string>
+      </property>
+     </widget>
+    </widget>
+    <widget class="QWidget" name="tab_3">
+     <attribute name="icon">
+      <iconset theme="utilities-system-monitor">
+       <normaloff>.</normaloff>.</iconset>
+     </attribute>
+     <attribute name="title">
+      <string>设置</string>
+     </attribute>
+     <widget class="QScrollArea" name="scrollArea_2">
+      <property name="geometry">
+       <rect>
+        <x>0</x>
+        <y>0</y>
+        <width>711</width>
+        <height>351</height>
+       </rect>
+      </property>
+      <property name="horizontalScrollBarPolicy">
+       <enum>Qt::ScrollBarAlwaysOn</enum>
+      </property>
+      <property name="widgetResizable">
+       <bool>true</bool>
+      </property>
+      <widget class="QWidget" name="scrollAreaWidgetContents_2">
+       <property name="geometry">
+        <rect>
+         <x>0</x>
+         <y>0</y>
+         <width>709</width>
+         <height>332</height>
+        </rect>
+       </property>
+       <widget class="QPushButton" name="pushButton_12">
+        <property name="geometry">
+         <rect>
+          <x>400</x>
+          <y>130</y>
+          <width>61</width>
+          <height>31</height>
+         </rect>
+        </property>
+        <property name="text">
+         <string>下载</string>
+        </property>
+       </widget>
+       <widget class="QPushButton" name="pushButton_13">
+        <property name="geometry">
+         <rect>
+          <x>400</x>
+          <y>10</y>
+          <width>61</width>
+          <height>31</height>
+         </rect>
+        </property>
+        <property name="text">
+         <string>...</string>
+        </property>
+       </widget>
+       <widget class="QLabel" name="label_4">
+        <property name="geometry">
+         <rect>
+          <x>10</x>
+          <y>135</y>
+          <width>111</width>
+          <height>21</height>
+         </rect>
+        </property>
+        <property name="text">
+         <string>Java 21 路径</string>
+        </property>
+       </widget>
+       <widget class="QLabel" name="label_2">
+        <property name="geometry">
+         <rect>
+          <x>10</x>
+          <y>55</y>
+          <width>111</width>
+          <height>21</height>
+         </rect>
+        </property>
+        <property name="text">
+         <string>Java 8 路径</string>
+        </property>
+       </widget>
+       <widget class="QLineEdit" name="lineEdit_4">
+        <property name="geometry">
+         <rect>
+          <x>110</x>
+          <y>130</y>
+          <width>291</width>
+          <height>31</height>
+         </rect>
+        </property>
+       </widget>
+       <widget class="QProgressBar" name="progressBar_3">
+        <property name="geometry">
+         <rect>
+          <x>110</x>
+          <y>170</y>
+          <width>351</width>
+          <height>23</height>
+         </rect>
+        </property>
+        <property name="value">
+         <number>0</number>
+        </property>
+       </widget>
+       <widget class="QLabel" name="label_11">
+        <property name="geometry">
+         <rect>
+          <x>10</x>
+          <y>205</y>
+          <width>111</width>
+          <height>21</height>
+         </rect>
+        </property>
+        <property name="text">
+         <string>回退 Java 路径</string>
+        </property>
+       </widget>
+       <widget class="QLabel" name="label_3">
+        <property name="geometry">
+         <rect>
+          <x>10</x>
+          <y>95</y>
+          <width>111</width>
+          <height>21</height>
+         </rect>
+        </property>
+        <property name="text">
+         <string>Java 17 路径</string>
+        </property>
+       </widget>
+       <widget class="QLineEdit" name="lineEdit_8">
+        <property name="geometry">
+         <rect>
+          <x>110</x>
+          <y>200</y>
+          <width>351</width>
+          <height>31</height>
+         </rect>
+        </property>
+       </widget>
+       <widget class="QLineEdit" name="lineEdit">
+        <property name="geometry">
+         <rect>
+          <x>110</x>
+          <y>10</y>
+          <width>291</width>
+          <height>31</height>
+         </rect>
+        </property>
+        <property name="placeholderText">
+         <string>路径</string>
+        </property>
+       </widget>
+       <widget class="QLabel" name="label">
+        <property name="geometry">
+         <rect>
+          <x>10</x>
+          <y>15</y>
+          <width>111</width>
+          <height>21</height>
+         </rect>
+        </property>
+        <property name="text">
+         <string>Minecraft 文件夹</string>
+        </property>
+       </widget>
+       <widget class="QLineEdit" name="lineEdit_2">
+        <property name="geometry">
+         <rect>
+          <x>110</x>
+          <y>50</y>
+          <width>291</width>
+          <height>31</height>
+         </rect>
+        </property>
+       </widget>
+       <widget class="QPushButton" name="pushButton_11">
+        <property name="geometry">
+         <rect>
+          <x>400</x>
+          <y>90</y>
+          <width>61</width>
+          <height>31</height>
+         </rect>
+        </property>
+        <property name="text">
+         <string>下载</string>
+        </property>
+       </widget>
+       <widget class="QPushButton" name="pushButton">
+        <property name="geometry">
+         <rect>
+          <x>10</x>
+          <y>240</y>
+          <width>121</width>
+          <height>31</height>
+         </rect>
+        </property>
+        <property name="text">
+         <string>保存设置</string>
+        </property>
+       </widget>
+       <widget class="QPushButton" name="pushButton_10">
+        <property name="geometry">
+         <rect>
+          <x>400</x>
+          <y>50</y>
+          <width>61</width>
+          <height>31</height>
+         </rect>
+        </property>
+        <property name="text">
+         <string>下载</string>
+        </property>
+       </widget>
+       <widget class="QLineEdit" name="lineEdit_3">
+        <property name="geometry">
+         <rect>
+          <x>110</x>
+          <y>90</y>
+          <width>291</width>
+          <height>31</height>
+         </rect>
+        </property>
+       </widget>
+      </widget>
      </widget>
     </widget>
     <widget class="QWidget" name="tab_6">
      <attribute name="icon">
-      <iconset theme="insert-image"/>
+      <iconset theme="insert-image">
+       <normaloff>.</normaloff>.</iconset>
      </attribute>
      <attribute name="title">
       <string>关于</string>
@@ -1057,13 +1124,10 @@
        <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;&lt;span style=&quot; font-size:24pt; font-weight:600;&quot;&gt;Spectrum Launcher&lt;/span&gt;&lt;/p&gt;&lt;p&gt;Spectrum Launcher 是一个轻量化，开源的 Minecraft 启动器，基于 Python 与PyQt5。&lt;/p&gt;&lt;p&gt;兼容Fabric, Forge等 Mod 加载器。当前正在完善 Mod 加载器的兼容。&lt;/p&gt;&lt;p&gt;Github: &lt;a href=&quot;https://github.com/HPLAY-dev/spectrum-minecraft/launcher&quot;&gt;&lt;span style=&quot; text-decoration: underline; color:#0000ff;&quot;&gt;HPLAY-dev/spectrum-minecraft/launcher&lt;/span&gt;&lt;/a&gt;&lt;/p&gt;&lt;p&gt;Bilibili: &lt;a href=&quot;https://space.bilibili.com/3493108044007466&quot;&gt;&lt;span style=&quot; text-decoration: underline; color:#0000ff;&quot;&gt;UID: 3493108044007466&lt;/span&gt;&lt;/a&gt;&lt;/p&gt;&lt;p&gt;开源协议: GNU GPL v3.0&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
       </property>
       <property name="textFormat">
-       <enum>Qt::TextFormat::RichText</enum>
-      </property>
-      <property name="alignment">
-       <set>Qt::AlignmentFlag::AlignLeading|Qt::AlignmentFlag::AlignLeft|Qt::AlignmentFlag::AlignTop</set>
+       <enum>Qt::PlainText</enum>
       </property>
       <property name="textInteractionFlags">
-       <set>Qt::TextInteractionFlag::LinksAccessibleByMouse|Qt::TextInteractionFlag::TextSelectableByMouse</set>
+       <set>Qt::NoTextInteraction</set>
       </property>
      </widget>
     </widget>
@@ -1085,9 +1149,6 @@
     </property>
     <property name="scaledContents">
      <bool>false</bool>
-    </property>
-    <property name="alignment">
-     <set>Qt::AlignmentFlag::AlignCenter</set>
     </property>
    </widget>
    <zorder>label_6</zorder>

@@ -2,17 +2,11 @@ main_window = """
             QMainWindow {
                 background-color: #161616;
             }
-            QComboBox {
-                background-color: rgba(255,255,255,120);
-                color: white;
-            }
             QLineEdit {
                 background-color: rgba(255,255,255,120);
-                color: white;
             }
             QListView {
                 background-color: rgba(255,255,255,0.4);
-                color: white;
             }
                 QListView::item {
                     background-color: transparent;
@@ -31,18 +25,15 @@ main_window = """
                 }
             QTabWidget {
                 background-color: transparent;
-                color: white;
             }
             QWidget {
                 background-color: transparent;
-                color: white;
             }
             QLabel {
                 border: none;
             }
             QPushButton {
                 background-color: #242424aa;
-                color: white;
             }
             QPushButton:hover {
                 background-color: #807EDC;
@@ -110,3 +101,9 @@ button1 = """
                 background-color: #5841BB;  /* 按下时的背景色 */
             }
         """
+
+bg_label = """
+            QLabel {
+                background: transparent;
+            }
+"""
