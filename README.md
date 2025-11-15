@@ -15,9 +15,10 @@ Only zh_CN is supported.
 ## 5.0 What can we do
 - [x] Launch any version of Minecraft Java Edition
 - [x] Fabric ModLoader
-- [x] Forge ModLoader (50%)
-- [x] Neoforge ModLoader (50%)
+- [ ] Forge ModLoader (50%)
+- [ ] Neoforge ModLoader (50%)
 - [x] Version file managing
+- [x] Download Mods on Modrinth
 
 ......
 
@@ -33,7 +34,7 @@ To make all parts of this application work, you need to install the following pa
 - Qt Creator
 - requests
 ```
-pip install PyQt6 PyQt6-Tools requests
+pip install PyQt6 PyQt6-Tools requests modrinth_api_wrapper
 ```
 ### 6.2 UI Modification 
 Run `./buildui.bat`(Windows only) to build the ui. (On *nix OSes, run `pyuic6 -o .\ui.py .\qt.ui`)
