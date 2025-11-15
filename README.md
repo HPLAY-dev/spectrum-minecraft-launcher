@@ -24,7 +24,7 @@ Only zh_CN is supported.
 
 ## 6.0 Developing & Contributing
 ### 6.1 Requirements
-- Python 3.x (3.13 used by us)
+- Python 3.x (3.14 used by us)
 - A environment for developing Qt 5 GUI
 - A Browser for developing OAuth Login (Alternatively, you can open the link in your browser without the webbrowser.)
 
