@@ -199,7 +199,7 @@ class Ui_MainWindow(object):
         self.pushButton_9.setGeometry(QRect(280, 110, 81, 31))
         self.lineEdit_5 = QLineEdit(self.tab_5)
         self.lineEdit_5.setObjectName(u"lineEdit_5")
-        self.lineEdit_5.setGeometry(QRect(100, 110, 181, 31))
+        self.lineEdit_5.setGeometry(QRect(140, 110, 141, 31))
         self.pushButton_14 = QPushButton(self.tab_5)
         self.pushButton_14.setObjectName(u"pushButton_14")
         self.pushButton_14.setGeometry(QRect(50, 110, 41, 31))
@@ -210,7 +210,7 @@ class Ui_MainWindow(object):
         self.scrollArea.setWidgetResizable(False)
         self.scrollAreaWidgetContents = QWidget()
         self.scrollAreaWidgetContents.setObjectName(u"scrollAreaWidgetContents")
-        self.scrollAreaWidgetContents.setGeometry(QRect(0, -584, 360, 818))
+        self.scrollAreaWidgetContents.setGeometry(QRect(0, 0, 360, 818))
         self.label_15 = QLabel(self.scrollAreaWidgetContents)
         self.label_15.setObjectName(u"label_15")
         self.label_15.setGeometry(QRect(10, 390, 111, 21))
@@ -276,6 +276,9 @@ class Ui_MainWindow(object):
         self.label_23.setObjectName(u"label_23")
         self.label_23.setGeometry(QRect(370, 60, 121, 31))
         self.label_23.setFont(font1)
+        self.pushButton_20 = QPushButton(self.tab_5)
+        self.pushButton_20.setObjectName(u"pushButton_20")
+        self.pushButton_20.setGeometry(QRect(90, 110, 41, 31))
         icon2 = QIcon()
         iconThemeName = u"system-file-manager"
         if QIcon.hasThemeIcon(iconThemeName):
@@ -448,7 +451,7 @@ class Ui_MainWindow(object):
 
         self.retranslateUi(MainWindow)
 
-        self.mainTabWidget.setCurrentIndex(5)
+        self.mainTabWidget.setCurrentIndex(2)
         self.tabWidget.setCurrentIndex(0)
 
 
@@ -512,6 +515,7 @@ class Ui_MainWindow(object):
         self.pushButton_17.setText(QCoreApplication.translate("MainWindow", u"\u4fdd\u5b58\u8be5\u7248\u672c\u8bbe\u7f6e", None))
         self.checkBox_6.setText(QCoreApplication.translate("MainWindow", u"\u5f3a\u5236Java", None))
         self.label_23.setText(QCoreApplication.translate("MainWindow", u"\u7248\u672c\u8bbe\u7f6e", None))
+        self.pushButton_20.setText(QCoreApplication.translate("MainWindow", u"\u5237\u65b0", None))
         self.mainTabWidget.setTabText(self.mainTabWidget.indexOf(self.tab_5), QCoreApplication.translate("MainWindow", u"\u7248\u672c\u7ba1\u7406", None))
         self.pushButton_12.setText(QCoreApplication.translate("MainWindow", u"\u4e0b\u8f7d", None))
         self.pushButton_13.setText(QCoreApplication.translate("MainWindow", u"...", None))

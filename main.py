@@ -91,6 +91,8 @@ class MainWindow(QMainWindow, Ui_MainWindow):
         self.mc_token = None
         self.autodl_fabric_api = False
 
+        self.mainTabWidget.setCurrentIndex(0)
+
         # self.setStyleSheet(stylesheets.main_window)
         self.LaunchBtn.setStyleSheet(stylesheets.button1)
         # self.label_6.setStyleSheet(stylesheets.bg_label)
@@ -121,6 +123,7 @@ class MainWindow(QMainWindow, Ui_MainWindow):
         self.mainTabWidget.currentChanged.connect(self.page_process) # change tab
 
         self.comboBox_5.currentTextChanged.connect(self.switch_manager_select_version) # Resourcepack manager
+        self.pushButton_20.clicked.connect(self.switch_manager_select_version)
 
         self.pushButton_4.clicked.connect(self.remove_version) # Remove ver
 
@@ -158,10 +161,19 @@ class MainWindow(QMainWindow, Ui_MainWindow):
         self.pushButton_18.clicked.connect(self.search_modrinth)
         self.pushButton_19.clicked.connect(self.install_modrinth)
         
-        open_bin = 'explorer.exe' if downloader.native() == 'windows' else 'xdg-open'
-        self.pushButton_14.clicked.connect(lambda: os.system(f'{open_bin} {self.comboBox_5.currentText()}'))
+        self.pushButton_14.clicked.connect(self.open_version_folder)
+        # self.pushButton_14.clicked.connect(lambda: os.system(f'cmd /c set /p a={self.comboBox_5.currentText()}'))
 
         self.update_installed_versions()
+
+    def open_version_folder(self):
+        open_bin = 'explorer.exe' if downloader.native() == 'windows' else 'xdg-open'
+        minecraft_dir = self.lineEdit.text().replace('\\', '/')
+        log(f'Opening {minecraft_dir}/versions/{self.comboBox_5.currentText()}')
+        cmd = f'{open_bin} {minecraft_dir}/versions/{self.comboBox_5.currentText()}'
+        if launcher.native() == 'windows':
+            cmd = cmd.replace('/', '\\')
+        os.system(cmd)
 
     def launch_version_select(self):
         self.launch_version = self.listView_2.selectionModel().selectedIndexes()[0].data()
@@ -324,7 +336,9 @@ class MainWindow(QMainWindow, Ui_MainWindow):
         self.switch_manager_select_version(version_name=ver)
 
 
-    def switch_manager_select_version(self, version_name):
+    def switch_manager_select_version(self, version_name=None):
+        if not version_name:
+            version_name = self.comboBox_5.currentText()
         self.checkBox_6.setChecked(False)
         self.lineEdit_9.setText('')
         if version_name in self.versions_config:
@@ -801,6 +815,7 @@ class MainWindow(QMainWindow, Ui_MainWindow):
                 raw = requests.get(url)
                 with open(destination, 'wb') as f:
                     f.write(raw.content)
+                    return
 
 
 log('Current __name__ is '+__name__)
