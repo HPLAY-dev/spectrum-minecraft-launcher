@@ -76,6 +76,7 @@ def fpath(path):
 
 default_icon = app_path() + '/assets/default_icon.png'
 
+log("Loading Assets","preparation")
 if not os.path.exists(default_icon):
     QMessageBox.critical(None, 'Assets load fail', default_icon)
     sys.exit(1)
@@ -83,7 +84,7 @@ if not os.path.exists(default_icon):
 class MainWindow(QMainWindow, Ui_MainWindow):
     def __init__(self, parent=None):
         # check_update()
-
+        log("Starting window")
         super(MainWindow, self).__init__(parent)
         self.setupUi(self)
         self.launch_version = None
@@ -93,7 +94,7 @@ class MainWindow(QMainWindow, Ui_MainWindow):
         self.autodl_fabric_api = False
 
         self.mainTabWidget.setCurrentIndex(0)
-
+        log("Setting Stylesheets")
         # self.setStyleSheet(stylesheets.main_window)
         self.LaunchBtn.setStyleSheet(stylesheets.button1)
         # self.label_6.setStyleSheet(stylesheets.bg_label)
@@ -166,6 +167,7 @@ class MainWindow(QMainWindow, Ui_MainWindow):
         # self.pushButton_14.clicked.connect(lambda: os.system(f'cmd /c set /p a={self.comboBox_5.currentText()}'))
 
         self.update_installed_versions()
+        log("Window created","preapration")
 
     def open_version_folder(self):
         open_bin = 'explorer.exe' if downloader.native() == 'windows' else 'xdg-open'
@@ -820,9 +822,10 @@ class MainWindow(QMainWindow, Ui_MainWindow):
                     return
 
 
-log('Current __name__ is '+__name__)
+log('Starting Program as '+__name__)
 if __name__ in ("__main__", "__compiled__", "__mp_main__"):
-    if not os.path.exists(app_path()+'/JavaWrapper.jar'):
+    if launcher.native() == "windows" and not os.path.exists(app_path()+'/JavaWrapper.jar'):
+        log("Downloading JavaWrapper")
         download_javawrapper()
     app = QApplication(sys.argv)
     win = MainWindow()

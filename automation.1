@@ -1,0 +1,30 @@
+// This program is an example of AUTOMATION launcher
+
+// Set an Initial version & version_name
+set     version         1.8.9
+set     vname           1.8.9-test1
+
+// Ask if change version
+in      chver           Do_you_want_to_change_a_minecraft_version?[1:yes_2:no]
+cmp     $chver          1
+
+jne     22
+out     This_line_will_never_be_reached
+
+// Yes
+in      version         Enter_Version:
+in      vname           Enter_Version_Name:
+out     The_program_will_install_Minecraft_$version_to_$vname.
+in      _               Press_Enter_to_continue
+// All thone '_'s are changed into ' ' and '__' -> '_'
+
+// No & Yes(already changed)
+in      mcdir           Input_Minecraft_Dir:
+env     mcdir           $mcdir
+in      modloader       Input_Modloader(forge,_fabric,_vanilla):
+env     modloader       $modloader
+env     mcversion       $version
+env     vname           $vname
+
+// Download the version
+dlver
