@@ -31,3 +31,4 @@ cfg.json.*
 qt6-*/
 launch.bat
 config/
+nuitka-crash-report.xml

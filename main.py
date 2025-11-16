@@ -508,15 +508,16 @@ class MainWindow(QMainWindow, Ui_MainWindow):
 
         if version_name in self.versions_config and self.versions_config[version_name]['if_override_java']:
             javaw = self.versions_config[version_name]['override_java_path']
-        java_major_version = launcher.get_required_java_version(minecraft_dir, version_name)
-        if java_major_version == 21:
-            javaw = self.lineEdit_4.text()
-        elif java_major_version == 17:
-            javaw = self.lineEdit_3.text()
-        elif java_major_version == 8:
-            javaw = self.lineEdit_2.text()
         else:
-            javaw = self.lineEdit_8.text()
+            java_major_version = launcher.get_required_java_version(minecraft_dir, version_name)
+            if java_major_version == 21:
+                javaw = self.lineEdit_4.text()
+            elif java_major_version == 17:
+                javaw = self.lineEdit_3.text()
+            elif java_major_version == 8:
+                javaw = self.lineEdit_2.text()
+            else:
+                javaw = self.lineEdit_8.text()
 
         xmx = self.comboBox_4.currentText()
 
