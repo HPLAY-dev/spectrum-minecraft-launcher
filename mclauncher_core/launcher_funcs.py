@@ -322,8 +322,8 @@ def launch(javaw, xmx, minecraft_dir, version_name, javawrapper=None, username: 
                 "-XX:+UseG1GC",
                 "-XX:-UseAdaptiveSizePolicy",
                 "-XX:-OmitStackTraceInFastThrow"]
-        if jvm_args_extend != '':
-            x_args.append(jvm_args_extend)
+        if jvm_args != '':
+            x_args.append(jvm_args)
         x_args = ' '.join(x_args)
 
         # -d args (jvm system properties)

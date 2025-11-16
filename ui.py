@@ -123,7 +123,7 @@ class Ui_MainWindow(object):
         self.listView.setEditTriggers(QAbstractItemView.NoEditTriggers)
         self.label_7 = QLabel(self.tab_2)
         self.label_7.setObjectName(u"label_7")
-        self.label_7.setGeometry(QRect(10, 10, 54, 21))
+        self.label_7.setGeometry(QRect(10, 10, 54, 31))
         self.checkBox = QCheckBox(self.tab_2)
         self.checkBox.setObjectName(u"checkBox")
         self.checkBox.setGeometry(QRect(340, 100, 141, 16))
@@ -390,7 +390,7 @@ class Ui_MainWindow(object):
         self.label_17 = QLabel(self.tab_6)
         self.label_17.setObjectName(u"label_17")
         self.label_17.setGeometry(QRect(10, 10, 481, 361))
-        self.label_17.setTextFormat(Qt.PlainText)
+        self.label_17.setTextFormat(Qt.AutoText)
         self.label_17.setTextInteractionFlags(Qt.NoTextInteraction)
         icon4 = QIcon()
         iconThemeName = u"insert-image"
@@ -451,7 +451,7 @@ class Ui_MainWindow(object):
 
         self.retranslateUi(MainWindow)
 
-        self.mainTabWidget.setCurrentIndex(2)
+        self.mainTabWidget.setCurrentIndex(0)
         self.tabWidget.setCurrentIndex(0)
 
 
@@ -539,7 +539,7 @@ class Ui_MainWindow(object):
         self.label_26.setText(QCoreApplication.translate("MainWindow", u"\u6e38\u620f\u53c2\u6570", None))
         self.pushButton.setText(QCoreApplication.translate("MainWindow", u"\u4fdd\u5b58\u8bbe\u7f6e", None))
         self.mainTabWidget.setTabText(self.mainTabWidget.indexOf(self.tab_3), QCoreApplication.translate("MainWindow", u"\u8bbe\u7f6e", None))
-        self.label_17.setText(QCoreApplication.translate("MainWindow", u"<html><head/><body><p><span style=\" font-size:24pt; font-weight:600;\">Spectrum Launcher</span></p><p>Spectrum Launcher \u662f\u4e00\u4e2a\u8f7b\u91cf\u5316\uff0c\u5f00\u6e90\u7684 Minecraft \u542f\u52a8\u5668\uff0c\u57fa\u4e8e Python \u4e0ePyQt5\u3002</p><p>\u517c\u5bb9Fabric, Forge\u7b49 Mod \u52a0\u8f7d\u5668\u3002\u5f53\u524d\u6b63\u5728\u5b8c\u5584 Mod \u52a0\u8f7d\u5668\u7684\u517c\u5bb9\u3002</p><p>Github: <a href=\"https://github.com/HPLAY-dev/spectrum-minecraft/launcher\"><span style=\" text-decoration: underline; color:#0000ff;\">HPLAY-dev/spectrum-minecraft/launcher</span></a></p><p>Bilibili: <a href=\"https://space.bilibili.com/3493108044007466\"><span style=\" text-decoration: underline; color:#0000ff;\">UID: 3493108044007466</span></a></p><p>\u5f00\u6e90\u534f\u8bae: GNU GPL v3.0</p></body></html>", None))
+        self.label_17.setText(QCoreApplication.translate("MainWindow", u"<html><head/><body><p><span style=\" font-size:24pt; font-weight:600;\">Spectrum Launcher</span></p><p>Spectrum Launcher \u662f\u4e00\u4e2a\u8f7b\u91cf\u5316\uff0c\u5f00\u6e90\u7684 Minecraft \u542f\u52a8\u5668\uff0c\u57fa\u4e8e Python \u4e0ePySide6\u3002</p><p>\u517c\u5bb9Fabric, Forge\u7b49 Mod \u52a0\u8f7d\u5668\uff1bModrinth\u6a21\u7ec4\u4e0b\u8f7d\uff1b\u7b80\u5355\u7684\u5404\u7248\u672c\u6587\u4ef6\u7ba1\u7406\uff1b\u6b63\u7248\u767b\u5f55</p><p>Github: <a href=\"https://github.com/HPLAY-dev/spectrum-minecraft/launcher\"><span style=\" text-decoration: underline; color:#0000ff;\">HPLAY-dev/spectrum-minecraft/launcher</span></a></p><p>Bilibili: <a href=\"https://space.bilibili.com/3493108044007466\"><span style=\" text-decoration: underline; color:#0000ff;\">UID: 3493108044007466</span></a></p><p>\u5f00\u6e90\u534f\u8bae: GNU GPL</p></body></html>", None))
         self.mainTabWidget.setTabText(self.mainTabWidget.indexOf(self.tab_6), QCoreApplication.translate("MainWindow", u"\u5173\u4e8e", None))
         self.label_27.setText(QCoreApplication.translate("MainWindow", u"\u641c\u7d22 Mod", None))
         self.label_28.setText(QCoreApplication.translate("MainWindow", u"\u540d\u79f0", None))

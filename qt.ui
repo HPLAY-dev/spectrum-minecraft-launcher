@@ -38,7 +38,7 @@
      <enum>QTabWidget::North</enum>
     </property>
     <property name="currentIndex">
-     <number>2</number>
+     <number>0</number>
     </property>
     <property name="documentMode">
      <bool>false</bool>
@@ -301,7 +301,7 @@
         <x>10</x>
         <y>10</y>
         <width>54</width>
-        <height>21</height>
+        <height>31</height>
        </rect>
       </property>
       <property name="text">
@@ -1294,10 +1294,10 @@
        </rect>
       </property>
       <property name="text">
-       <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;&lt;span style=&quot; font-size:24pt; font-weight:600;&quot;&gt;Spectrum Launcher&lt;/span&gt;&lt;/p&gt;&lt;p&gt;Spectrum Launcher 是一个轻量化，开源的 Minecraft 启动器，基于 Python 与PyQt5。&lt;/p&gt;&lt;p&gt;兼容Fabric, Forge等 Mod 加载器。当前正在完善 Mod 加载器的兼容。&lt;/p&gt;&lt;p&gt;Github: &lt;a href=&quot;https://github.com/HPLAY-dev/spectrum-minecraft/launcher&quot;&gt;&lt;span style=&quot; text-decoration: underline; color:#0000ff;&quot;&gt;HPLAY-dev/spectrum-minecraft/launcher&lt;/span&gt;&lt;/a&gt;&lt;/p&gt;&lt;p&gt;Bilibili: &lt;a href=&quot;https://space.bilibili.com/3493108044007466&quot;&gt;&lt;span style=&quot; text-decoration: underline; color:#0000ff;&quot;&gt;UID: 3493108044007466&lt;/span&gt;&lt;/a&gt;&lt;/p&gt;&lt;p&gt;开源协议: GNU GPL v3.0&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+       <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;&lt;span style=&quot; font-size:24pt; font-weight:600;&quot;&gt;Spectrum Launcher&lt;/span&gt;&lt;/p&gt;&lt;p&gt;Spectrum Launcher 是一个轻量化，开源的 Minecraft 启动器，基于 Python 与PySide6。&lt;/p&gt;&lt;p&gt;兼容Fabric, Forge等 Mod 加载器；Modrinth模组下载；简单的各版本文件管理；正版登录&lt;/p&gt;&lt;p&gt;Github: &lt;a href=&quot;https://github.com/HPLAY-dev/spectrum-minecraft/launcher&quot;&gt;&lt;span style=&quot; text-decoration: underline; color:#0000ff;&quot;&gt;HPLAY-dev/spectrum-minecraft/launcher&lt;/span&gt;&lt;/a&gt;&lt;/p&gt;&lt;p&gt;Bilibili: &lt;a href=&quot;https://space.bilibili.com/3493108044007466&quot;&gt;&lt;span style=&quot; text-decoration: underline; color:#0000ff;&quot;&gt;UID: 3493108044007466&lt;/span&gt;&lt;/a&gt;&lt;/p&gt;&lt;p&gt;开源协议: GNU GPL&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
       </property>
       <property name="textFormat">
-       <enum>Qt::PlainText</enum>
+       <enum>Qt::AutoText</enum>
       </property>
       <property name="textInteractionFlags">
        <set>Qt::NoTextInteraction</set>

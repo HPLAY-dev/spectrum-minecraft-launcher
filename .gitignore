@@ -30,4 +30,4 @@ build-*/
 cfg.json.*
 qt6-*/
 launch.bat
-
+config/
