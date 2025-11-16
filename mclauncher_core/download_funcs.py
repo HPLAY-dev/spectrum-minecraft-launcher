@@ -140,8 +140,11 @@ def download_libraries(minecraft_dir, version, version_name, print_status=True, 
                 if not os.path.exists(dest):
                     src = os.path.join(root, name)
                     shutil.copy(src, dest)
-    shutil.rmtree(os.path.join(natives_path, native()))
-    shutil.rmtree(os.path.join(natives_path, 'META-INF'))
+    try:
+        shutil.rmtree(os.path.join(natives_path, native()))
+        shutil.rmtree(os.path.join(natives_path, 'META-INF'))
+    except:
+        pass
 
 def download_single_library(minecraft_dir, version_name, lib, bmclapi, print_status):
     """下载单个库文件，返回None"""
