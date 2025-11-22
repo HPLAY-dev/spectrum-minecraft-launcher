@@ -99,14 +99,7 @@ class Ui_MainWindow(object):
         font1.setPointSize(18)
         font1.setBold(True)
         self.label_18.setFont(font1)
-        icon = QIcon()
-        iconThemeName = u"media-playback-start"
-        if QIcon.hasThemeIcon(iconThemeName):
-            icon = QIcon.fromTheme(iconThemeName)
-        else:
-            icon.addFile(u".", QSize(), QIcon.Mode.Normal, QIcon.State.Off)
-
-        self.mainTabWidget.addTab(self.tab_1, icon, "")
+        self.mainTabWidget.addTab(self.tab_1, "")
         self.label_18.raise_()
         self.tabWidget.raise_()
         self.comboBox_4.raise_()
@@ -123,7 +116,7 @@ class Ui_MainWindow(object):
         self.listView.setEditTriggers(QAbstractItemView.NoEditTriggers)
         self.label_7 = QLabel(self.tab_2)
         self.label_7.setObjectName(u"label_7")
-        self.label_7.setGeometry(QRect(10, 10, 54, 31))
+        self.label_7.setGeometry(QRect(10, 10, 78, 31))
         self.checkBox = QCheckBox(self.tab_2)
         self.checkBox.setObjectName(u"checkBox")
         self.checkBox.setGeometry(QRect(340, 100, 141, 16))
@@ -140,7 +133,7 @@ class Ui_MainWindow(object):
         self.checkBox_4.setChecked(True)
         self.label_8 = QLabel(self.tab_2)
         self.label_8.setObjectName(u"label_8")
-        self.label_8.setGeometry(QRect(20, 200, 54, 21))
+        self.label_8.setGeometry(QRect(10, 200, 78, 21))
         self.lineEdit_7 = QLineEdit(self.tab_2)
         self.lineEdit_7.setObjectName(u"lineEdit_7")
         self.lineEdit_7.setGeometry(QRect(90, 200, 241, 31))
@@ -175,14 +168,7 @@ class Ui_MainWindow(object):
         self.checkBox_5.setObjectName(u"checkBox_5")
         self.checkBox_5.setGeometry(QRect(340, 130, 171, 16))
         self.checkBox_5.setChecked(True)
-        icon1 = QIcon()
-        iconThemeName = u"emblem-downloads"
-        if QIcon.hasThemeIcon(iconThemeName):
-            icon1 = QIcon.fromTheme(iconThemeName)
-        else:
-            icon1.addFile(u".", QSize(), QIcon.Mode.Normal, QIcon.State.Off)
-
-        self.mainTabWidget.addTab(self.tab_2, icon1, "")
+        self.mainTabWidget.addTab(self.tab_2, "")
         self.tab_5 = QWidget()
         self.tab_5.setObjectName(u"tab_5")
         self.label_12 = QLabel(self.tab_5)
@@ -190,19 +176,19 @@ class Ui_MainWindow(object):
         self.label_12.setGeometry(QRect(10, 15, 111, 21))
         self.comboBox_5 = QComboBox(self.tab_5)
         self.comboBox_5.setObjectName(u"comboBox_5")
-        self.comboBox_5.setGeometry(QRect(110, 10, 591, 31))
+        self.comboBox_5.setGeometry(QRect(110, 10, 251, 31))
         self.pushButton_4 = QPushButton(self.tab_5)
         self.pushButton_4.setObjectName(u"pushButton_4")
-        self.pushButton_4.setGeometry(QRect(10, 110, 41, 31))
+        self.pushButton_4.setGeometry(QRect(10, 110, 90, 31))
         self.pushButton_9 = QPushButton(self.tab_5)
         self.pushButton_9.setObjectName(u"pushButton_9")
-        self.pushButton_9.setGeometry(QRect(280, 110, 81, 31))
+        self.pushButton_9.setGeometry(QRect(620, 10, 81, 31))
         self.lineEdit_5 = QLineEdit(self.tab_5)
         self.lineEdit_5.setObjectName(u"lineEdit_5")
-        self.lineEdit_5.setGeometry(QRect(140, 110, 141, 31))
+        self.lineEdit_5.setGeometry(QRect(360, 10, 261, 31))
         self.pushButton_14 = QPushButton(self.tab_5)
         self.pushButton_14.setObjectName(u"pushButton_14")
-        self.pushButton_14.setGeometry(QRect(50, 110, 41, 31))
+        self.pushButton_14.setGeometry(QRect(110, 110, 90, 31))
         self.scrollArea = QScrollArea(self.tab_5)
         self.scrollArea.setObjectName(u"scrollArea")
         self.scrollArea.setGeometry(QRect(10, 150, 351, 201))
@@ -261,7 +247,7 @@ class Ui_MainWindow(object):
         self.lineEdit_9.setGeometry(QRect(450, 100, 191, 31))
         self.label_21 = QLabel(self.tab_5)
         self.label_21.setObjectName(u"label_21")
-        self.label_21.setGeometry(QRect(10, 60, 121, 31))
+        self.label_21.setGeometry(QRect(10, 60, 300, 31))
         self.label_21.setFont(font1)
         self.pushButton_16 = QPushButton(self.tab_5)
         self.pushButton_16.setObjectName(u"pushButton_16")
@@ -271,22 +257,15 @@ class Ui_MainWindow(object):
         self.pushButton_17.setGeometry(QRect(570, 310, 131, 31))
         self.checkBox_6 = QCheckBox(self.tab_5)
         self.checkBox_6.setObjectName(u"checkBox_6")
-        self.checkBox_6.setGeometry(QRect(370, 100, 71, 31))
+        self.checkBox_6.setGeometry(QRect(370, 100, 100, 31))
         self.label_23 = QLabel(self.tab_5)
         self.label_23.setObjectName(u"label_23")
-        self.label_23.setGeometry(QRect(370, 60, 121, 31))
+        self.label_23.setGeometry(QRect(370, 60, 300, 31))
         self.label_23.setFont(font1)
         self.pushButton_20 = QPushButton(self.tab_5)
         self.pushButton_20.setObjectName(u"pushButton_20")
-        self.pushButton_20.setGeometry(QRect(90, 110, 41, 31))
-        icon2 = QIcon()
-        iconThemeName = u"system-file-manager"
-        if QIcon.hasThemeIcon(iconThemeName):
-            icon2 = QIcon.fromTheme(iconThemeName)
-        else:
-            icon2.addFile(u".", QSize(), QIcon.Mode.Normal, QIcon.State.Off)
-
-        self.mainTabWidget.addTab(self.tab_5, icon2, "")
+        self.pushButton_20.setGeometry(QRect(210, 110, 90, 31))
+        self.mainTabWidget.addTab(self.tab_5, "")
         self.tab_3 = QWidget()
         self.tab_3.setObjectName(u"tab_3")
         self.scrollArea_2 = QScrollArea(self.tab_3)
@@ -296,7 +275,7 @@ class Ui_MainWindow(object):
         self.scrollArea_2.setWidgetResizable(False)
         self.scrollAreaWidgetContents_2 = QWidget()
         self.scrollAreaWidgetContents_2.setObjectName(u"scrollAreaWidgetContents_2")
-        self.scrollAreaWidgetContents_2.setGeometry(QRect(0, 0, 692, 1000))
+        self.scrollAreaWidgetContents_2.setGeometry(QRect(0, -207, 692, 1000))
         self.pushButton_12 = QPushButton(self.scrollAreaWidgetContents_2)
         self.pushButton_12.setObjectName(u"pushButton_12")
         self.pushButton_12.setGeometry(QRect(400, 175, 61, 31))
@@ -345,11 +324,11 @@ class Ui_MainWindow(object):
         self.lineEdit_3.setGeometry(QRect(110, 135, 291, 31))
         self.label_22 = QLabel(self.scrollAreaWidgetContents_2)
         self.label_22.setObjectName(u"label_22")
-        self.label_22.setGeometry(QRect(10, 10, 121, 31))
+        self.label_22.setGeometry(QRect(10, 10, 450, 31))
         self.label_22.setFont(font1)
         self.label_24 = QLabel(self.scrollAreaWidgetContents_2)
         self.label_24.setObjectName(u"label_24")
-        self.label_24.setGeometry(QRect(10, 290, 121, 31))
+        self.label_24.setGeometry(QRect(10, 290, 450, 31))
         self.label_24.setFont(font1)
         self.lineEdit_10 = QLineEdit(self.scrollAreaWidgetContents_2)
         self.lineEdit_10.setObjectName(u"lineEdit_10")
@@ -365,7 +344,7 @@ class Ui_MainWindow(object):
         self.lineEdit_11.setGeometry(QRect(110, 410, 291, 31))
         self.label_25 = QLabel(self.scrollAreaWidgetContents_2)
         self.label_25.setObjectName(u"label_25")
-        self.label_25.setGeometry(QRect(10, 370, 121, 31))
+        self.label_25.setGeometry(QRect(10, 370, 450, 31))
         self.label_25.setFont(font1)
         self.lineEdit_12 = QLineEdit(self.scrollAreaWidgetContents_2)
         self.lineEdit_12.setObjectName(u"lineEdit_12")
@@ -377,14 +356,7 @@ class Ui_MainWindow(object):
         self.pushButton = QPushButton(self.tab_3)
         self.pushButton.setObjectName(u"pushButton")
         self.pushButton.setGeometry(QRect(0, 310, 121, 31))
-        icon3 = QIcon()
-        iconThemeName = u"utilities-system-monitor"
-        if QIcon.hasThemeIcon(iconThemeName):
-            icon3 = QIcon.fromTheme(iconThemeName)
-        else:
-            icon3.addFile(u".", QSize(), QIcon.Mode.Normal, QIcon.State.Off)
-
-        self.mainTabWidget.addTab(self.tab_3, icon3, "")
+        self.mainTabWidget.addTab(self.tab_3, "")
         self.tab_6 = QWidget()
         self.tab_6.setObjectName(u"tab_6")
         self.label_17 = QLabel(self.tab_6)
@@ -392,14 +364,7 @@ class Ui_MainWindow(object):
         self.label_17.setGeometry(QRect(10, 10, 481, 361))
         self.label_17.setTextFormat(Qt.AutoText)
         self.label_17.setTextInteractionFlags(Qt.NoTextInteraction)
-        icon4 = QIcon()
-        iconThemeName = u"insert-image"
-        if QIcon.hasThemeIcon(iconThemeName):
-            icon4 = QIcon.fromTheme(iconThemeName)
-        else:
-            icon4.addFile(u".", QSize(), QIcon.Mode.Normal, QIcon.State.Off)
-
-        self.mainTabWidget.addTab(self.tab_6, icon4, "")
+        self.mainTabWidget.addTab(self.tab_6, "")
         self.tab_7 = QWidget()
         self.tab_7.setObjectName(u"tab_7")
         self.label_27 = QLabel(self.tab_7)
@@ -451,7 +416,7 @@ class Ui_MainWindow(object):
 
         self.retranslateUi(MainWindow)
 
-        self.mainTabWidget.setCurrentIndex(0)
+        self.mainTabWidget.setCurrentIndex(2)
         self.tabWidget.setCurrentIndex(0)
 
 

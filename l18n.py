@@ -39,6 +39,7 @@ def get_system_locale():
 
 
 lang = get_system_locale().lower()
+lang = 'en_us'
 if os.path.exists('languages/'+lang+".json"):
     try:
         with open('languages/'+lang+'.json', 'r', encoding='utf-8') as f:
