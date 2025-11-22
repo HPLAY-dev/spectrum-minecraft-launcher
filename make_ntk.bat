@@ -22,6 +22,7 @@ if '%1'=='clean' goto clean
     mkdir .\..\builds\build-%Version%\assets
     xcopy .\build\main.dist .\builds\nuitka-%VERSION% /E /I /Q
     xcopy .\assets .\builds\nuitka-%VERSION%\assets /E /I /Q
+    xcopy .\languages .\builds\nuitka-%VERSION%\languages /E /I /Q
     echo Creating Archive
     7z a -mx0 .\builds\nuitka-%VERSION%.7z .\builds\nuitka-%VERSION%
     goto EOF

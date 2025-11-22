@@ -29,7 +29,9 @@ goto HELP
 	%pyinstaller% --noconfirm --onedir .\..\%PROJECT%.py
 	xcopy .\dist\%PROJECT% .\..\builds\build-%Version% /E /I /Q
 	mkdir .\..\builds\build-%Version%\assets
+	mkdir .\..\builds\build-%Version%\languages
 	xcopy .\..\assets .\..\builds\build-%Version%\assets /E /I /Q
+	xcopy .\..\languages .\..\builds\build-%Version%\languages /E /I /Q
 
 	cd ..
 	goto EOF
