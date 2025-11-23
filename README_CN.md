@@ -1,10 +1,11 @@
 # Spectrum Minecraft Launcher
 开源且轻量的Minecraft启动器，基于Python3
+
 ## 2.0 模组加载器
 Fabric已经完整支持，Forge与Neoforge基本支持，见4.0
 
 ## 3.0 多语言
-仅 中文,简体 (zh_CN)被支持
+中文(简体) 英语(美国)
 
 ## 4.0 问题
 - 早期版本不能正确加载assets(素材)
@@ -17,23 +18,24 @@ Fabric已经完整支持，Forge与Neoforge基本支持，见4.0
 - [x] Forge ModLoader (50%)
 - [x] Neoforge ModLoader (50%)
 - [x] 版本文件管理
+- [x] Modtinth Mods下载
 
 ......
 
 ## 6.0 开发与贡献
 ### 6.1 环境配置
 - Python 3.x (3.13 被使用)
-- 开发Qt 5 GUI的DE
+- 开发Qt 6 GUI的桌面环境(linux only)
 - OAuth登录使用的浏览器
 
-要使此程序完整工作，还需要安装以下pypi包
+要使此程序完整工作，还需要安装以下包
 
-- PyQt5
-- PyQt5-Tools (构建时不需要)
+- PySide6
+- modrinth_api_wrapper
 - requests
 ```
-pip install PyQt5 PyQt5-Tools requests
+pip install PyQt6 PyQt6-Tools requests modrinth_api_wrapper
 ```
 ### 6.2 UI 修改
 运行 `designer qt.ui` 来修改 UI.
-运行 `./buildui.bat`(Windows) 来构建. (在其它系统，执行 `pyuic5 -o .\ui.py .\qt.ui`)
+运行 `./buildui.bat`(Windows) 来构建. (在其它系统，执行 `pyuic6 -o .\ui.py .\qt.ui`)
