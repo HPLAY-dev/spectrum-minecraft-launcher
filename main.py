@@ -731,7 +731,6 @@ class MainWindow(QMainWindow, Ui_MainWindow):
 
     # Modrinth stuff (quite simple, thx for the api author)
     def load_icon(self, url):
-        """同步加载图标（可能会阻塞UI）"""
         try:
             response = requests.get(url, timeout=10)
             response.raise_for_status()
@@ -786,7 +785,6 @@ class MainWindow(QMainWindow, Ui_MainWindow):
         self.mods = mods
 
     def install_modrinth(self):
-
         minecraft_dir = self.lineEdit.text().replace('\\', '/')
         if minecraft_dir[-1] == '/':
             minecraft_dir = minecraft_dir[:-1]
