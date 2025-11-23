@@ -39,18 +39,25 @@ def get_system_locale():
 
 
 lang = get_system_locale().lower()
-lang = 'en_us'
 if os.path.exists('languages/'+lang+".json"):
     try:
         with open('languages/'+lang+'.json', 'r', encoding='utf-8') as f:
-            langfile = json.loads(f.read())
+            _langfile = json.loads(f.read())
     except Exception as e:
         print('[l18n] Language File Load Error'+str(e))
 elif os.path.exists("languages/en_us.json"):
+    print('[l18n] Language File Using Fallback'+str(e))
     try:
         with open('languages/en_us.json', 'r', encoding='utf-8') as f:
-            langfile = json.loads(f.read())
+            _langfile = json.loads(f.read())
     except Exception as e:
         print('[l18n] Language File Load Error'+str(e))
 else:
     print('[l18n] Language File Missing')
+
+def string(key: str):
+    if key in _langfile:
+        return _langfile[key]
+    else:
+        print('[l18n] Cannot find key: '+key)
+        return ''

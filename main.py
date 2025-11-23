@@ -83,7 +83,7 @@ default_icon = app_path() + '/assets/default_icon.png'
 
 log("Loading Assets","preparation")
 if not os.path.exists(default_icon):
-    QMessageBox.critical(None, l18n.langfile["assetLoadFail"], default_icon)
+    QMessageBox.critical(None, l18n.string("assetLoadFail"), default_icon)
     sys.exit(1)
 
 class MainWindow(QMainWindow, Ui_MainWindow):
@@ -177,7 +177,7 @@ class MainWindow(QMainWindow, Ui_MainWindow):
     def open_version_folder(self):
         open_bin = 'explorer.exe' if downloader.native() == 'windows' else 'xdg-open'
         minecraft_dir = self.lineEdit.text().replace('\\', '/')
-        log(f'{l18n.langfile["opening"]} {minecraft_dir}/versions/{self.comboBox_5.currentText()}')
+        log(f'{l18n.string("opening")} {minecraft_dir}/versions/{self.comboBox_5.currentText()}')
         cmd = f'{open_bin} {minecraft_dir}/versions/{self.comboBox_5.currentText()}'
         if launcher.native() == 'windows':
             cmd = cmd.replace('/', '\\')
@@ -185,7 +185,7 @@ class MainWindow(QMainWindow, Ui_MainWindow):
 
     def launch_version_select(self):
         self.launch_version = self.listView_2.selectionModel().selectedIndexes()[0].data()
-        self.LaunchBtn.setText(l18n.langfile["launch"]+"\n"+self.launch_version)
+        self.LaunchBtn.setText(l18n.string("launch")+"\n"+self.launch_version)
         self.ver_visibility_toggle()
 
     def ver_visibility_toggle(self):
@@ -197,12 +197,12 @@ class MainWindow(QMainWindow, Ui_MainWindow):
         self.listView_2.setVisible(not _)
 
     def open_folder(self):
-        return QFileDialog.getExistingDirectory(self, l18n.langfile["selectFolder"], app_path())
+        return QFileDialog.getExistingDirectory(self, l18n.string("selectFolder"), app_path())
     def open_file(self):
-        return QFileDialog.getOpenFileName(self, self, l18n.langfile["selectFile"], app_path())
+        return QFileDialog.getOpenFileName(self, self, l18n.string("selectFile"), app_path())
     def rename_version(self):
         if self.lineEdit_5.text() == "":
-            QMessageBox.warning(None, l18n.langfile["appName"], l18n.langfile["noName"])
+            QMessageBox.warning(None, l18n.string("appName"), l18n.string("noName"))
         new_name = self.lineEdit_5.text()
         version_name = self.comboBox_5.currentText()
         minecraft_dir = self.lineEdit.text().replace('\\', '/')
@@ -224,7 +224,7 @@ class MainWindow(QMainWindow, Ui_MainWindow):
             # 首先获取文件大小
             response = requests.get(url, stream=True)
             if response.status_code != 200:
-                raise Exception(l18n.langfile["downloadFailColon"] + str(response.status_code))
+                raise Exception(l18n.string("downloadFailColon") + str(response.status_code))
 
             total_size = int(response.headers.get('content-length', 0))
             downloaded_size = 0
@@ -243,10 +243,10 @@ class MainWindow(QMainWindow, Ui_MainWindow):
                             # 如果有回调函数，调用回调函数
                             if callback:
                                 callback(int(progress_percent))
-                                log(f"\r{l18n.langfile["downloadProgress"]}: {progress_percent}%", end='', flush=True)
+                                log(f"\r{l18n.string("downloadProgress")}: {progress_percent}%", end='', flush=True)
                             else:
                                 # 默认行为：打印进度
-                                log(f"\r{l18n.langfile["downloadProgress"]}: {progress_percent}%", end='', flush=True)
+                                log(f"\r{l18n.string("downloadProgress")}: {progress_percent}%", end='', flush=True)
 
             # 下载完成
             if callback:
@@ -292,11 +292,11 @@ class MainWindow(QMainWindow, Ui_MainWindow):
             return 1
         log(str(self.comboBox_5.currentText()))
         if len(str(self.comboBox_5.currentText())) == 0:
-            QMessageBox.critical(None, l18n.langfile["appName"], l18n.langfile["selectVersion"])
+            QMessageBox.critical(None, l18n.string("appName"), l18n.string("selectVersion"))
             return 1
         ver = str(self.comboBox_5.currentText())
 
-        QMessageBox.information(None, l18n.langfile["appName"], ver+l18n.langfile["willBeDeleted"])
+        QMessageBox.information(None, l18n.string("appName"), ver+l18n.string("willBeDeleted"))
         launcher.remove_version(minecraft_dir, ver)
         self.update_installed_versions()
         return None
@@ -309,16 +309,16 @@ class MainWindow(QMainWindow, Ui_MainWindow):
             return 1
 
         if self.comboBox_5.currentText() == '':
-            QMessageBox.critical(None, l18n.langfile["appName"], l18n.langfile["selectVersion"])
+            QMessageBox.critical(None, l18n.string("appName"), l18n.string("selectVersion"))
             return 1
         ver = self.comboBox_5.currentText()
 
         if len(self.listView_saves.selectionModel().selectedIndexes()) == 0:
-            QMessageBox.critical(None, l18n.langfile["appName"], l18n.langfile["selectSave"])
+            QMessageBox.critical(None, l18n.string("appName"), l18n.string("selectSave"))
             return 1
         save = self.listView_saves.selectionModel().selectedIndexes()[0].data()
 
-        QMessageBox.information(None, l18n.langfile["appName"], save+l18n.langfile["willBeDeleted"])
+        QMessageBox.information(None, l18n.string("appName"), save+l18n.string("willBeDeleted"))
         manager.remove_save(minecraft_dir, ver, save)
         self.switch_manager_select_version(version_name=ver)
 
@@ -330,16 +330,16 @@ class MainWindow(QMainWindow, Ui_MainWindow):
             return 1
 
         if self.comboBox_5.currentText() == '':
-            QMessageBox.critical(None, l18n.langfile["appName"], l18n.langfile["selectVersion"])
+            QMessageBox.critical(None, l18n.string("appName"), l18n.string("selectVersion"))
             return 1
         ver = self.comboBox_5.currentText()
 
         if len(self.listView_respacks.selectionModel().selectedIndexes()) == 0:
-            QMessageBox.critical(None, l18n.langfile["appName"], l18n.langfile["selectRespack"])
+            QMessageBox.critical(None, l18n.string("appName"), l18n.string("selectRespack"))
             return 1
         respack = self.listView_respacks.selectionModel().selectedIndexes()[0].data()
 
-        QMessageBox.information(None, l18n.langfile["appName"], respack+l18n.langfile["willBeDeleted"])
+        QMessageBox.information(None, l18n.string("appName"), respack+l18n.string("willBeDeleted"))
         manager.remove_resourcepack(minecraft_dir, ver, respack)
         self.switch_manager_select_version(version_name=ver)
 
@@ -454,10 +454,10 @@ class MainWindow(QMainWindow, Ui_MainWindow):
                             dirname = '.'.join(file.split('.')[:-1]).split('/')[-1]
                             f.extractall(saves_path+'/'+dirname)
                             if not os.path.exists(saves_path+'/'+dirname+'/level.dat'):
-                                QMessageBox.warning(None, l18n.langfile["appName"], l18n.langfile["fileIsNotSaveFolderSaveZip"])
+                                QMessageBox.warning(None, l18n.string("appName"), l18n.string("fileIsNotSaveFolderSaveZip"))
                                 shutil.rmtree(saves_path+'/'+dirname)
                     except z.BadZipFile:
-                        QMessageBox.warning(None, l18n.langfile["appName"], l18n.langfile["fileIsNotSaveFolderSaveZip"])
+                        QMessageBox.warning(None, l18n.string("appName"), l18n.string("fileIsNotSaveFolderSaveZip"))
             event.accept()
 
         elif widget_under_cursor.objectName() == 'listView_respacks':
@@ -473,10 +473,10 @@ class MainWindow(QMainWindow, Ui_MainWindow):
                             dirname = '.'.join(file.split('.')[:-1]).split('/')[-1]
                             f.extractall(saves_path+'/'+dirname)
                             if not os.path.exists(saves_path+'/'+dirname+'/pack.mcmeta'):
-                                QMessageBox.warning(None, l18n.langfile["appName"], l18n.langfile["fileIsNotRespackFolderRespackZip"])
+                                QMessageBox.warning(None, l18n.string("appName"), l18n.string("fileIsNotRespackFolderRespackZip"))
                                 shutil.rmtree(saves_path+'/'+dirname)
                     except z.BadZipFile:
-                        QMessageBox.warning(None, l18n.langfile["appName"], l18n.langfile["fileIsNotRespackFolderRespackZip"])
+                        QMessageBox.warning(None, l18n.string("appName"), l18n.string("fileIsNotRespackFolderRespackZip"))
             event.accept()
 
     def page_process(self, page_index):
@@ -505,11 +505,11 @@ class MainWindow(QMainWindow, Ui_MainWindow):
         if minecraft_dir[-1] == '/':
             minecraft_dir = minecraft_dir[:-1]
         if not os.path.exists(minecraft_dir):
-            QMessageBox.critical(None, l18n.langfile["appName"], l18n.langfile["minecraftPathInvalid"])
+            QMessageBox.critical(None, l18n.string("appName"), l18n.string("minecraftPathInvalid"))
             return 1
         
         if self.launch_version == None:
-            QMessageBox.critical(None, l18n.langfile["appName"], l18n.langfile["selectVersion"])
+            QMessageBox.critical(None, l18n.string("appName"), l18n.string("selectVersion"))
             return 1
         version_name = self.launch_version
 
@@ -530,16 +530,16 @@ class MainWindow(QMainWindow, Ui_MainWindow):
 
         username = self.lineEdit_6.text()
         # if len(username) > 16:
-        #     QMessageBox.warning(None, l18n.langfile["appName"], '玩家名称长度>16，可能出现问题。')
+        #     QMessageBox.warning(None, l18n.string("appName"), '玩家名称长度>16，可能出现问题。')
         # punctuations = "[!\"#$%&'()*+,-./:;<=>?@[\\]^_`{|}~]"
         # pattern = re.compile(r'[\u4e00-\u9fff\u3040-\u30ff\uac00-\ud7af\uff00-\uffef\s' + punctuations + ']') # CJK chars; symbol; full-width chars; spaces; 
         # if bool(pattern.search(username)):
-        #     QMessageBox.warning(None, l18n.langfile["appName"], '玩家名称含有其他语言字符，可能出现问题。')
+        #     QMessageBox.warning(None, l18n.string("appName"), '玩家名称含有其他语言字符，可能出现问题。')
 
         if launcher.native() == 'windows':
             javawrapper = './JavaWrapper.jar'
             if not os.path.exists(javawrapper):
-                QMessageBox.critical(None, l18n.langfile["appName"], l18n.langfile["javaWrapperInvalid"])
+                QMessageBox.critical(None, l18n.string("appName"), l18n.string("javaWrapperInvalid"))
                 return 1
         else:
             javawrapper = None
@@ -574,19 +574,19 @@ class MainWindow(QMainWindow, Ui_MainWindow):
     def handle_minecraft_output(self):
         data = self.minecraft_process.readAllStandardOutput()
         stdout = bytes(data).decode("gbk", errors='ignore')
-        log(f"{l18n.langfile["minecraftOut"]}: {stdout}")
+        log(f"{l18n.string("minecraftOut")}: {stdout}")
 
     def handle_minecraft_error(self):
         data = self.minecraft_process.readAllStandardError()
         stderr = bytes(data).decode("gbk", errors='ignore')
-        log(f"{l18n.langfile["minecraftErr"]}: {stderr}")
+        log(f"{l18n.string("minecraftErr")}: {stderr}")
 
     def handle_minecraft_finished(self, exit_code, exit_status):
-        log(f"{l18n.langfile["minecraftExit"]}: {exit_code}")
+        log(f"{l18n.string("minecraftExit")}: {exit_code}")
         
     def download(self):
         if len(self.listView.selectionModel().selectedIndexes()) == 0:
-            QMessageBox.critical(None, l18n.langfile["appName"], l18n.langfile["selectVersion"])
+            QMessageBox.critical(None, l18n.string("appName"), l18n.string("selectVersion"))
             return 1
         version = self.listView.selectionModel().selectedIndexes()[0].data()
 
@@ -597,7 +597,7 @@ class MainWindow(QMainWindow, Ui_MainWindow):
         version_name = self.lineEdit_7.text()
         os.makedirs(minecraft_dir+'/versions', exist_ok=True)
         if version_name in os.listdir(minecraft_dir+'/versions'):
-            QMessageBox.critical(None, l18n.langfile["appName"], l18n.langfile["nameAlreadyExists"])
+            QMessageBox.critical(None, l18n.string("appName"), l18n.string("nameAlreadyExists"))
             return 1
         
         modloader = self.comboBox.currentText().lower()
@@ -606,19 +606,19 @@ class MainWindow(QMainWindow, Ui_MainWindow):
         
         modloader_version = self.comboBox_2.currentText()
         if modloader_version == '' and modloader != 'vanilla':
-            QMessageBox.critical(None, l18n.langfile["appName"], l18n.langfile["selectModLoaderVersion"])
+            QMessageBox.critical(None, l18n.string("appName"), l18n.string("selectModLoaderVersion"))
             return 1
 
         r = downloader.auto_download(minecraft_dir=minecraft_dir, version=version, version_name=version_name, modloader=modloader, modloader_version=modloader_version, progress_callback=self.progress_callback)
         if self.autodl_fabric_api == True:
             fabric.download_fabric_api(minecraft_dir, version, version_name)
         if r == 721:
-            QMessageBox.warning(None, l18n.langfile["appName"], l18n.langfile["failToDownloadTheVersionWithThisModLoader"])
+            QMessageBox.warning(None, l18n.string("appName"), l18n.string("failToDownloadTheVersionWithThisModLoader"))
         self.update_installed_versions()
 
     def download_fix(self):
         if self.launch_version == None:
-            QMessageBox.critical(None, l18n.langfile["appName"], l18n.langfile["selectVersion"])
+            QMessageBox.critical(None, l18n.string("appName"), l18n.string("selectVersion"))
             return 1
         version_name = self.launch_version
 
@@ -628,7 +628,7 @@ class MainWindow(QMainWindow, Ui_MainWindow):
 
         r = downloader.auto_download(minecraft_dir=minecraft_dir, version=launcher.get_minecraft_version(minecraft_dir, version_name), version_name=version_name, progress_callback=self.progress_callback)
         if r == 721:
-            QMessageBox.warning(None, l18n.langfile["appName"], l18n.langfile["modloaderDownloadFail"])
+            QMessageBox.warning(None, l18n.string("appName"), l18n.string("modloaderDownloadFail"))
         self.update_installed_versions()
 
     def progress_callback(self, current, total, description):
@@ -744,7 +744,7 @@ class MainWindow(QMainWindow, Ui_MainWindow):
             icon = QIcon(pixmap)
             return icon
         except Exception as e:
-            print(l18n.langfile["iconLoadFail"]+e)
+            print(l18n.string("iconLoadFail")+e)
             return QIcon()
 
     def search_modrinth(self):
@@ -752,7 +752,7 @@ class MainWindow(QMainWindow, Ui_MainWindow):
         # Get arguments needed
         keyword = self.lineEdit_13.text()
         if len(keyword) <= 3:
-            log(l18n.langfile["modrinthKeywordTooShort"])
+            log(l18n.string("modrinthKeywordTooShort"))
 
         minecraft_dir = self.lineEdit.text().replace('\\', '/')
         if minecraft_dir[-1] == '/':
@@ -797,7 +797,7 @@ class MainWindow(QMainWindow, Ui_MainWindow):
             version_name = self.comboBox_6.currentText()
             mcversion = launcher.get_minecraft_version(minecraft_dir, version_name)
         except Exception as E:
-            log(l18n.langfile["cannotGetMinecraftVersion"])
+            log(l18n.string("cannotGetMinecraftVersion"))
 
         modloader = self.comboBox_3.currentText()
 
@@ -820,10 +820,10 @@ class MainWindow(QMainWindow, Ui_MainWindow):
                     return
 
 
-log(l18n.langfile["startingMainIs"]+__name__)
+log(l18n.string("startingMainIs")+__name__)
 if __name__ in ("__main__", "__compiled__", "__mp_main__"):
     if launcher.native() == "windows" and not os.path.exists(app_path()+'/JavaWrapper.jar'):
-        log(l18n.langfile["javaWrapper"])
+        log(l18n.string("javaWrapper"))
         download_javawrapper()
     app = QApplication(sys.argv)
     win = MainWindow()
