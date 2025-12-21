@@ -7,7 +7,7 @@ from mclauncher_core.launcher_funcs import get_version_manifest, get_assetIndex
 from concurrent.futures import ThreadPoolExecutor, as_completed
 
 from mclauncher_core.modloader_fabric import download_fabric_json, fabric_merge_json
-from mclauncher_core.modloader_forge import download_forge_json
+from mclauncher_core.modloader_forge import download_forge_json, processors
 from mclauncher_core.modloader_neoforge import download_neoforge_json
 from mclauncher_core.tool_funcs import *
 import zipfile as zipf
@@ -487,5 +487,15 @@ def auto_download(minecraft_dir, version, version_name, modloader='vanilla', bmc
     download_jar(minecraft_dir, version_name, bmclapi=bmclapi)
 
     download_libraries(minecraft_dir, version, version_name, bmclapi=bmclapi, progress_callback=progress_callback)
+
+    if modloader == 'forge':
+        install_profile = os.path.join(get_file_path(), 'temp', 'forge_installer', 'install_profile.json')
+        install_profile = json.loads(open(install_profile, 'r').read())
+        processors(install_profile=install_profile,
+                   working_dir=get_file_path() + '/temp',
+                   minecraft_version_path=os.path.join(minecraft_dir, 'versions', version_name),
+                   version=version,
+                   forge_version=modloader_version,
+                   minecraft_dir=minecraft_dir)
 
     download_assets(minecraft_dir, version_name, bmclapi=bmclapi, progress_callback=progress_callback)

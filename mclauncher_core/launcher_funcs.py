@@ -179,7 +179,7 @@ def get_cp_args(minecraft_dir, version, version_name) -> str:
         print(missing)
         # input(missing)
 
-    return f'"{separator.join(classpath)}"'.replace("\\", '/')
+    return f'-cp "{separator.join(classpath)}"'.replace("\\", '/')
 
 
 def get_assetIndex(minecraft_dir, version_name) -> str:
@@ -281,7 +281,7 @@ def get_jvm_args(minecraft_dir, version, version_name):
         args_text = ' '.join(d_args)
 
     if add_cp_args:
-        args_text = args_text + ' ' + get_cp_args(minecraft_dir, versions, version_name)
+        args_text = args_text + ' ' + get_cp_args(minecraft_dir, version, version_name)
 
     # final modifier
     replacer = {'-DFabricMcEmu= net': '-DFabricMcEmu=net'}

@@ -2,6 +2,8 @@ import requests, json, shutil, zipfile as zipf
 from mclauncher_core.manifest_funcs import get_version_json
 from mclauncher_core.tool_funcs import *
 
+from mclauncher_core.modloader_forge_processor import *
+
 
 
 def get_all_forgeable_versions():
@@ -31,8 +33,9 @@ def download_forge_json(minecraft_dir, version, version_name, forge_version='lat
             versions.append(ver["version"])
         forge_version = versions[0]
 
-    url = 'https://bmclapi2.bangbang93.com/forge/download'
-    url = url + f'?mcversion={version}&version={forge_version}&category=installer&format=jar'
+    # url = 'https://bmclapi2.bangbang93.com/forge/download'
+    # url = url + f'?mcversion={version}&version={forge_version}&category=installer&format=jar'
+    url = f'https://maven.minecraftforge.net/net/minecraftforge/forge/{version}-{forge_version}/forge-{version}-{forge_version}-installer.jar'
     item = requests.get(url)
     if item.status_code != 200:
         raise Exception(f"Request Fail: {item.status_code}\nurl: {url}")
@@ -75,14 +78,16 @@ def download_forge_json(minecraft_dir, version, version_name, forge_version='lat
 
         for i in range(len(version_json['libraries'])):
             lib = version_json['libraries'][i]
-            print(lib['name'])
-            if lib['name'] == 'net.minecraftforge:forge:1.21.8-58.0.10:client':
-                version_json['libraries'][i][
-                    'url'] = 'https://github.com/HPLAY-dev/spectrum-minecraft-launcher/raw/refs/heads/main/misc/forge-1.21.8-58.0.10-client.jar'
     else:
         raise Exception('Error parsing forge json')
+    
     os.makedirs(f'{minecraft_dir}/versions/{version_name}', exist_ok=True)
     with open(f'{minecraft_dir}/versions/{version_name}/{version_name}.json', 'w') as f:
         f.write(json.dumps(version_json))
 
+    # processors(install_profile, get_file_path() + "/temp", os.path.join(minecraft_dir, 'versions', version_name))
+
+def clean_temp():
+    """清理临时文件"""
     shutil.rmtree(get_file_path() + "/temp")
+
