@@ -356,7 +356,6 @@ def launch(javaw, xmx, minecraft_dir, version_name, javawrapper=None, username: 
     minecraft_args = get_minecraft_args(minecraft_dir, version, version_name)
     if game_args_extend != '':
         minecraft_args.append(game_args_extend)
-    # minecraft_args_cp = get_cp_args(minecraft_dir, version, version_name)
     mainClass = get_mainclass(minecraft_dir, version_name)
     minecraft_args = mainClass + ' ' + minecraft_args + f" -width {str(width)} -height {str(height)}"
 
@@ -378,16 +377,19 @@ def launch(javaw, xmx, minecraft_dir, version_name, javawrapper=None, username: 
     print(ms_login)
     for i in replacer:
         minecraft_args = minecraft_args.replace(i, replacer[i])
-    final_pt1 = f'"{javaw}" {jvm_args}'
+
+    classpath = get_cp_args(minecraft_dir, version, version_name)
+    final_pt1 = f'"{javaw}" {jvm_args} {classpath}'
     if native() == 'windows':
         if javawrapper != None:
             javawrapper_arg = f'-jar "{javawrapper}"'
         else:
-            raise SyntaxError("Unspecified JavaWrapper on Windows Platform.")
+            pass
+            # raise SyntaxError("Unspecified JavaWrapper on Windows Platform.")
     else:
         javawrapper_arg = ''
     final_pt2 = f'{javawrapper_arg} {mainClass} {minecraft_args}'
-    # final = final.replace('/', '\\')
+    
     final = final_pt1 + ' ' + final_pt2
     final = final.replace('${version_name}', version_name)
     final = final.replace('${library_directory}', f'{minecraft_dir}/libraries')
@@ -396,10 +398,7 @@ def launch(javaw, xmx, minecraft_dir, version_name, javawrapper=None, username: 
         '${clientid}': client_id
     }
 
-    final = final.split(' ')
-
-    i = len(final)
-
-    final = ' '.join(final)
+    for i in replacer_mslogin:
+        final = final.replace(i, replacer_mslogin[i])
 
     return final
