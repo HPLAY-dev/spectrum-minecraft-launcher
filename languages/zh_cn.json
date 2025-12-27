@@ -23,6 +23,8 @@
     "selectModLoaderVersion": "Please select a mod loader version",
     "failToDownloadTheVersionWithThisModLoader": "Failed to download the version with this mod loader",
     "modloaderDownloadFail": "Mod loader download failed",
+    "downloadInProgress": "该版本已有下载在进行中",
+    "downloadFail": "下载失败: ",
     "iconLoadFail": "Failed to load icon: ",
     "modrinthKeywordTooShort": "Modrinth search keyword is too short (must be >3 characters)",
     "cannotGetMinecraftVersion": "Cannot get Minecraft version",

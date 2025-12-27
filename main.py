@@ -7,7 +7,7 @@ USE_OS_SYSTEM_TO_EXECUTE = 0
 
 import sys
 import os
-from PySide6.QtCore import QStringListModel, QProcess
+from PySide6.QtCore import QStringListModel, QProcess, Signal
 from PySide6.QtWidgets import QApplication, QMainWindow, QMessageBox, QFileDialog
 from PySide6.QtGui import QStandardItemModel, QIcon, QStandardItem, QPixmap
 import re
@@ -26,6 +26,8 @@ import stylesheets
 import shutil
 import zipfile as z
 import requests
+import hashlib
+from concurrent.futures import ThreadPoolExecutor
 from ui import Ui_MainWindow
 import ui_retranslater as _r
 
@@ -87,11 +89,25 @@ if not os.path.exists(default_icon):
     sys.exit(1)
 
 class MainWindow(QMainWindow, Ui_MainWindow):
+    # signal emitted from any thread to report progress (current, total, description)
+    download_progress = Signal(int, int, str)
+    # signal emitted when a download task finished (result, version_name, minecraft_dir)
+    download_finished = Signal(object, str, str)
+
     def __init__(self, parent=None):
         # check_update()
         log("Starting window")
         super(MainWindow, self).__init__(parent)
         self.setupUi(self)
+        # Executor and tracking for background download tasks
+        self._dl_executor = ThreadPoolExecutor(max_workers=3)
+        self._downloads_in_progress = set()
+        self._dl_lock_dir = os.path.join(app_path(), 'temp', 'download_locks')
+        os.makedirs(self._dl_lock_dir, exist_ok=True)
+        # Connect signals (thread-safe) for progress and completion
+        self.download_progress.connect(self._on_download_progress)
+        self.download_finished.connect(self._on_download_finished)
+
         self.launch_version = None
         # Stuff
         self.using_mc_login = False
@@ -609,12 +625,9 @@ class MainWindow(QMainWindow, Ui_MainWindow):
             QMessageBox.critical(None, l18n.string("appName"), l18n.string("selectModLoaderVersion"))
             return 1
 
-        r = downloader.auto_download(minecraft_dir=minecraft_dir, version=version, version_name=version_name, modloader=modloader, modloader_version=modloader_version, progress_callback=self.progress_callback)
-        if self.autodl_fabric_api == True:
-            fabric.download_fabric_api(minecraft_dir, version, version_name)
-        if r == 721:
-            QMessageBox.warning(None, l18n.string("appName"), l18n.string("failToDownloadTheVersionWithThisModLoader"))
-        self.update_installed_versions()
+        # Start asynchronous download to avoid blocking the UI
+        self.start_download(minecraft_dir=minecraft_dir, version=version, version_name=version_name, modloader=modloader, modloader_version=modloader_version)
+        # update will be handled when finished via signal handler
 
     def download_fix(self):
         if self.launch_version == None:
@@ -626,10 +639,145 @@ class MainWindow(QMainWindow, Ui_MainWindow):
         if minecraft_dir[-1] == '/':
             minecraft_dir = minecraft_dir[:-1]
 
-        r = downloader.auto_download(minecraft_dir=minecraft_dir, version=launcher.get_minecraft_version(minecraft_dir, version_name), version_name=version_name, progress_callback=self.progress_callback)
-        if r == 721:
+        # Start async download instead of blocking the UI
+        self.start_download(minecraft_dir=minecraft_dir, version=launcher.get_minecraft_version(minecraft_dir, version_name), version_name=version_name)
+
+    def _emit_progress(self, current, total, description):
+        """Emit progress safely from background threads."""
+        try:
+            self.download_progress.emit(int(current), int(total), str(description))
+        except Exception:
+            pass
+
+    def _on_download_progress(self, current, total, description):
+        """Runs in main thread via Qt signal to update UI."""
+        try:
+            self.progress_callback(current, total, description)
+        except Exception:
+            pass
+
+    def _on_download_finished(self, result, version_name, minecraft_dir):
+        """Handle completion in main thread."""
+        # Re-enable UI
+        try:
+            self.pushButton_3.setEnabled(True)
+        except Exception:
+            pass
+
+        # Update installed versions regardless
+        try:
+            self.update_installed_versions()
+        except Exception:
+            pass
+
+        # Show messages based on result
+        if isinstance(result, dict) and result.get('status') == 'exists':
+            QMessageBox.information(None, l18n.string("appName"), l18n.string("downloadInProgress"))
+            return
+        if isinstance(result, dict) and result.get('status') == 'error':
+            QMessageBox.warning(None, l18n.string("appName"), l18n.string("downloadFail") + str(result.get('exc')))
+            return
+        # If downloader returned the magic 721 code, show the specific warning
+        if result == 721:
             QMessageBox.warning(None, l18n.string("appName"), l18n.string("modloaderDownloadFail"))
-        self.update_installed_versions()
+            return
+
+        # Optionally auto-download Fabric API in background
+        try:
+            if self.autodl_fabric_api == True:
+                # run fabric download in background to avoid blocking UI
+                self._dl_executor.submit(fabric.download_fabric_api, minecraft_dir, launcher.get_minecraft_version(minecraft_dir, version_name), version_name)
+        except Exception:
+            pass
+
+    def _create_lock_file(self, key):
+        """Atomically create a lock file for a given key. Returns True if created, False if exists."""
+        path = os.path.join(self._dl_lock_dir, f"{key}.lock")
+        try:
+            fd = os.open(path, os.O_CREAT | os.O_EXCL | os.O_WRONLY)
+            os.close(fd)
+            return True
+        except FileExistsError:
+            return False
+        except Exception:
+            # In case of weird filesystem errors, fallback to an in-process set check
+            if key in self._downloads_in_progress:
+                return False
+            self._downloads_in_progress.add(key)
+            return True
+
+    def _remove_lock_file(self, key):
+        path = os.path.join(self._dl_lock_dir, f"{key}.lock")
+        try:
+            if os.path.exists(path):
+                os.remove(path)
+        except Exception:
+            pass
+        try:
+            if key in self._downloads_in_progress:
+                self._downloads_in_progress.discard(key)
+        except Exception:
+            pass
+
+    def _run_download_task(self, minecraft_dir, version, version_name, modloader, modloader_version):
+        """Runs the blocking download in background thread while managing lock files.
+        This is executed inside executor threads."""
+        # Create a stable key based on minecraft_dir and version_name
+        key = hashlib.md5(minecraft_dir.encode('utf-8')).hexdigest() + '_' + str(version_name)
+
+        created = self._create_lock_file(key)
+        if not created:
+            return {'status': 'exists'}
+
+        try:
+            # Call into the existing downloader while forwarding progress via _emit_progress
+            res = downloader.auto_download(minecraft_dir=minecraft_dir, version=version, version_name=version_name, modloader=modloader, modloader_version=modloader_version, progress_callback=self._emit_progress)
+            return res
+        except Exception as e:
+            return {'status': 'error', 'exc': str(e)}
+        finally:
+            self._remove_lock_file(key)
+
+    def start_download(self, minecraft_dir, version, version_name, modloader='vanilla', modloader_version='latest'):
+        """Public method to start a download asynchronously without blocking the UI."""
+        # Quick sanity checks
+        if version_name in os.listdir(os.path.join(minecraft_dir, 'versions')) if os.path.exists(os.path.join(minecraft_dir, 'versions')) else False:
+            # If folder exists, proceed but still allow choosing
+            pass
+
+        # prevent repeated clicks in UI
+        try:
+            self.pushButton_3.setEnabled(False)
+        except Exception:
+            pass
+
+        key = hashlib.md5(minecraft_dir.encode('utf-8')).hexdigest() + '_' + str(version_name)
+        if key in self._downloads_in_progress:
+            QMessageBox.information(None, l18n.string("appName"), l18n.string("downloadInProgress"))
+            try:
+                self.pushButton_3.setEnabled(True)
+            except Exception:
+                pass
+            return
+        self._downloads_in_progress.add(key)
+
+        # submit the blocking work to executor
+        future = self._dl_executor.submit(self._run_download_task, minecraft_dir, version, version_name, modloader, modloader_version)
+
+        def _done(fut):
+            try:
+                res = fut.result()
+            except Exception as e:
+                res = {'status': 'error', 'exc': str(e)}
+            # remove from in-memory tracking
+            try:
+                self._downloads_in_progress.discard(key)
+            except Exception:
+                pass
+            # emit finished signal (runs on main thread handler) and include directory
+            self.download_finished.emit(res, version_name, minecraft_dir)
+
+        future.add_done_callback(_done)
 
     def progress_callback(self, current, total, description):
         if description[1:-1].split('][')[0] == 'LIB':

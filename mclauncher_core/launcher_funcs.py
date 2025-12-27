@@ -229,7 +229,12 @@ def get_jvm_args(minecraft_dir, version, version_name):
         d_args.append("--add-exports cpw.mods.bootstraplauncher/cpw.mods.bootstraplauncher=ALL-UNNAMED")
     if "arguments" in version_json and "jvm" in version_json["arguments"]:
         args = version_json["arguments"]["jvm"]
-        add_cp_args = not '${classpath}' in args
+        excludes = ['${classpath}', '-cp', '-classpath']
+        for i in range(len(args)):
+            if i >= len(args):
+                break
+            if args[i] in excludes:
+                args.pop[i]
         # fix for neoforge '-p' argument
         if '-p' in args:
             position = args.index('-p')
@@ -237,7 +242,6 @@ def get_jvm_args(minecraft_dir, version, version_name):
             args.pop(
                 position)  # pop "${library_directory}/net/neoforged/fancymodloader/bootstraplauncher/9.0.18/bootstraplauncher-9.0.18.jar${classpath_separator}${library_directory}/net/neoforged/fancymodloader/securejarhandler/9.0.18/securejarhandler-9.0.18.jar${classpath_separator}${library_directory}/net/neoforged/JarJarFileSystems/0.4.1/JarJarFileSystems-0.4.1.jar"
         replacer = {"${natives_directory}": f'{minecraft_dir}/versions/{version_name}/{version_name}-natives',
-                    "${classpath}": cp_args,
                     "${launcher_name}": "minecraft-launcher",
                     "${launcher_version}": "1.0.0.0",
                     "-Dos.name=Windows 10": '-Dos.name="Windows 10"'}
@@ -280,10 +284,9 @@ def get_jvm_args(minecraft_dir, version, version_name):
     else:
         args_text = ' '.join(d_args)
 
-    if add_cp_args:
-        args_text = args_text + ' ' + get_cp_args(minecraft_dir, version, version_name)
+    args_text = args_text + ' ' + get_cp_args(minecraft_dir, version, version_name)
 
-    # final modifier
+    # final modifier (patch in fact)
     replacer = {'-DFabricMcEmu= net': '-DFabricMcEmu=net'}
     for i in replacer:
         args_text = args_text.replace(i, replacer[i])
