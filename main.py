@@ -553,7 +553,7 @@ class MainWindow(QMainWindow, Ui_MainWindow):
         #     QMessageBox.warning(None, l18n.string("appName"), '玩家名称含有其他语言字符，可能出现问题。')
 
         if launcher.native() == 'windows':
-            javawrapper = './JavaWrapper.jar'
+            javawrapper = os.path.join(app_path(), 'JavaWrapper.jar')
             if not os.path.exists(javawrapper):
                 QMessageBox.critical(None, l18n.string("appName"), l18n.string("javaWrapperInvalid"))
                 return 1
@@ -625,8 +625,19 @@ class MainWindow(QMainWindow, Ui_MainWindow):
             QMessageBox.critical(None, l18n.string("appName"), l18n.string("selectModLoaderVersion"))
             return 1
 
+        
+        java_major_version = downloader.get_version_json(version).get('javaVersion', {}).get('majorVersion', 0)
+        if java_major_version == 21:
+            java = self.lineEdit_4.text()
+        elif java_major_version == 17:
+            java = self.lineEdit_3.text()
+        elif java_major_version == 8:
+            java = self.lineEdit_2.text()
+        else:
+            java = self.lineEdit_8.text()
+
         # Start asynchronous download to avoid blocking the UI
-        self.start_download(minecraft_dir=minecraft_dir, version=version, version_name=version_name, modloader=modloader, modloader_version=modloader_version)
+        self.start_download(minecraft_dir=minecraft_dir, version=version, version_name=version_name, modloader=modloader, modloader_version=modloader_version, java=java)
         # update will be handled when finished via signal handler
 
     def download_fix(self):
@@ -719,7 +730,7 @@ class MainWindow(QMainWindow, Ui_MainWindow):
         except Exception:
             pass
 
-    def _run_download_task(self, minecraft_dir, version, version_name, modloader, modloader_version):
+    def _run_download_task(self, minecraft_dir, version, version_name, modloader, modloader_version, java):
         """Runs the blocking download in background thread while managing lock files.
         This is executed inside executor threads."""
         # Create a stable key based on minecraft_dir and version_name
@@ -731,14 +742,14 @@ class MainWindow(QMainWindow, Ui_MainWindow):
 
         try:
             # Call into the existing downloader while forwarding progress via _emit_progress
-            res = downloader.auto_download(minecraft_dir=minecraft_dir, version=version, version_name=version_name, modloader=modloader, modloader_version=modloader_version, progress_callback=self._emit_progress)
+            res = downloader.auto_download(minecraft_dir=minecraft_dir, version=version, version_name=version_name, modloader=modloader, modloader_version=modloader_version, progress_callback=self._emit_progress, java=java)
             return res
         except Exception as e:
             return {'status': 'error', 'exc': str(e)}
         finally:
             self._remove_lock_file(key)
 
-    def start_download(self, minecraft_dir, version, version_name, modloader='vanilla', modloader_version='latest'):
+    def start_download(self, minecraft_dir, version, version_name, modloader='vanilla', modloader_version='latest', java='java'):
         """Public method to start a download asynchronously without blocking the UI."""
         # Quick sanity checks
         if version_name in os.listdir(os.path.join(minecraft_dir, 'versions')) if os.path.exists(os.path.join(minecraft_dir, 'versions')) else False:
@@ -762,7 +773,7 @@ class MainWindow(QMainWindow, Ui_MainWindow):
         self._downloads_in_progress.add(key)
 
         # submit the blocking work to executor
-        future = self._dl_executor.submit(self._run_download_task, minecraft_dir, version, version_name, modloader, modloader_version)
+        future = self._dl_executor.submit(self._run_download_task, minecraft_dir, version, version_name, modloader, modloader_version, java)
 
         def _done(fut):
             try:

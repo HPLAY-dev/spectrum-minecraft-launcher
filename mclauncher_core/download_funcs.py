@@ -1,3 +1,5 @@
+DOWNLOAD_MANIFEST_USE_BMCLAPI = 0
+
 import time
 
 import threading
@@ -7,7 +9,7 @@ from mclauncher_core.launcher_funcs import get_version_manifest, get_assetIndex
 from concurrent.futures import ThreadPoolExecutor, as_completed
 
 from mclauncher_core.modloader_fabric import download_fabric_json, fabric_merge_json
-from mclauncher_core.modloader_forge import download_forge_json, processors
+from mclauncher_core.modloader_forge import download_forge_json
 from mclauncher_core.modloader_neoforge import download_neoforge_json
 from mclauncher_core.tool_funcs import *
 import zipfile as zipf
@@ -18,7 +20,7 @@ def get_version_list(show_snapshot=False, show_old=False, show_release=True, bmc
     """获取minecraft版本列表，返回list"""
 
     def _download_manifest():
-        if bmclapi:
+        if DOWNLOAD_MANIFEST_USE_BMCLAPI:
             url = "https://bmclapi2.bangbang93.com/mc/game/version_manifest.json"
         else:
             url = "https://launchermeta.mojang.com/mc/game/version_manifest.json"
@@ -51,6 +53,25 @@ def get_version_list(show_snapshot=False, show_old=False, show_release=True, bmc
             continue
         returns.append(version['id'])
     return returns
+
+def get_version_json(version, bmclapi=False) -> dict:
+    """获取Minecraft为指定版本的json，返回dict"""
+    manifest = get_version_manifest()
+    if version == "latest":
+        version = manifest["latest"]["release"]
+    elif version == "latest_snapshot":
+        version = manifest["latest"]["snapshot"]
+    for current in manifest["versions"]:
+        if current["id"] == version:
+            url = current["url"]
+            if bmclapi:
+                url = url.replace("https://launchermeta.mojang.com/", "https://bmclapi2.bangbang93.com/")
+                url = url.replace("https://launcher.mojang.com/", "https://bmclapi2.bangbang93.com/")
+
+            response = requests.get(url)
+            if response.status_code != 200:
+                raise Exception(f"Request Fail: {response.status_code}\nurl: {url}")
+            return response.json()
 
 def download_version_json(minecraft_dir, version, version_name, bmclapi=False) -> None:
     """下载Minecraft为指定版本的json，返回None"""
@@ -451,7 +472,7 @@ def download_assets(minecraft_dir, version_name, print_status=True, bmclapi=Fals
 
 
 def auto_download(minecraft_dir, version, version_name, modloader='vanilla', bmclapi=False, modloader_version='latest',
-                  progress_callback=None):
+                  progress_callback=None, java='java'):
     """下载整个Minecraft版本，返回None"""
     if modloader == None:
         modloader = 'vanilla'
@@ -468,9 +489,8 @@ def auto_download(minecraft_dir, version, version_name, modloader='vanilla', bmc
                 f.write(json.dumps(jsonfile))
 
         elif modloader == 'forge':
-            if not os.path.exists(f'{minecraft_dir}/versions/{version_name}/{version_name}.json'):
-                download_forge_json(minecraft_dir, version, version_name, bmclapi=bmclapi,
-                                    forge_version=modloader_version)
+            download_forge_json(minecraft_dir, version, version_name, bmclapi=bmclapi,
+                                forge_version=modloader_version)
 
         elif modloader == 'neoforge':
             print('download neoforge json')
@@ -488,14 +508,14 @@ def auto_download(minecraft_dir, version, version_name, modloader='vanilla', bmc
 
     download_libraries(minecraft_dir, version, version_name, bmclapi=bmclapi, progress_callback=progress_callback)
 
-    if modloader == 'forge':
-        install_profile = os.path.join(get_file_path(), 'temp', 'forge_installer', 'install_profile.json')
-        install_profile = json.loads(open(install_profile, 'r').read())
-        processors(install_profile=install_profile,
-                   working_dir=get_file_path() + '/temp',
-                   minecraft_version_path=os.path.join(minecraft_dir, 'versions', version_name),
-                   version=version,
-                   forge_version=modloader_version,
-                   minecraft_dir=minecraft_dir)
+    # if modloader == 'forge':
+    #     install_profile = os.path.join(get_file_path(), 'temp', 'forge_installer', 'install_profile.json')
+    #     install_profile = json.loads(open(install_profile, 'r').read())
+    #     processors(install_profile=install_profile,
+    #                working_dir=get_file_path() + '/temp',
+    #                minecraft_version_path=os.path.join(minecraft_dir, 'versions', version_name),
+    #                version=version,
+    #                forge_version=modloader_version,
+    #                minecraft_dir=minecraft_dir)
 
     download_assets(minecraft_dir, version_name, bmclapi=bmclapi, progress_callback=progress_callback)

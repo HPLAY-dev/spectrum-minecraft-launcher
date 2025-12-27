@@ -230,17 +230,13 @@ def get_jvm_args(minecraft_dir, version, version_name):
     if "arguments" in version_json and "jvm" in version_json["arguments"]:
         args = version_json["arguments"]["jvm"]
         excludes = ['${classpath}', '-cp', '-classpath']
-        for i in range(len(args)):
-            if i >= len(args):
-                break
-            if args[i] in excludes:
-                args.pop[i]
+        for i in excludes:
+            args.pop(args.index(i)) if i in args else None
         # fix for neoforge '-p' argument
         if '-p' in args:
             position = args.index('-p')
             args.pop(position)  # pop -p
-            args.pop(
-                position)  # pop "${library_directory}/net/neoforged/fancymodloader/bootstraplauncher/9.0.18/bootstraplauncher-9.0.18.jar${classpath_separator}${library_directory}/net/neoforged/fancymodloader/securejarhandler/9.0.18/securejarhandler-9.0.18.jar${classpath_separator}${library_directory}/net/neoforged/JarJarFileSystems/0.4.1/JarJarFileSystems-0.4.1.jar"
+            args.pop(position)  # pop "${library_directory}/net/neoforged/fancymodloader/bootstraplauncher/9.0.18/bootstraplauncher-9.0.18.jar${classpath_separator}${library_directory}/net/neoforged/fancymodloader/securejarhandler/9.0.18/securejarhandler-9.0.18.jar${classpath_separator}${library_directory}/net/neoforged/JarJarFileSystems/0.4.1/JarJarFileSystems-0.4.1.jar"
         replacer = {"${natives_directory}": f'{minecraft_dir}/versions/{version_name}/{version_name}-natives',
                     "${launcher_name}": "minecraft-launcher",
                     "${launcher_version}": "1.0.0.0",
@@ -377,9 +373,13 @@ def launch(javaw, xmx, minecraft_dir, version_name, javawrapper=None, username: 
     print(ms_login)
     for i in replacer:
         minecraft_args = minecraft_args.replace(i, replacer[i])
+    if (not "--version" in minecraft_args) and (not "--version" in minecraft_args):
+        minecraft_args = minecraft_args + f" --version {version}"
+    if (not "-accessToken" in minecraft_args) and (not "--accessToken" in minecraft_args):
+        minecraft_args = minecraft_args + f" --accessToken {access_token}"
 
-    classpath = get_cp_args(minecraft_dir, version, version_name)
-    final_pt1 = f'"{javaw}" {jvm_args} {classpath}'
+    # classpath = get_cp_args(minecraft_dir, version, version_name)
+    final_pt1 = f'"{javaw}" {jvm_args}'
     if native() == 'windows':
         if javawrapper != None:
             javawrapper_arg = f'-jar "{javawrapper}"'
@@ -388,7 +388,7 @@ def launch(javaw, xmx, minecraft_dir, version_name, javawrapper=None, username: 
             # raise SyntaxError("Unspecified JavaWrapper on Windows Platform.")
     else:
         javawrapper_arg = ''
-    final_pt2 = f'{javawrapper_arg} {mainClass} {minecraft_args}'
+    final_pt2 = f'{javawrapper_arg} {minecraft_args}'
     
     final = final_pt1 + ' ' + final_pt2
     final = final.replace('${version_name}', version_name)
@@ -400,5 +400,6 @@ def launch(javaw, xmx, minecraft_dir, version_name, javawrapper=None, username: 
 
     for i in replacer_mslogin:
         final = final.replace(i, replacer_mslogin[i])
-
+    
+    final = f'cd {minecraft_dir}/versions/{version_name} && ' + final
     return final

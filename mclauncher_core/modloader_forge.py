@@ -1,9 +1,7 @@
+import shutil, os
 import requests, json, shutil, zipfile as zipf
 from mclauncher_core.manifest_funcs import get_version_json
 from mclauncher_core.tool_funcs import *
-
-from mclauncher_core.modloader_forge_processor import *
-
 
 
 def get_all_forgeable_versions():
@@ -24,8 +22,8 @@ def get_forge_version(version):
     return item.json()
 
 
-def download_forge_json(minecraft_dir, version, version_name, forge_version='latest', bmclapi=False):
-    """下载一个包含了Forge的东西的版本json"""
+def download_forge_json(minecraft_dir, version, version_name, forge_version='latest', bmclapi=False, java='java'):
+    """下载一个包含了Forge的东西的版本json，附赠一份forge client jar于Libraries(其实无非就是调用安装器罢了)"""
     if forge_version == 'latest':
         forge_versions = get_forge_version(version)
         versions = []
@@ -40,52 +38,76 @@ def download_forge_json(minecraft_dir, version, version_name, forge_version='lat
     if item.status_code != 200:
         raise Exception(f"Request Fail: {item.status_code}\nurl: {url}")
     os.makedirs(get_file_path() + "/temp", exist_ok=True)
-    with open(get_file_path() + "/temp/forge_installer.zip",
-              'wb') as f:  # Of course we downloaded a .jar file, but in order to identify the format, we use .zip
+    with open(get_file_path() + "/temp/forge_installer.jar",
+              'wb') as f:
         f.write(item.content)
-
-    with zipf.ZipFile(get_file_path() + "/temp/forge_installer.zip", 'r') as file:
-        file.extractall(get_file_path() + "/temp/forge_installer")
-
-    if not os.path.exists(get_file_path() + "/temp/forge_installer/install_profile.json"):
-        shutil.rmtree(get_file_path() + "/temp/forge_installer/")
-        raise Exception("INSTALL_PROFILE.JSON not found")
-    with open(get_file_path() + "/temp/forge_installer/install_profile.json", 'r') as f:
-        install_profile = json.loads(f.read())
-
-    if 'versionInfo' in install_profile:
-        forge_version_json = install_profile['versionInfo']
-        version_json = get_version_json(version, bmclapi)
-        original_libs = version_json['libraries']
-        version_json.update(forge_version_json)
-        version_json['libraries'].extend(original_libs)
-
-    # elif 'libraries' in install_profile:
-    #     forge_version_json = install_profile['libraries']
-    #     version_json = get_version_json(version, bmclapi)
-    #     original_libs = version_json['libraries']
-    #     version_json.update(forge_version_json)
-    #     version_json['libraries'].extend(original_libs)
-
-    elif os.path.exists(get_file_path() + "/temp/forge_installer/version.json"):
-        print(1)
-        with open(get_file_path() + "/temp/forge_installer/version.json", 'r') as f:
-            forge_version_json = json.loads(f.read())
-        version_json = get_version_json(version, bmclapi)
-        original_libs = version_json['libraries']
-        version_json.update(forge_version_json)
-        version_json['libraries'].extend(original_libs)
-
-        for i in range(len(version_json['libraries'])):
-            lib = version_json['libraries'][i]
-    else:
-        raise Exception('Error parsing forge json')
     
-    os.makedirs(f'{minecraft_dir}/versions/{version_name}', exist_ok=True)
+    cmd = f'{java} -jar "{get_file_path() + "/temp/forge_installer.jar"}" --installClient {minecraft_dir}'
+    os.system(cmd)
+    installer_version_name = f'{version}-forge-{forge_version}'
+    shutil.move(os.path.join(minecraft_dir, 'versions', installer_version_name),
+                os.path.join(minecraft_dir, 'versions', version_name))
+    shutil.move(os.path.join(minecraft_dir, 'versions', version_name, installer_version_name + '.json'),
+                os.path.join(minecraft_dir, 'versions', version_name, version_name + '.json'))
+
+
+    # if not os.path.exists(get_file_path() + "/temp/forge_installer/install_profile.json"):
+    #     shutil.rmtree(get_file_path() + "/temp/forge_installer/")
+    #     raise Exception("INSTALL_PROFILE.JSON not found")
+    # with open(get_file_path() + "/temp/forge_installer/install_profile.json", 'r') as f:
+    #     install_profile = json.loads(f.read())
+
+    # if 'versionInfo' in install_profile:
+    forge_version_json_path = os.path.join(minecraft_dir, 'versions', version_name, version_name + '.json')
+    with open(forge_version_json_path, 'r') as f:
+        forge_version_json = json.load(f)
+    version_json = get_version_json(version, bmclapi)
+
+    # 深度合并：保留两边的条目（非重复），并对子字典递归合并
+    def deep_merge(a, b):
+        if isinstance(a, dict) and isinstance(b, dict):
+            out = dict(a)
+            for k, v in b.items():
+                if k in out:
+                    out[k] = deep_merge(out[k], v)
+                else:
+                    out[k] = v
+            return out
+        if isinstance(a, list) and isinstance(b, list):
+            merged = []
+            seen = set()
+            # 以 b（来自 Forge 的条目）先加入，保持 Forge 条目靠前
+            for item in b:
+                merged.append(item)
+                if isinstance(item, dict) and 'name' in item:
+                    seen.add(item['name'])
+                else:
+                    seen.add(json.dumps(item, sort_keys=True))
+            for item in a:
+                key = item['name'] if isinstance(item, dict) and 'name' in item else json.dumps(item, sort_keys=True)
+                if key in seen:
+                    # 如果是字典并且已存在，递归合并
+                    if isinstance(item, dict):
+                        for idx, ex in enumerate(merged):
+                            if isinstance(ex, dict) and ex.get('name') == key:
+                                merged[idx] = deep_merge(ex, item)
+                                break
+                    continue
+                merged.append(item)
+                seen.add(key)
+            return merged
+        # 对于标量或类型不匹配，优先保留 a（原版数据）以避免覆盖已存在设置
+        return a if a is not None else b
+
+    merged_json = deep_merge(forge_version_json, version_json)
+    # 确保 libraries 字段使用专门的合并策略以去重并保留两边的条目
+    merged_json['libraries'] = deep_merge(version_json.get('libraries', []), forge_version_json.get('libraries', []))
+
     with open(f'{minecraft_dir}/versions/{version_name}/{version_name}.json', 'w') as f:
-        f.write(json.dumps(version_json))
+        f.write(json.dumps(merged_json))
 
     # processors(install_profile, get_file_path() + "/temp", os.path.join(minecraft_dir, 'versions', version_name))
+    clean_temp()
 
 def clean_temp():
     """清理临时文件"""
