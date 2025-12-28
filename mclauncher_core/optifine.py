@@ -1,8 +1,9 @@
 import requests
 
+
 BadForgeVersion = Exception('Bad Forge Version')
-def get_versions(version):
-    url = f"https://bmclapi2.bangbang93.com/optifine/{version}"
+def get_versions(mcversion):
+    url = f"https://bmclapi2.bangbang93.com/optifine/{mcversion}"
     item = requests.get(url)
     if item.status_code != 200:
         raise Exception('Cannot connect to bmclapi')
@@ -20,25 +21,25 @@ def get_versions(version):
     except:
         return None
 
-def download_optifine(minecraft_dir, version_name, version, forge_version):
-    versions = get_versions(version)
+def download_optifine(minecraft_dir, instance_name, mcversion, forge_version):
+    versions = get_versions(mcversion)
     _ = 0
     for v in versions:
         if v['forge'] == forge_version:
-            version = v
+            selected = v
             _ = 1
             continue
     if not _:
         raise BadForgeVersion
 
-    optifine_type = version['type']
-    patch = version['patch']
-    filename = version['filename']
-    url = f"https://bmclapi2.bangbang93.com/optifine/{version}/{optifine_type}/{patch}"
+    optifine_type = selected['type']
+    patch = selected['patch']
+    filename = selected['filename']
+    url = f"https://bmclapi2.bangbang93.com/optifine/{mcversion}/{optifine_type}/{patch}"
     item = requests.get(url)
     if item.status_code != 200:
         raise Exception('Cannot connect to bmclapi')
     data = item.content
 
-    with open(f'{minecraft_dir}/versions/{version_name}/mods/{filename}', 'wb') as file:
+    with open(f'{minecraft_dir}/versions/{instance_name}/mods/{filename}', 'wb') as file:
         file.write(data)

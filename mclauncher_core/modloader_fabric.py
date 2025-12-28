@@ -2,9 +2,9 @@ import requests, json, os
 import xml.etree.ElementTree as ET
 
 
-def is_fabric(minecraft_dir, version_name) -> bool:
+def is_fabric(minecraft_dir, instance_name) -> bool:
     '''检测版本是否为Fabric，返回bool'''
-    with open(minecraft_dir + '/versions/' + version_name + '/' + version_name + '.json', 'r') as f:
+    with open(minecraft_dir + '/versions/' + instance_name + '/' + instance_name + '.json', 'r') as f:
         if "fabric-loader" in f.read():
             return True
         else:
@@ -67,12 +67,12 @@ def get_fabric_installer_versions() -> list:
     parse_xml(url='https://maven.fabricmc.net/net/fabricmc/fabric-loader/maven-metadata.xml')['metadata']['versioning'][
         'versions']
 
-def download_fabric_api(minecraft_dir, version, version_name, mod_version='latest') -> None:
+def download_fabric_api(minecraft_dir, mcversion, instance_name, mod_version='latest') -> None:
     '''下载Fabric API(一个Mod)'''
     metadata = parse_xml('https://maven.fabricmc.net/net/fabricmc/fabric-api/fabric-api/maven-metadata.xml')
     available = []
     for i in metadata['metadata']['versioning']['versions']:
-        if '+' + version in i:
+        if '+' + mcversion in i:
             available.append(i)
     if mod_version == 'latest':
         mod_version = available[-1]
@@ -80,7 +80,7 @@ def download_fabric_api(minecraft_dir, version, version_name, mod_version='lates
     raw = requests.get(url)
     if raw.status_code != 200:
         raise Exception(f"Request Fail: {raw.status_code}\nurl: {url}")
-    with open(f'{minecraft_dir}/versions/{version_name}/mods/fabric-api-{mod_version}.jar', 'wb') as f:
+    with open(f'{minecraft_dir}/versions/{instance_name}/mods/fabric-api-{mod_version}.jar', 'wb') as f:
         f.write(raw.content)
 
 def get_latest_fabric_loader_version() -> str:
@@ -95,8 +95,8 @@ def get_fabric_versions() -> list:
     parse_xml(url='https://maven.fabricmc.net/net/fabricmc/fabric-loader/maven-metadata.xml')['metadata']['versioning'][
         'versions']
 
-def download_fabric_json(minecraft_dir, version, version_name, loader_version='latest') -> None:
-    '''下载Fabric-Loader的JSON文件到.minecraft/versions/{version_name}/Fabric.json，用于和当前版本的Minecraft的json合并'''
+def download_fabric_json(minecraft_dir, mcversion, instance_name, loader_version='latest') -> None:
+    '''下载Fabric-Loader的JSON文件到.minecraft/versions/{instance_name}/Fabric.json，用于和当前版本的Minecraft的json合并'''
     if loader_version == 'latest':
         loader_version = get_latest_fabric_loader_version()
     url = f'https://maven.fabricmc.net/net/fabricmc/fabric-loader/{loader_version}/fabric-loader-{loader_version}.json'
@@ -106,7 +106,7 @@ def download_fabric_json(minecraft_dir, version, version_name, loader_version='l
     jsonfile = item.text
     jsonfile = json.loads(jsonfile)
     # Parse JSON
-    jsonfile["inheritsFrom"] = version
+    jsonfile["inheritsFrom"] = mcversion
     jsonfile["mainClass"] = jsonfile["mainClass"]['client']
     jsonfile.pop("version")
     jsonfile.pop("min_java_version")
@@ -117,7 +117,7 @@ def download_fabric_json(minecraft_dir, version, version_name, loader_version='l
         libraries.append(item)
     jsonfile["libraries"] = libraries
     jsonfile["releaseTime"] = '0' # Needs Fix......
-    jsonfile["id"] = f"fabric-loader-{loader_version}-{version}"
+    jsonfile["id"] = f"fabric-loader-{loader_version}-{mcversion}"
     jsonfile["time"] = '0' # Fix need......
     jsonfile["type"] = 'release'
 
@@ -128,7 +128,7 @@ def download_fabric_json(minecraft_dir, version, version_name, loader_version='l
         "url": "https://maven.fabricmc.net/"
     }
     intermediary_json = {
-        "name": f"net.fabricmc:intermediary:{version}",
+        "name": f"net.fabricmc:intermediary:{mcversion}",
         "url": "https://maven.fabricmc.net/"
     }
     jsonfile["libraries"].append(loader_json)
@@ -136,6 +136,6 @@ def download_fabric_json(minecraft_dir, version, version_name, loader_version='l
 
     content = json.dumps(jsonfile)
 
-    os.makedirs(f'{minecraft_dir}/versions/{version_name}', exist_ok=True)
-    with open(f'{minecraft_dir}/versions/{version_name}/Fabric.json', 'w') as f:
+    os.makedirs(f'{minecraft_dir}/versions/{instance_name}', exist_ok=True)
+    with open(f'{minecraft_dir}/versions/{instance_name}/Fabric.json', 'w') as f:
         f.write(content)

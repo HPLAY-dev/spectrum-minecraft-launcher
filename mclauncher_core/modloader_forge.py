@@ -13,27 +13,27 @@ def get_all_forgeable_versions():
     return item.json()
 
 
-def get_forge_version(version):
+def get_forge_version(mcversion):
     """获取支持此Minecraft版本的Forge"""
-    url = 'https://bmclapi2.bangbang93.com/forge/minecraft/' + version
+    url = 'https://bmclapi2.bangbang93.com/forge/minecraft/' + mcversion
     item = requests.get(url)
     if item.status_code != 200:
         raise Exception(f"Request Fail: {item.status_code}\nurl: {url}")
     return item.json()
 
 
-def download_forge_json(minecraft_dir, version, version_name, forge_version='latest', bmclapi=False, java='java'):
+def download_forge_json(minecraft_dir, mcversion, instance_name, forge_version='latest', bmclapi=False, java='java'):
     """下载一个包含了Forge的东西的版本json，附赠一份forge client jar于Libraries(其实无非就是调用安装器罢了)"""
     if forge_version == 'latest':
-        forge_versions = get_forge_version(version)
+        forge_versions = get_forge_version(mcversion)
         versions = []
         for ver in forge_versions:
             versions.append(ver["version"])
         forge_version = versions[0]
 
     # url = 'https://bmclapi2.bangbang93.com/forge/download'
-    # url = url + f'?mcversion={version}&version={forge_version}&category=installer&format=jar'
-    url = f'https://maven.minecraftforge.net/net/minecraftforge/forge/{version}-{forge_version}/forge-{version}-{forge_version}-installer.jar'
+    # url = url + f'?mcversion={mcversion}&version={forge_version}&category=installer&format=jar'
+    url = f'https://maven.minecraftforge.net/net/minecraftforge/forge/{mcversion}-{forge_version}/forge-{mcversion}-{forge_version}-installer.jar'
     item = requests.get(url)
     if item.status_code != 200:
         raise Exception(f"Request Fail: {item.status_code}\nurl: {url}")
@@ -44,11 +44,11 @@ def download_forge_json(minecraft_dir, version, version_name, forge_version='lat
     
     cmd = f'{java} -jar "{get_file_path() + "/temp/forge_installer.jar"}" --installClient {minecraft_dir}'
     os.system(cmd)
-    installer_version_name = f'{version}-forge-{forge_version}'
+    installer_version_name = f'{mcversion}-forge-{forge_version}'
     shutil.move(os.path.join(minecraft_dir, 'versions', installer_version_name),
-                os.path.join(minecraft_dir, 'versions', version_name))
-    shutil.move(os.path.join(minecraft_dir, 'versions', version_name, installer_version_name + '.json'),
-                os.path.join(minecraft_dir, 'versions', version_name, version_name + '.json'))
+                os.path.join(minecraft_dir, 'versions', instance_name))
+    shutil.move(os.path.join(minecraft_dir, 'versions', instance_name, installer_version_name + '.json'),
+                os.path.join(minecraft_dir, 'versions', instance_name, instance_name + '.json'))
 
 
     # if not os.path.exists(get_file_path() + "/temp/forge_installer/install_profile.json"):
@@ -58,7 +58,7 @@ def download_forge_json(minecraft_dir, version, version_name, forge_version='lat
     #     install_profile = json.loads(f.read())
 
     # if 'versionInfo' in install_profile:
-    forge_version_json_path = os.path.join(minecraft_dir, 'versions', version_name, version_name + '.json')
+    forge_version_json_path = os.path.join(minecraft_dir, 'versions', instance_name, instance_name + '.json')
     with open(forge_version_json_path, 'r') as f:
         forge_version_json = json.load(f)
     version_json = get_version_json(version, bmclapi)
@@ -103,10 +103,10 @@ def download_forge_json(minecraft_dir, version, version_name, forge_version='lat
     # 确保 libraries 字段使用专门的合并策略以去重并保留两边的条目
     merged_json['libraries'] = deep_merge(version_json.get('libraries', []), forge_version_json.get('libraries', []))
 
-    with open(f'{minecraft_dir}/versions/{version_name}/{version_name}.json', 'w') as f:
+    with open(f'{minecraft_dir}/versions/{instance_name}/{instance_name}.json', 'w') as f:
         f.write(json.dumps(merged_json))
 
-    # processors(install_profile, get_file_path() + "/temp", os.path.join(minecraft_dir, 'versions', version_name))
+    # processors(install_profile, get_file_path() + "/temp", os.path.join(minecraft_dir, 'versions', instance_name))
     clean_temp()
 
 def clean_temp():
