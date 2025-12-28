@@ -38,7 +38,7 @@
      <enum>QTabWidget::North</enum>
     </property>
     <property name="currentIndex">
-     <number>2</number>
+     <number>0</number>
     </property>
     <property name="documentMode">
      <bool>false</bool>
@@ -513,7 +513,7 @@
        </rect>
       </property>
       <property name="text">
-       <string>Minecraft 版本</string>
+       <string>Minecraft 实例</string>
       </property>
      </widget>
      <widget class="QComboBox" name="comboBox_5">
@@ -644,7 +644,7 @@
          </rect>
         </property>
         <property name="text">
-         <string>版本存档</string>
+         <string>存档</string>
         </property>
        </widget>
        <widget class="QPushButton" name="pushButton_8">
@@ -812,7 +812,7 @@
        </font>
       </property>
       <property name="text">
-       <string>版本文件</string>
+       <string>实例文件</string>
       </property>
      </widget>
      <widget class="QPushButton" name="pushButton_16">
@@ -851,7 +851,7 @@
        </rect>
       </property>
       <property name="text">
-       <string>强制Java</string>
+       <string>使用特定Java</string>
       </property>
      </widget>
      <widget class="QLabel" name="label_23">
@@ -872,7 +872,7 @@
        </font>
       </property>
       <property name="text">
-       <string>版本设置</string>
+       <string>实例设置</string>
       </property>
      </widget>
      <widget class="QPushButton" name="pushButton_20">
@@ -912,7 +912,7 @@
        <property name="geometry">
         <rect>
          <x>0</x>
-         <y>-207</y>
+         <y>0</y>
          <width>692</width>
          <height>1000</height>
         </rect>
