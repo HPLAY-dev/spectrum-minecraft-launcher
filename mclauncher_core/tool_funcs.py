@@ -70,3 +70,39 @@ def native():
         return 'macos'
     else:
         return 'linux'
+
+def maven_to_path(maven_str: str) -> str:
+    """将maven坐标转换为路径。
+
+    支持格式：
+      - group:artifact:version
+      - group:artifact:version:classifier
+      - group:artifact:version@packaging
+      - group:artifact:version:classifier@packaging
+
+    返回示例：
+      group/path/artifact/version/artifact-version[-classifier].packaging
+    """
+    packaging = 'jar'
+    raw = maven_str
+    # 支持 @packaging（例如 @zip）
+    if '@' in raw:
+        raw, packaging = raw.rsplit('@', 1)
+
+    parts = raw.split(':')
+    if len(parts) < 3:
+        raise ValueError("Invalid Maven coordinate format. Expected at least 'groupId:artifactId:version'.")
+
+    group_id = parts[0]
+    artifact_id = parts[1]
+    version = parts[2]
+    classifier = parts[3] if len(parts) >= 4 and parts[3] else None
+
+    group_path = group_id.replace('.', '/')
+
+    filename = f"{artifact_id}-{version}"
+    if classifier:
+        filename += f"-{classifier}"
+    filename += f".{packaging}"
+
+    return f"{group_path}/{artifact_id}/{version}/{filename}"

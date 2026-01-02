@@ -1,6 +1,7 @@
 from mclauncher_core.oauth_funcs import get_mc_token, get_mslogin_uuid_name
 from mclauncher_core.tool_funcs import *
 from mclauncher_core.modloader_fabric import is_fabric
+from mclauncher_core.tool_funcs import maven_to_path
 import json, random, shutil, requests
 
 
@@ -72,37 +73,15 @@ def get_minecraft_libraries(minecraft_dir, instance_name) -> list:
         # check if required
         if not is_library_required(lib):
             continue
-        if not "downloads" in lib:  # For fabric stuff format like that
-            # first we need to get the path of file like org/ow2/asm/asm/9.8
-            name = lib['name'].split(':')
-            # name = lib['name'].replace(':', '$SEP$')
-            name[0] = name[0].replace('.', '$SEP$')
-            filename = '-'.join(name[1:]) + '.jar'
-            name = "$SEP$".join(name)
-            path = name.replace("$SEP$", '/')
-            local_path = f'{minecraft_dir}/libraries/{path}/{filename}'
-            if not os.path.exists(local_path):
-                raise FileNotFoundError("Library not found")
-            libraries.append(local_path)
+        lib_path = lib.get('downloads', None).get('artifact', None  ).get('path', None) 
+        if lib_path:  # For fabric stuff format like that
+            lib_path = maven_to_path(lib['name'])
         else:
-            late = "artifact" in lib["downloads"] and "path" in lib["downloads"]["artifact"]
-            # get main libs
-            if late and not "natives" in lib["downloads"]["artifact"]["path"]:
-                lib_path = lib["downloads"]["artifact"]["path"]
-                full_path = f'{minecraft_dir}/libraries/{lib_path}'
-                libraries.append(full_path)
-            else:  # DEBUG
-                if 'downloads' in lib and 'artifact' in lib['downloads'] and 'path' in lib['downloads']['artifact']:
-                    lib_path = lib["downloads"]["artifact"]["path"]
-                else:
-                    name = lib['name'].split(':')  # [org.ow2.asm,asm,9.8]
-                    name[0] = name[0].replace('.', '$SEP$')  # [org$SEP$ow2$SEP$asm,asm,9.8]
-                    filename = '-'.join(name[1:]) + '.jar'  # asm-9.8.jar
-                    name = "$SEP$".join(name)  # org$SEP$ow2$SEP$asm$SEP$asm$SEP$9.8
-                    lib_path = name.replace("$SEP$", '/')  # org/ow2/asm/asm/9.8
-                full_path = f'{minecraft_dir}/libraries/{lib_path}'
-                libraries.append(full_path)
-        print(lib['name'])
+            lib_path = lib["downloads"]["artifact"]["path"]
+        local_path = f'{minecraft_dir}/libraries/{lib_path}'
+        if local_path not in libraries: # Due to some f**ked modloaders adding duplicated libraries...
+            libraries.append(local_path)
+            print(lib['name'])
     return libraries
 
 
@@ -229,8 +208,7 @@ def get_jvm_args(minecraft_dir, mcversion, instance_name):
     cp_args = get_cp_args(minecraft_dir, mcversion, instance_name)
     with open(version_json_path, 'r') as f:
         version_json = json.loads(f.read())
-    if os.path.exists(
-            f"{minecraft_dir}/versions/{instance_name}/.fabric"):  # --add-exports cpw.mods.bootstraplauncher/cpw.mods.bootstraplauncher=ALL-UNNAMED
+    if is_fabric(minecraft_dir, instance_name):  # --add-exports cpw.mods.bootstraplauncher/cpw.mods.bootstraplauncher=ALL-UNNAMED
         d_args.append("--add-exports cpw.mods.bootstraplauncher/cpw.mods.bootstraplauncher=ALL-UNNAMED")
     if "arguments" in version_json and "jvm" in version_json["arguments"]:
         args = version_json["arguments"]["jvm"]
@@ -242,10 +220,6 @@ def get_jvm_args(minecraft_dir, mcversion, instance_name):
             position = args.index('-p')
             args.pop(position)  # pop -p
             args.pop(position)  # pop "${library_directory}/net/neoforged/fancymodloader/bootstraplauncher/9.0.18/bootstraplauncher-9.0.18.jar${classpath_separator}${library_directory}/net/neoforged/fancymodloader/securejarhandler/9.0.18/securejarhandler-9.0.18.jar${classpath_separator}${library_directory}/net/neoforged/JarJarFileSystems/0.4.1/JarJarFileSystems-0.4.1.jar"
-        replacer = {"${natives_directory}": f'{minecraft_dir}/versions/{instance_name}/{instance_name}-natives',
-                    "${launcher_name}": "minecraft-launcher",
-                    "${launcher_version}": "1.0.0.0",
-                    "-Dos.name=Windows 10": '-Dos.name="Windows 10"'}
         args_text = ''
         for arg in args:
             if type(arg) == dict:
@@ -280,17 +254,10 @@ def get_jvm_args(minecraft_dir, mcversion, instance_name):
             else:
                 args_text = args_text + arg + ' '
         args_text = args_text[:-1]
-        for i in replacer:
-            args_text = args_text.replace(i, replacer[i])
     else:
         args_text = ' '.join(d_args)
 
     args_text = args_text + ' ' + get_cp_args(minecraft_dir, mcversion, instance_name)
-
-    # final modifier (patch in fact)
-    replacer = {'-DFabricMcEmu= net': '-DFabricMcEmu=net'}
-    for i in replacer:
-        args_text = args_text.replace(i, replacer[i])
     return args_text
 
 
@@ -309,6 +276,8 @@ def get_minecraft_version(minecraft_dir, instance_name):
         version_json = json.loads(f.read())
     if "inheritsFrom" in version_json:
         return version_json["inheritsFrom"]
+    elif "clientVersion" in version_json: # idk how this appears...
+        return version_json["clientVersion"]
     else:
         raise FileNotFoundError("version.json seems invalid")
 
@@ -321,8 +290,8 @@ def launch(javaw, xmx, minecraft_dir, instance_name, javawrapper=None, username:
     mcversion = get_minecraft_version(minecraft_dir, instance_name)
     minecraft_dir = minecraft_dir.replace('\\', '/')
     if jvm_args == '':
-        x_args = ["-Xmx{xmx}",
-                "-Xmn{xmn}",
+        x_args = [f"-Xmx{xmx}",
+                f"-Xmn{xmn}",
                 "-XX:+UseG1GC",
                 "-XX:-UseAdaptiveSizePolicy",
                 "-XX:-OmitStackTraceInFastThrow"]
@@ -333,16 +302,6 @@ def launch(javaw, xmx, minecraft_dir, instance_name, javawrapper=None, username:
         # -d args (jvm system properties)
         d_args = get_jvm_args(minecraft_dir, mcversion, instance_name)
     jvm_args = x_args+' '+d_args
-    
-    replacer = {
-        '{xmx}': xmx,
-        '{xmn}': xmn,
-        '{minecraft_dir}': minecraft_dir,
-        '{version_name}': instance_name,
-        '{version}': mcversion,
-    }
-    for i in replacer:
-        jvm_args = jvm_args.replace(i, replacer[i])
 
 
     # minecraft args
@@ -360,24 +319,9 @@ def launch(javaw, xmx, minecraft_dir, instance_name, javawrapper=None, username:
     mainClass = get_mainclass(minecraft_dir, instance_name)
     minecraft_args = mainClass + ' ' + minecraft_args + f" -width {str(width)} -height {str(height)}"
 
-    replacer = {"${auth_player_name}": username,
-                "${version_name}": instance_name,
-                "${auth_session}": uuid,
-                "${game_directory}": minecraft_dir + '/versions/' + instance_name,
-                "${assets_root}": minecraft_dir + '/assets',
-                "${game_assets}": minecraft_dir + f'/versions/{instance_name}/resources',
-                "${assets_index_name}": get_assetIndex(minecraft_dir, instance_name),
-                "${auth_uuid}": uuid,
-                "${auth_access_token}": access_token,
-                "${user_properties}": "{}",
-                "${user_type}": "msa",
-                "${version_type}": '"'+version_type+'"'}
-
     if ms_login:
         replacer['${auth_player_name}'] = get_mslogin_uuid_name(access_token)[1]
     print(ms_login)
-    for i in replacer:
-        minecraft_args = minecraft_args.replace(i, replacer[i])
     if (not "--version" in minecraft_args) and (not "--version" in minecraft_args):
         minecraft_args = minecraft_args + f" --version {version}"
     if (not "-accessToken" in minecraft_args) and (not "--accessToken" in minecraft_args):
@@ -399,12 +343,30 @@ def launch(javaw, xmx, minecraft_dir, instance_name, javawrapper=None, username:
     final = final.replace('${version_name}', instance_name)
     final = final.replace('${library_directory}', f'{minecraft_dir}/libraries')
 
-    replacer_mslogin = {
-        '${clientid}': client_id
-    }
 
-    for i in replacer_mslogin:
-        final = final.replace(i, replacer_mslogin[i])
+    replacer = {"${auth_player_name}": username,
+                "${version_name}": instance_name,
+                "${auth_session}": uuid,
+                "${game_directory}": minecraft_dir + '/versions/' + instance_name,
+                "${assets_root}": minecraft_dir + '/assets',
+                "${game_assets}": minecraft_dir + f'/versions/{instance_name}/resources',
+                "${assets_index_name}": get_assetIndex(minecraft_dir, instance_name),
+                "${auth_uuid}": uuid,
+                "${auth_access_token}": access_token,
+                "${user_properties}": "{}",
+                "${user_type}": "msa",
+                "${version_type}": '"'+version_type+'"',
+                '-DFabricMcEmu= net': '-DFabricMcEmu=net',
+                "${natives_directory}": f'"{minecraft_dir}/versions/{instance_name}/{instance_name}-natives"',
+                "${launcher_name}": "minecraft-launcher",
+                "${launcher_version}": "1.0.0.0",
+                "-Dos.name=Windows 10": '-Dos.name="Windows 10"',
+                '{minecraft_dir}': minecraft_dir,
+                '${clientid}': client_id,
+                '{version}': mcversion}
+
+    for i in replacer:
+        final = final.replace(i, replacer[i])
     
     final = f'cd {minecraft_dir}/versions/{instance_name} && ' + final
     return final
