@@ -1,33 +1,39 @@
 @echo off
 
-REM this is a build script for Spectrum Launcher using Nuitka.
-REM Usage: make_ntk.bat [clean|dist]
-REM 
+set nuitka=nuitka
 
-set nuitka=.\.venv\Scripts\nuitka
+if '%1' neq '' goto CHECKARG 
 
+:HELP
+    echo this is a build script for Spectrum Launcher using Nuitka.
+    echo Usage: .\make_ntk.bat [clean^|dist^|make]
+    echo.
+    goto EOF
 
-REM .\.venv\Scripts\activate
-
-set /p VERSION=V: 
-if '%1'=='clean' goto clean
-if '%1'=='dist' goto dist
-goto make
+:CHECKARG
+    if '%1'=='clean' goto clean
+    set /p VERSION=V: 
+    if '%1'=='make' goto make
+    if '%1'=='dist' goto dist
 
 :clean
     if exist .\build rd /s /q .\build
     goto EOF
 
 :make
+    if exist .\upx set upx=.\upx
+    
     echo Starting Nuitka
     %nuitka% --mingw64 ^
              --standalone ^
+             --jobs=16 ^
              --enable-plugin=pyside6 ^
              --assume-yes-for-downloads ^
              --output-dir=build ^
              --show-progress ^
              main.py
     goto EOF
+
 :dist
     echo Copying Files
     mkdir .\..\builds\build-%Version%

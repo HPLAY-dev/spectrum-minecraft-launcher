@@ -35,3 +35,4 @@ config/
 nuitka-crash-report.xml
 temp/
 mclauncher_core/*/
+upx/
