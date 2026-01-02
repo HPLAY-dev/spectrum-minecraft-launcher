@@ -15,7 +15,7 @@ def check_java_available(java_binary_path, minecraft_dir, instance_name) -> bool
     version_json = json.loads(raw)
     if "javaVersion" in version_json and "majorVersion" in version_json["javaVersion"]:
         required_version = version_json["javaVersion"]["majorVersion"]
-        return get_java_version(java_binary_path)[0] == required_version
+        return get_java_version(java_binary_path) == required_version
     else:
         return False
 

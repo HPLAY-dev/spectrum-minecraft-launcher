@@ -42,7 +42,7 @@ def get_system_bits() -> str:
     """ 获取系统位数('32','64')"""
     return platform.architecture()[0][:2]
 
-def get_java_version(java_binary_path='java') -> list:
+def get_java_version(java_binary_path='java', detailed=False) -> list:
     """执行java -version并获得返回值，格式为[8, '1.8.0_452']或[21, "21.0.7"]等，返回list"""
     try: # need fix
         p = s.Popen([java_binary_path, '-version'], stdout=s.PIPE, stderr=s.PIPE)
@@ -57,9 +57,12 @@ def get_java_version(java_binary_path='java') -> list:
         else:
             major_version = ver_full.split('.')[0]
 
-        return [major_version, ver_full]
+        if detailed:
+            return ver_full
+        else:
+            return major_version
     except:
-        return [0,""]
+        return None
 
 def native():
     """返回当前操作系统类型"""

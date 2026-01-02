@@ -35,10 +35,10 @@
      </sizepolicy>
     </property>
     <property name="tabPosition">
-     <enum>QTabWidget::North</enum>
+     <enum>QTabWidget::TabPosition::North</enum>
     </property>
     <property name="currentIndex">
-     <number>0</number>
+     <number>3</number>
     </property>
     <property name="documentMode">
      <bool>false</bool>
@@ -237,7 +237,7 @@
        </rect>
       </property>
       <property name="editTriggers">
-       <set>QAbstractItemView::NoEditTriggers</set>
+       <set>QAbstractItemView::EditTrigger::NoEditTriggers</set>
       </property>
      </widget>
      <widget class="QLabel" name="label_18">
@@ -253,7 +253,6 @@
        <font>
         <family>微软雅黑</family>
         <pointsize>18</pointsize>
-        <weight>75</weight>
         <bold>true</bold>
        </font>
       </property>
@@ -284,7 +283,7 @@
        </rect>
       </property>
       <property name="editTriggers">
-       <set>QAbstractItemView::NoEditTriggers</set>
+       <set>QAbstractItemView::EditTrigger::NoEditTriggers</set>
       </property>
      </widget>
      <widget class="QLabel" name="label_7">
@@ -588,7 +587,7 @@
        </rect>
       </property>
       <property name="horizontalScrollBarPolicy">
-       <enum>Qt::ScrollBarAlwaysOff</enum>
+       <enum>Qt::ScrollBarPolicy::ScrollBarAlwaysOff</enum>
       </property>
       <property name="widgetResizable">
        <bool>false</bool>
@@ -625,7 +624,7 @@
          </rect>
         </property>
         <property name="editTriggers">
-         <set>QAbstractItemView::NoEditTriggers</set>
+         <set>QAbstractItemView::EditTrigger::NoEditTriggers</set>
         </property>
         <property name="iconSize">
          <size>
@@ -683,7 +682,7 @@
          </rect>
         </property>
         <property name="editTriggers">
-         <set>QAbstractItemView::NoEditTriggers</set>
+         <set>QAbstractItemView::EditTrigger::NoEditTriggers</set>
         </property>
         <property name="iconSize">
          <size>
@@ -715,7 +714,7 @@
          </rect>
         </property>
         <property name="editTriggers">
-         <set>QAbstractItemView::NoEditTriggers</set>
+         <set>QAbstractItemView::EditTrigger::NoEditTriggers</set>
         </property>
         <property name="iconSize">
          <size>
@@ -734,7 +733,7 @@
          </rect>
         </property>
         <property name="editTriggers">
-         <set>QAbstractItemView::NoEditTriggers</set>
+         <set>QAbstractItemView::EditTrigger::NoEditTriggers</set>
         </property>
         <property name="iconSize">
          <size>
@@ -807,7 +806,6 @@
        <font>
         <family>微软雅黑</family>
         <pointsize>18</pointsize>
-        <weight>75</weight>
         <bold>true</bold>
        </font>
       </property>
@@ -867,7 +865,6 @@
        <font>
         <family>微软雅黑</family>
         <pointsize>18</pointsize>
-        <weight>75</weight>
         <bold>true</bold>
        </font>
       </property>
@@ -903,7 +900,7 @@
        </rect>
       </property>
       <property name="verticalScrollBarPolicy">
-       <enum>Qt::ScrollBarAlwaysOn</enum>
+       <enum>Qt::ScrollBarPolicy::ScrollBarAlwaysOn</enum>
       </property>
       <property name="widgetResizable">
        <bool>false</bool>
@@ -920,14 +917,14 @@
        <widget class="QPushButton" name="pushButton_12">
         <property name="geometry">
          <rect>
-          <x>400</x>
-          <y>175</y>
-          <width>61</width>
+          <x>340</x>
+          <y>180</y>
+          <width>120</width>
           <height>31</height>
          </rect>
         </property>
         <property name="text">
-         <string>下载</string>
+         <string>下载 Java 21</string>
         </property>
        </widget>
        <widget class="QPushButton" name="pushButton_13">
@@ -941,42 +938,6 @@
         </property>
         <property name="text">
          <string>...</string>
-        </property>
-       </widget>
-       <widget class="QLabel" name="label_4">
-        <property name="geometry">
-         <rect>
-          <x>10</x>
-          <y>180</y>
-          <width>111</width>
-          <height>21</height>
-         </rect>
-        </property>
-        <property name="text">
-         <string>Java 21 路径</string>
-        </property>
-       </widget>
-       <widget class="QLabel" name="label_2">
-        <property name="geometry">
-         <rect>
-          <x>10</x>
-          <y>100</y>
-          <width>111</width>
-          <height>21</height>
-         </rect>
-        </property>
-        <property name="text">
-         <string>Java 8 路径</string>
-        </property>
-       </widget>
-       <widget class="QLineEdit" name="lineEdit_4">
-        <property name="geometry">
-         <rect>
-          <x>110</x>
-          <y>175</y>
-          <width>291</width>
-          <height>31</height>
-         </rect>
         </property>
        </widget>
        <widget class="QProgressBar" name="progressBar_3">
@@ -1003,19 +964,6 @@
         </property>
         <property name="text">
          <string>回退 Java 路径</string>
-        </property>
-       </widget>
-       <widget class="QLabel" name="label_3">
-        <property name="geometry">
-         <rect>
-          <x>10</x>
-          <y>140</y>
-          <width>111</width>
-          <height>21</height>
-         </rect>
-        </property>
-        <property name="text">
-         <string>Java 17 路径</string>
         </property>
        </widget>
        <widget class="QLineEdit" name="lineEdit_8">
@@ -1054,50 +1002,30 @@
          <string>Minecraft 文件夹</string>
         </property>
        </widget>
-       <widget class="QLineEdit" name="lineEdit_2">
-        <property name="geometry">
-         <rect>
-          <x>110</x>
-          <y>95</y>
-          <width>291</width>
-          <height>31</height>
-         </rect>
-        </property>
-       </widget>
        <widget class="QPushButton" name="pushButton_11">
         <property name="geometry">
          <rect>
-          <x>400</x>
-          <y>135</y>
-          <width>61</width>
+          <x>220</x>
+          <y>180</y>
+          <width>120</width>
           <height>31</height>
          </rect>
         </property>
         <property name="text">
-         <string>下载</string>
+         <string>下载 Java 17</string>
         </property>
        </widget>
        <widget class="QPushButton" name="pushButton_10">
         <property name="geometry">
          <rect>
-          <x>400</x>
-          <y>95</y>
-          <width>61</width>
+          <x>110</x>
+          <y>180</y>
+          <width>111</width>
           <height>31</height>
          </rect>
         </property>
         <property name="text">
-         <string>下载</string>
-        </property>
-       </widget>
-       <widget class="QLineEdit" name="lineEdit_3">
-        <property name="geometry">
-         <rect>
-          <x>110</x>
-          <y>135</y>
-          <width>291</width>
-          <height>31</height>
-         </rect>
+         <string>下载 Java 8</string>
         </property>
        </widget>
        <widget class="QLabel" name="label_22">
@@ -1113,7 +1041,6 @@
          <font>
           <family>微软雅黑</family>
           <pointsize>18</pointsize>
-          <weight>75</weight>
           <bold>true</bold>
          </font>
         </property>
@@ -1134,7 +1061,6 @@
          <font>
           <family>微软雅黑</family>
           <pointsize>18</pointsize>
-          <weight>75</weight>
           <bold>true</bold>
          </font>
         </property>
@@ -1210,7 +1136,6 @@
          <font>
           <family>微软雅黑</family>
           <pointsize>18</pointsize>
-          <weight>75</weight>
           <bold>true</bold>
          </font>
         </property>
@@ -1242,6 +1167,42 @@
         </property>
         <property name="text">
          <string>游戏参数</string>
+        </property>
+       </widget>
+       <widget class="QLabel" name="label_2">
+        <property name="geometry">
+         <rect>
+          <x>10</x>
+          <y>100</y>
+          <width>111</width>
+          <height>31</height>
+         </rect>
+        </property>
+        <property name="text">
+         <string>导入的 Java</string>
+        </property>
+       </widget>
+       <widget class="QComboBox" name="comboBox_7">
+        <property name="geometry">
+         <rect>
+          <x>110</x>
+          <y>100</y>
+          <width>291</width>
+          <height>31</height>
+         </rect>
+        </property>
+       </widget>
+       <widget class="QPushButton" name="pushButton_21">
+        <property name="geometry">
+         <rect>
+          <x>400</x>
+          <y>100</y>
+          <width>61</width>
+          <height>31</height>
+         </rect>
+        </property>
+        <property name="text">
+         <string>...</string>
         </property>
        </widget>
       </widget>
@@ -1277,10 +1238,10 @@
        <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;&lt;span style=&quot; font-size:24pt; font-weight:600;&quot;&gt;Spectrum Launcher&lt;/span&gt;&lt;/p&gt;&lt;p&gt;Spectrum Launcher 是一个轻量化，开源的 Minecraft 启动器，基于 Python 与PySide6。&lt;/p&gt;&lt;p&gt;兼容Fabric, Forge等 Mod 加载器；Modrinth模组下载；简单的各版本文件管理；正版登录&lt;/p&gt;&lt;p&gt;Github: &lt;a href=&quot;https://github.com/HPLAY-dev/spectrum-minecraft/launcher&quot;&gt;&lt;span style=&quot; text-decoration: underline; color:#0000ff;&quot;&gt;HPLAY-dev/spectrum-minecraft/launcher&lt;/span&gt;&lt;/a&gt;&lt;/p&gt;&lt;p&gt;Bilibili: &lt;a href=&quot;https://space.bilibili.com/3493108044007466&quot;&gt;&lt;span style=&quot; text-decoration: underline; color:#0000ff;&quot;&gt;UID: 3493108044007466&lt;/span&gt;&lt;/a&gt;&lt;/p&gt;&lt;p&gt;开源协议: GNU GPL&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
       </property>
       <property name="textFormat">
-       <enum>Qt::AutoText</enum>
+       <enum>Qt::TextFormat::AutoText</enum>
       </property>
       <property name="textInteractionFlags">
-       <set>Qt::NoTextInteraction</set>
+       <set>Qt::TextInteractionFlag::NoTextInteraction</set>
       </property>
      </widget>
     </widget>
@@ -1301,7 +1262,6 @@
        <font>
         <family>微软雅黑</family>
         <pointsize>18</pointsize>
-        <weight>75</weight>
         <bold>true</bold>
        </font>
       </property>
@@ -1413,7 +1373,7 @@
        </rect>
       </property>
       <property name="editTriggers">
-       <set>QAbstractItemView::NoEditTriggers</set>
+       <set>QAbstractItemView::EditTrigger::NoEditTriggers</set>
       </property>
      </widget>
      <widget class="QPushButton" name="pushButton_19">

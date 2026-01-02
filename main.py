@@ -29,11 +29,10 @@ import requests
 import hashlib
 from concurrent.futures import ThreadPoolExecutor
 from ui import Ui_MainWindow
-import ui_retranslater as _r
 
 import l18n
 
-Ui_MainWindow.retranslateUi = _r.retranslateUi
+Ui_MainWindow.retranslateUi = l18n.retranslateUi
 
 
 def log(string: str, type='launcher'):
@@ -61,27 +60,23 @@ def check_update():
     #         return 
     # except Exception as e:
     #     QMessageBox.warning(None, '检查更新', '失败: '+str(e))
-    
-def app_path():
-    if getattr(sys, 'frozen', False):
-        path = os.path.dirname(sys.executable)
-    else:
-        path = os.path.dirname(os.path.abspath(__file__))
-    
-    path = path.replace('\\', '/')
-    if path[-1] == '/':
-        path = path[:-1]
-
-    return str(path)
 
 def fpath(path):
     path = path.replace('\\', '/')
     if path[-1] == '/':
         path = path[:-1]
     return path
+    
+
+if getattr(sys, 'frozen', False):
+    app_path = os.path.dirname(sys.executable)
+else:
+    app_path = os.path.dirname(os.path.abspath(__file__))
+
+app_path = fpath(app_path)
 
 
-default_icon = app_path() + '/assets/default_icon.png'
+default_icon = app_path + '/assets/default_icon.png'
 
 log("Loading Assets","preparation")
 if not os.path.exists(default_icon):
@@ -102,7 +97,7 @@ class MainWindow(QMainWindow, Ui_MainWindow):
         # Executor and tracking for background download tasks
         self._dl_executor = ThreadPoolExecutor(max_workers=3)
         self._downloads_in_progress = set()
-        self._dl_lock_dir = os.path.join(app_path(), 'temp', 'download_locks')
+        self._dl_lock_dir = os.path.join(app_path, 'temp', 'download_locks')
         os.makedirs(self._dl_lock_dir, exist_ok=True)
         # Connect signals (thread-safe) for progress and completion
         self.download_progress.connect(self._on_download_progress)
@@ -113,6 +108,8 @@ class MainWindow(QMainWindow, Ui_MainWindow):
         self.using_mc_login = False
         self.mc_token = None
         self.autodl_fabric_api = False
+
+        self.javas = {}
 
         self.mainTabWidget.setCurrentIndex(0)
         log("Setting Stylesheets")
@@ -168,12 +165,13 @@ class MainWindow(QMainWindow, Ui_MainWindow):
         self.pushButton_9.clicked.connect(self.rename_version)
 
         self.pushButton_13.clicked.connect(lambda: self.lineEdit.setText(self.open_folder()))
+        self.pushButton_21.clicked.connect(lambda: self.add_java(self.open_file("Java (*.*);;Java.exe (*.exe)")))
         self.pushButton_15.clicked.connect(self.ver_visibility_toggle)
         self.listView_2.clicked.connect(self.launch_version_select)
         
         self.listView_2.setVisible(False)
 
-        self.pushButton_16.clicked.connect(lambda: self.lineEdit_9.setText(self.open_file()))
+        self.pushButton_16.clicked.connect(lambda: self.lineEdit_9.setText(self.open_file("Java (*.*);;Java.exe (*.exe)")))
 
         self.pushButton_17.clicked.connect(self.save_version_config)
         
@@ -213,9 +211,10 @@ class MainWindow(QMainWindow, Ui_MainWindow):
         self.listView_2.setVisible(not _)
 
     def open_folder(self):
-        return QFileDialog.getExistingDirectory(self, l18n.string("selectFolder"), app_path())
-    def open_file(self):
-        return QFileDialog.getOpenFileName(self, self, l18n.string("selectFile"), app_path())
+        return QFileDialog.getExistingDirectory(self, l18n.string("selectFolder"), app_path)
+    def open_file(self, filters):
+        filename, _ = QFileDialog.getOpenFileName(self, l18n.string("selectFile"), "", filters, app_path)
+        return filename
     def rename_version(self):
         if self.lineEdit_5.text() == "":
             QMessageBox.warning(None, l18n.string("appName"), l18n.string("noName"))
@@ -274,7 +273,7 @@ class MainWindow(QMainWindow, Ui_MainWindow):
             log(f"Error while downloading: {e}")
             raise
 
-        os.system(f'cmd /c start msiexec /i {app_path()}/java_installer.msi')
+        os.system(f'cmd /c start msiexec /i {app_path}/java_installer.msi')
 
 
     def toggle_fabric_api_autodownload(self, stat=''):
@@ -553,7 +552,7 @@ class MainWindow(QMainWindow, Ui_MainWindow):
         #     QMessageBox.warning(None, l18n.string("appName"), '玩家名称含有其他语言字符，可能出现问题。')
 
         if launcher.native() == 'windows':
-            javawrapper = os.path.join(app_path(), 'JavaWrapper.jar')
+            javawrapper = os.path.join(app_path, 'JavaWrapper.jar')
             if not os.path.exists(javawrapper):
                 QMessageBox.critical(None, l18n.string("appName"), l18n.string("javaWrapperInvalid"))
                 return 1
@@ -582,7 +581,7 @@ class MainWindow(QMainWindow, Ui_MainWindow):
             
             # 如果是Windows，使用cmd.exe来执行命令
             if launcher.native() == 'windows':
-                self.minecraft_process.start(app_path()+'/launch.bat')
+                self.minecraft_process.start(app_path+'/launch.bat')
             else:
                 # 对于Linux/Mac，使用bash
                 self.minecraft_process.start('bash', ['-c', cmd])
@@ -627,14 +626,9 @@ class MainWindow(QMainWindow, Ui_MainWindow):
 
         
         java_major_version = downloader.get_version_json(mcversion).get('javaVersion', {}).get('majorVersion', 0)
-        if java_major_version == 21:
-            java = self.lineEdit_4.text()
-        elif java_major_version == 17:
-            java = self.lineEdit_3.text()
-        elif java_major_version == 8:
-            java = self.lineEdit_2.text()
-        else:
-            java = self.lineEdit_8.text()
+        if not java_major_version:
+            java_major_version = 8  # default to Java 8 if not specified
+        java = self.get_java(version=java_major_version)
 
         # Start asynchronous download to avoid blocking the UI
         self.start_download(minecraft_dir=minecraft_dir, mcversion=mcversion, instance_name=instance_name, modloader=modloader, modloader_version=modloader_version, java=java)
@@ -798,47 +792,39 @@ class MainWindow(QMainWindow, Ui_MainWindow):
             self.progressBar_2.setValue(int(current/total*100))
 
     def load_config(self):
-        def trydo(sth):
-            try:
-                sth()
-            except:
-                pass
-        
-        if os.path.exists(app_path()+'/cfg.json'):
-            with open(app_path()+'/cfg.json', 'r') as f:
+        if os.path.exists(app_path+'/cfg.json'):
+            with open(app_path+'/cfg.json', 'r') as f:
                 config = json.loads(f.read())
-
-            trydo(lambda: self.lineEdit.setText(config['launcher']['minecraftPath']))
-            trydo(lambda: self.lineEdit_2.setText(config['launcher']['java8']))
-            trydo(lambda: self.lineEdit_3.setText(config['launcher']['java17']))
-            trydo(lambda: self.lineEdit_4.setText(config['launcher']['java21']))
-            trydo(lambda: self.lineEdit_10.setText(config['launcher']['launcher_info']))
-            trydo(lambda: self.lineEdit_11.setText(config['launcher']['jvm_args']))
-            trydo(lambda: self.lineEdit_12.setText(config['launcher']['game_extend']))
-            trydo(lambda: self.checkBox_5.setChecked(config['launcher']['auto_download_fabric_api_mod']))
+                self.lineEdit_10.setText(config.get('launcher', {}).get('launcher_info', ''))
+                self.lineEdit_11.setText(config.get('launcher', {}).get('jvm_args', ''))
+                self.lineEdit.setText(config.get('launcher', {}).get('minecraftPath', ''))
+                self.lineEdit_12.setText(config.get('launcher', {}).get('game_extend', ''))
+                self.checkBox_5.setChecked(config.get('launcher', {}).get('auto_download_fabric_api_mod', False))
+                self.comboBox_7.clear()
+                self.comboBox_7.addItems(config.get('javas', []))
+                for i in config.get('javas', []):
+                    self.javas[i] = java.get_java_major_version(i)
         else:
             self.lineEdit.setText('.minecraft')
 
 
-        if os.path.exists(app_path()+'/versions.json'):
-            with open(app_path()+'/versions.json', 'r') as f:        
+        if os.path.exists(app_path+'/versions.json'):
+            with open(app_path+'/versions.json', 'r') as f:        
                 self.versions_config = json.loads(f.read())
         else:
             self.versions_config = {}
     
     def save_config(self):
         jsonfile = {'launcher': {}}
-        jsonfile['launcher']['java8'] = self.lineEdit_2.text()
-        jsonfile['launcher']['java17'] = self.lineEdit_3.text()
-        jsonfile['launcher']['java21'] = self.lineEdit_4.text()
         jsonfile['launcher']['wrapperPath'] = './JavaWrapper.jar'
         jsonfile['launcher']['minecraftPath'] = self.lineEdit.text()
         jsonfile['launcher']['auto_download_fabric_api_mod'] = self.checkBox_5.isChecked()
         jsonfile['launcher']['launcher_info'] = self.lineEdit_10.text()
         jsonfile['launcher']['jvm_args'] = self.lineEdit_11.text()
         jsonfile['launcher']['game_extend'] = self.lineEdit_12.text()
+        jsonfile['javas'] = list(self.javas.keys())
 
-        with open(app_path()+'/cfg.json', 'w') as f:
+        with open(app_path+'/cfg.json', 'w') as f:
             f.write(json.dumps(jsonfile))
 
     def save_version_config(self):
@@ -849,15 +835,15 @@ class MainWindow(QMainWindow, Ui_MainWindow):
         }
         jsonfile = {}
         try:
-            if os.path.exists(app_path()+'/versions.json'):
-                with open(app_path()+'/versions.json', 'r') as f:
+            if os.path.exists(app_path+'/versions.json'):
+                with open(app_path+'/versions.json', 'r') as f:
                     jsonfile = json.loads(f.read())
         except:
             pass
         jsonfile[version] = data
         self.versions_config = jsonfile
 
-        with open(app_path()+'/versions.json', 'w') as f:
+        with open(app_path+'/versions.json', 'w') as f:
             f.write(json.dumps(jsonfile))
 
     def update_version_list(self, state):
@@ -977,10 +963,25 @@ class MainWindow(QMainWindow, Ui_MainWindow):
                     f.write(raw.content)
                     return
 
+    def add_java(self, file_path):
+        if file_path in self.javas:
+            return
+        v = launcher.get_java_version(file_path)
+        if not v:
+            log('Bad java path: '+file_path)
+            return
+        self.javas[file_path] = v
+        self.comboBox_7.addItem(file_path)
+
+    def get_java(self, version):
+        for java in self.javas:
+            if self.javas[java] == version:
+                return java
+
 
 log(l18n.string("startingMainIs")+__name__)
 if __name__ in ("__main__", "__compiled__", "__mp_main__"):
-    if launcher.native() == "windows" and not os.path.exists(app_path()+'/JavaWrapper.jar'):
+    if launcher.native() == "windows" and not os.path.exists(app_path+'/JavaWrapper.jar'):
         log(l18n.string("javaWrapper"))
         download_javawrapper()
     app = QApplication(sys.argv)
