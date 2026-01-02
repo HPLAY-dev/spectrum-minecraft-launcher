@@ -91,7 +91,7 @@ if not os.path.exists(default_icon):
 class MainWindow(QMainWindow, Ui_MainWindow):
     # signal emitted from any thread to report progress (current, total, description)
     download_progress = Signal(int, int, str)
-    # signal emitted when a download task finished (result, version_name, minecraft_dir)
+    # signal emitted when a download task finished (result, instance_name, minecraft_dir)
     download_finished = Signal(object, str, str)
 
     def __init__(self, parent=None):
@@ -220,13 +220,13 @@ class MainWindow(QMainWindow, Ui_MainWindow):
         if self.lineEdit_5.text() == "":
             QMessageBox.warning(None, l18n.string("appName"), l18n.string("noName"))
         new_name = self.lineEdit_5.text()
-        version_name = self.comboBox_5.currentText()
+        instance_name = self.comboBox_5.currentText()
         minecraft_dir = self.lineEdit.text().replace('\\', '/')
         if minecraft_dir[-1] == '/':
             minecraft_dir = minecraft_dir[:-1]
         if not os.path.exists(minecraft_dir):
             return 1
-        manager.rename_version(minecraft_dir, version_name, new_name)
+        manager.rename_version(minecraft_dir, instance_name, new_name)
         self.update_installed_versions()
 
     def download_java(self, major_version: int, callback=None):
@@ -336,7 +336,7 @@ class MainWindow(QMainWindow, Ui_MainWindow):
 
         QMessageBox.information(None, l18n.string("appName"), save+l18n.string("willBeDeleted"))
         manager.remove_save(minecraft_dir, ver, save)
-        self.switch_manager_select_version(version_name=ver)
+        self.switch_manager_select_version(instance_name=ver)
 
     def remove_respack(self):
         minecraft_dir = self.lineEdit.text().replace('\\', '/')
@@ -357,18 +357,18 @@ class MainWindow(QMainWindow, Ui_MainWindow):
 
         QMessageBox.information(None, l18n.string("appName"), respack+l18n.string("willBeDeleted"))
         manager.remove_resourcepack(minecraft_dir, ver, respack)
-        self.switch_manager_select_version(version_name=ver)
+        self.switch_manager_select_version(instance_name=ver)
 
 
-    def switch_manager_select_version(self, version_name=None):
-        if not version_name:
-            version_name = self.comboBox_5.currentText()
+    def switch_manager_select_version(self, instance_name=None):
+        if not instance_name:
+            instance_name = self.comboBox_5.currentText()
         self.checkBox_6.setChecked(False)
         self.lineEdit_9.setText('')
-        if version_name in self.versions_config:
+        if instance_name in self.versions_config:
             try:
-                self.checkBox_6.setChecked(self.versions_config[version_name]['if_override_java'])
-                self.lineEdit_9.setText(self.versions_config[version_name]['override_java_path'])
+                self.checkBox_6.setChecked(self.versions_config[instance_name]['if_override_java'])
+                self.lineEdit_9.setText(self.versions_config[instance_name]['override_java_path'])
             except:
                 pass
         minecraft_dir = self.lineEdit.text().replace('\\', '/')
@@ -379,14 +379,14 @@ class MainWindow(QMainWindow, Ui_MainWindow):
         
         if self.comboBox_5.currentText() == '':
             return 1
-        version_name = self.comboBox_5.currentText()
+        instance_name = self.comboBox_5.currentText()
 
         # 设置存档列表
         self.model_saves = QStandardItemModel()
-        data = manager.get_saves(minecraft_dir, version_name)
+        data = manager.get_saves(minecraft_dir, instance_name)
 
         for i in data:
-            save_icon = f'{minecraft_dir}/versions/{version_name}/saves/{i}/icon.png'
+            save_icon = f'{minecraft_dir}/versions/{instance_name}/saves/{i}/icon.png'
             if os.path.exists(save_icon):
                 self.model_saves.appendRow(QStandardItem(QIcon(save_icon), i))
             else:
@@ -395,10 +395,10 @@ class MainWindow(QMainWindow, Ui_MainWindow):
 
         # 设置资源包列表
         self.model_respacks = QStandardItemModel()
-        data = manager.get_resourcepacks(minecraft_dir, version_name)
+        data = manager.get_resourcepacks(minecraft_dir, instance_name)
 
         for i in data:
-            save_icon = f'{minecraft_dir}/versions/{version_name}/resourcepacks/{i}/pack.png'
+            save_icon = f'{minecraft_dir}/versions/{instance_name}/resourcepacks/{i}/pack.png'
             if os.path.exists(save_icon):
                 self.model_respacks.appendRow(QStandardItem(QIcon(save_icon), i))
             else:
@@ -407,7 +407,7 @@ class MainWindow(QMainWindow, Ui_MainWindow):
 
         # 设置Mod列表
         self.model_mods = QStandardItemModel()
-        data = manager.get_mods(minecraft_dir, version_name)
+        data = manager.get_mods(minecraft_dir, instance_name)
 
         for i in data:
             self.model_mods.appendRow(QStandardItem(QIcon(default_icon), i))
@@ -415,7 +415,7 @@ class MainWindow(QMainWindow, Ui_MainWindow):
 
         # 设置光影d列表
         self.model_shaderpacks = QStandardItemModel()
-        data = manager.get_shaderpacks(minecraft_dir, version_name)
+        data = manager.get_shaderpacks(minecraft_dir, instance_name)
 
         for i in data:
             self.model_shaderpacks.appendRow(QStandardItem(QIcon(default_icon), i))
@@ -442,9 +442,9 @@ class MainWindow(QMainWindow, Ui_MainWindow):
         
         if self.comboBox_5.currentText() == '':
             return 1
-        version_name = self.comboBox_5.currentText()
+        instance_name = self.comboBox_5.currentText()
 
-        saves_path = f'{minecraft_dir}/versions/{version_name}/saves'
+        saves_path = f'{minecraft_dir}/versions/{instance_name}/saves'
         if not os.path.exists(saves_path):
             return 1
 
@@ -527,12 +527,12 @@ class MainWindow(QMainWindow, Ui_MainWindow):
         if self.launch_version == None:
             QMessageBox.critical(None, l18n.string("appName"), l18n.string("selectVersion"))
             return 1
-        version_name = self.launch_version
+        instance_name = self.launch_version
 
-        if version_name in self.versions_config and self.versions_config[version_name]['if_override_java']:
-            javaw = self.versions_config[version_name]['override_java_path']
+        if instance_name in self.versions_config and self.versions_config[instance_name]['if_override_java']:
+            javaw = self.versions_config[instance_name]['override_java_path']
         else:
-            java_major_version = launcher.get_required_java_version(minecraft_dir, version_name)
+            java_major_version = launcher.get_required_java_version(minecraft_dir, instance_name)
             if java_major_version == 21:
                 javaw = self.lineEdit_4.text()
             elif java_major_version == 17:
@@ -563,7 +563,7 @@ class MainWindow(QMainWindow, Ui_MainWindow):
         # 使用QProcess启动Minecraft而不阻塞UI\
         log(self.mc_token)
         cmd = launcher.launch(javaw=javaw, xmx=xmx, minecraft_dir=minecraft_dir, 
-                            version_name=version_name, javawrapper=javawrapper, 
+                            instance_name=instance_name, javawrapper=javawrapper, 
                             username=username, ms_login=self.using_mc_login, 
                             access_token=self.mc_token,
                             version_type=self.lineEdit_10.text(),
@@ -644,15 +644,15 @@ class MainWindow(QMainWindow, Ui_MainWindow):
         if self.launch_version == None:
             QMessageBox.critical(None, l18n.string("appName"), l18n.string("selectVersion"))
             return 1
-        version_name = self.launch_version
+        instance_name = self.launch_version
 
         minecraft_dir = self.lineEdit.text().replace('\\', '/')
         if minecraft_dir[-1] == '/':
             minecraft_dir = minecraft_dir[:-1]
 
         # Start async download instead of blocking the UI
-        mcversion = launcher.get_minecraft_version(minecraft_dir, version_name)
-        self.start_download(minecraft_dir=minecraft_dir, mcversion=mcversion, instance_name=version_name)
+        mcversion = launcher.get_minecraft_version(minecraft_dir, instance_name)
+        self.start_download(minecraft_dir=minecraft_dir, mcversion=mcversion, instance_name=instance_name)
 
     def _emit_progress(self, current, total, description):
         """Emit progress safely from background threads."""
@@ -920,8 +920,8 @@ class MainWindow(QMainWindow, Ui_MainWindow):
             return
         
         try:
-            version_name = self.comboBox_6.currentText()
-            mcversion = launcher.get_minecraft_version(minecraft_dir, version_name)
+            instance_name = self.comboBox_6.currentText()
+            mcversion = launcher.get_minecraft_version(minecraft_dir, instance_name)
         except Exception as E:
             log(l18.cannotGetMinecraftVersion)
 
@@ -952,8 +952,8 @@ class MainWindow(QMainWindow, Ui_MainWindow):
             return
         
         try:
-            version_name = self.comboBox_6.currentText()
-            mcversion = launcher.get_minecraft_version(minecraft_dir, version_name)
+            instance_name = self.comboBox_6.currentText()
+            mcversion = launcher.get_minecraft_version(minecraft_dir, instance_name)
         except Exception as E:
             log(l18n.string("cannotGetMinecraftVersion"))
 
@@ -968,7 +968,7 @@ class MainWindow(QMainWindow, Ui_MainWindow):
         versions = modrinth.list_project_versions(project_id)
         for ver in versions:
             if (mcversion in ver.game_versions and modloader.lower() in ver.loaders):
-                mods_path = f'{minecraft_dir}/versions/{version_name}/mods'
+                mods_path = f'{minecraft_dir}/versions/{instance_name}/mods'
                 os.makedirs(mods_path, exist_ok=True)
                 url = ver.files[0].url
                 destination = mods_path+'/'+ver.files[0].filename

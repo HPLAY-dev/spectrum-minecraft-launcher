@@ -61,7 +61,7 @@ def download_forge_json(minecraft_dir, mcversion, instance_name, forge_version='
     forge_version_json_path = os.path.join(minecraft_dir, 'versions', instance_name, instance_name + '.json')
     with open(forge_version_json_path, 'r') as f:
         forge_version_json = json.load(f)
-    version_json = get_version_json(version, bmclapi)
+    version_json = get_version_json(mcversion, bmclapi)
 
     # 深度合并：保留两边的条目（非重复），并对子字典递归合并
     def deep_merge(a, b):

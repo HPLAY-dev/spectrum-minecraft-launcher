@@ -64,9 +64,6 @@ def get_version_json(mcversion, bmclapi=False) -> dict:
     for current in manifest["versions"]:
         if current["id"] == mcversion:
             url = current["url"]
-            if bmclapi:
-                url = url.replace("https://launchermeta.mojang.com/", "https://bmclapi2.bangbang93.com/")
-                url = url.replace("https://launcher.mojang.com/", "https://bmclapi2.bangbang93.com/")
 
             response = requests.get(url)
             if response.status_code != 200:
@@ -85,9 +82,6 @@ def download_version_json(minecraft_dir, mcversion, instance_name, bmclapi=False
             os.makedirs(f'{minecraft_dir}/versions/{instance_name}', exist_ok=True)
             with open(f'{minecraft_dir}/versions/{instance_name}/{instance_name}.json', 'wb') as f:
                 url = current["url"]
-                if bmclapi:
-                    url = url.replace("https://launchermeta.mojang.com/", "https://bmclapi2.bangbang93.com/")
-                    url = url.replace("https://launcher.mojang.com/", "https://bmclapi2.bangbang93.com/")
                 item = requests.get(url)
                 if item.status_code != 200:
                     raise Exception(f"Request Fail: {item.status_code}\nurl: {url}")
@@ -103,10 +97,6 @@ def download_jar(minecraft_dir, instance_name, bmclapi=False) -> None:
     if not os.path.exists(f'{minecraft_dir}/versions/{instance_name}/{instance_name}.jar'):
         with open(f'{minecraft_dir}/versions/{instance_name}/{instance_name}.jar', 'wb') as f:
             url = version_json["downloads"]["client"]["url"]
-
-            if bmclapi:
-                url = url.replace("https://launchermeta.mojang.com/", "https://bmclapi2.bangbang93.com/")
-                url = url.replace("https://launcher.mojang.com/", "https://bmclapi2.bangbang93.com/")
             item = requests.get(url)
             if item.status_code != 200:
                 raise Exception(f"Request Fail: {item.status_code}\nurl: {url}")
@@ -117,6 +107,21 @@ def download_libraries(minecraft_dir, mcversion, instance_name, print_status=Tru
     """下载Minecraft为指定版本的libraries(库)，返回None"""
     with open(f'{minecraft_dir}/versions/{instance_name}/{instance_name}.json', 'r') as f:
         version_json = f.read()
+    
+    replacer = {
+        'https://libraries.minecraft.net/': 'https://bmclapi2.bangbang93.com/maven/',
+        'https://maven.neoforged.net/releases/': 'https://bmclapi2.bangbang93.com/maven/',
+        'https://maven.minecraftforge.net/': 'https://bmclapi2.bangbang93.com/maven/',
+        'https://files.minecraftforge.net/maven': 'https://bmclapi2.bangbang93.com/maven/',
+        'https://meta.fabricmc.net': 'https://bmclapi2.bangbang93.com/fabric-meta',
+        'https://launchermeta.mojang.com/': 'https://bmclapi2.bangbang93.com/',
+        'https://launcher.mojang.com/': 'https://bmclapi2.bangbang93.com/',
+        'http://resources.download.minecraft.net/': 'https://bmclapi2.bangbang93.com/assets/',
+        'https://libraries.minecraft.net/': 'https://bmclapi2.bangbang93.com/maven',
+        'http://dl.liteloader.com/versions/versions.json': 'https://bmclapi.bangbang93.com/maven/com/mumfrey/liteloader/versions.json',
+        'https://authlib-injector.yushi.moe': 'https://bmclapi2.bangbang93.com/mirrors/authlib-injector',
+        'https://maven.fabricmc.net/': 'https://bmclapi2.bangbang93.com/maven/',
+    } # God bless BMCLAPI
     version_json = json.loads(version_json)
     file_amount = len(version_json["libraries"])
     current = 0
@@ -145,13 +150,16 @@ def download_libraries(minecraft_dir, mcversion, instance_name, print_status=Tru
             # result = future.result()
             # if print_status:
             #     print(f'{current}/{file_amount}\n- {lib.get("name", "Unknown")}: {result}')
+            result = future.result()
+            if print_status:
+                print(f'{current}/{file_amount}\n- {lib.get("name", "Unknown")}: {result}')
 
-            try:
-                result = future.result()
-                if print_status:
-                    print(f'{current}/{file_amount}\n- {lib.get("name", "Unknown")}: {result}')
-            except Exception as e:
-                print(f'下载失败: {lib.get("name", "Unknown")}, 错误: {str(e)}')
+            # try:
+            #     result = future.result()
+            #     if print_status:
+            #         print(f'{current}/{file_amount}\n- {lib.get("name", "Unknown")}: {result}')
+            # except Exception as e:
+            #     print(f'下载失败: {lib.get("name", "Unknown")}, 错误: {str(e)}')
 
     natives_path = f'{minecraft_dir}/versions/{instance_name}/{instance_name}-natives'
     for root, dirs, files in os.walk(natives_path):
@@ -186,11 +194,6 @@ def download_fallback_library(minecraft_dir, lib, bmclapi):
     # # 仍然不知道如何下载qaq
     # if lib['name'].split(':')[0] == 'net.minecraftforge':
     #     filename = filename.replace('.jar', '-universal.jar')
-
-    if bmclapi:
-        url_base = "https://bmclapi2.bangbang93.com/maven/"
-    else:
-        url_base = lib['url']
 
     url = url_base + path + '/' + filename
     local_path = f'{minecraft_dir}/libraries/{path}'
@@ -252,14 +255,8 @@ def download_modern_library(minecraft_dir, instance_name, lib, bmclapi):
         return f"已存在: {local_path}"
 
     with open(f'{minecraft_dir}/libraries/{relative_path}', 'wb') as f:
-        if bmclapi:
-            url = url.replace("https://libraries.minecraft.net/", "https://bmclapi2.bangbang93.com/maven/")
-
         item = requests.get(url)
         f.write(item.content)
-    
-    while os.path.getsize(f'{minecraft_dir}/libraries/{relative_path}') == 0:
-        download_modern_library(minecraft_dir, instance_name, lib, bmclapi)
 
 
     if if_natives or if_natives_late_versions:
@@ -375,8 +372,6 @@ def download_assets(minecraft_dir, instance_name, print_status=True, bmclapi=Fal
     # 下载asset索引文件
     with open(f'{minecraft_dir}/assets/indexes/{asset_index}.json', "wb") as f:
         url = version_json["assetIndex"]["url"]
-        if bmclapi:
-            url = url.replace("http://resources.download.minecraft.net/", "https://bmclapi2.bangbang93.com/assets/")
         item = requests.get(url)
         if item.status_code != 200:
             raise Exception(f"Request Fail: {item.status_code}\nurl: {url}")
@@ -407,9 +402,6 @@ def download_assets(minecraft_dir, instance_name, print_status=True, bmclapi=Fal
         object_name, object_data = object_info
         hash = object_data["hash"]
         url = f'https://resources.download.minecraft.net/{hash[0:2]}/{hash}'
-
-        if bmclapi:
-            url = url.replace("https://resources.download.minecraft.net/", "https://bmclapi2.bangbang93.com/assets/")
 
         if ("map_to_resources" in asset_json) and (asset_json["map_to_resources"] == True):
             local = f'{minecraft_dir}/versions/{instance_name}/resources/{object_name}'
@@ -474,11 +466,10 @@ def download_assets(minecraft_dir, instance_name, print_status=True, bmclapi=Fal
 def auto_download(minecraft_dir, mcversion, instance_name, modloader='vanilla', bmclapi=False, modloader_version='latest',
                   progress_callback=None, java='java'):
     """下载整个Minecraft版本，返回None"""
-    if modloader == None:
-        modloader = 'vanilla'
     if not os.path.exists(f'{minecraft_dir}/versions/{instance_name}/{instance_name}.json'):
+        # 新的版本
         modloader = modloader.lower()
-        if modloader == 'fabric':
+        if modloader == 'fabric': # 手动merge
             fabric_json = f'{minecraft_dir}/versions/{instance_name}/Fabric.json'
             if not os.path.exists(fabric_json):
                 download_fabric_json(minecraft_dir, mcversion, instance_name, loader_version='latest')
@@ -490,13 +481,13 @@ def auto_download(minecraft_dir, mcversion, instance_name, modloader='vanilla', 
 
         elif modloader == 'forge':
             download_forge_json(minecraft_dir, mcversion, instance_name, bmclapi=bmclapi,
-                                forge_version=modloader_version)
+                                forge_version=modloader_version, java=java)
 
         elif modloader == 'neoforge':
             print('download neoforge json')
             if not os.path.exists(f'{minecraft_dir}/versions/{instance_name}/{instance_name}.json'):
                 download_neoforge_json(minecraft_dir, mcversion, instance_name, bmclapi=bmclapi,
-                                       neoforge_version=modloader_version)
+                                       neoforge_version=modloader_version, java=java)
 
         elif modloader == 'vanilla':
             download_version_json(minecraft_dir, mcversion, instance_name, bmclapi=bmclapi)

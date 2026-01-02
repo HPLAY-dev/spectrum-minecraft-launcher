@@ -1,5 +1,12 @@
 @echo off
 
+REM this is a build script for Spectrum Launcher using Nuitka.
+REM Usage: make_ntk.bat [clean|dist]
+REM 
+
+set nuitka=.\.venv\Scripts\nuitka
+
+
 REM .\.venv\Scripts\activate
 
 set /p VERSION=V: 
@@ -13,13 +20,13 @@ goto make
 
 :make
     echo Starting Nuitka
-    nuitka  --mingw64 ^
-            --standalone ^
-            --enable-plugin=pyside6 ^
-            --assume-yes-for-downloads ^
-            --output-dir=build ^
-            --show-progress ^
-            main.py
+    %nuitka% --mingw64 ^
+             --standalone ^
+             --enable-plugin=pyside6 ^
+             --assume-yes-for-downloads ^
+             --output-dir=build ^
+             --show-progress ^
+             main.py
     goto EOF
 :dist
     echo Copying Files

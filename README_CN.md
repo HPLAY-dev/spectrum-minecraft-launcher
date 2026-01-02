@@ -15,8 +15,8 @@ Fabric已经完整支持，Forge与Neoforge基本支持，见4.0
 - [x] 启动任何Minecraft Java Edition版本
 - [x] 微软登录
 - [x] Fabric ModLoader
-- [x] Forge ModLoader (50%)
-- [x] Neoforge ModLoader (50%)
+- [x] Forge ModLoader
+- [x] Neoforge ModLoader
 - [x] 版本文件管理
 - [x] Modtinth Mods下载
 

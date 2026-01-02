@@ -15,8 +15,8 @@ zh_CN & en_US.
 - [x] Launch any version of Minecraft Java Edition
 - [x] Microsoft Login
 - [x] Fabric ModLoader
-- [ ] Forge ModLoader (50%)
-- [ ] Neoforge ModLoader (50%)
+- [x] Forge ModLoader
+- [x] Neoforge ModLoader
 - [x] Version file managing
 - [x] Download Mods on Modrinth
 
