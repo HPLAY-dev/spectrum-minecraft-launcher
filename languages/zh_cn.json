@@ -51,6 +51,7 @@
         "memoryAllocation": "内存分配",
         "downloadFixFiles": "补全文件",
         "upArrow": "▲",
+        "downArrow": "▼",
         "launchTab": "启动",
         "versionList": "版本列表",
         "bmclapiMirror": "BMCLAPI 镜像源",

@@ -51,6 +51,7 @@
         "memoryAllocation": "Memory",
         "downloadFixFiles": "Complete Files",
         "upArrow": "▲",
+        "downArrow": "▼",
         "launchTab": "Launch",
         "versionList": "Versions",
         "bmclapiMirror": "BMCLAPI Mirror",
