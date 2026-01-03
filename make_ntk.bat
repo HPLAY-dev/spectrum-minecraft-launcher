@@ -24,13 +24,18 @@ if '%1' neq '' goto CHECKARG
     if exist .\upx set upx=.\upx
     
     echo Starting Nuitka
-    %nuitka% --mingw64 ^
-             --standalone ^
-             --jobs=16 ^
-             --enable-plugin=pyside6 ^
-             --assume-yes-for-downloads ^
-             --output-dir=build ^
-             --show-progress ^
+        %nuitka% ^
+            --mingw64 ^
+            --standalone ^
+            --jobs=16 ^
+            --enable-plugin=pyside6 ^
+            --assume-yes-for-downloads ^
+            --output-dir=build ^
+            --show-progress ^
+            --windows-console-mode=disable ^
+            --windows-file-version=%VERSION% ^
+            --windows-product-version=%VERSION% ^
+            --windows-file-description="Just a Minecraft Launcher." ^
              main.py
     goto EOF
 
