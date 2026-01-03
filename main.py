@@ -275,9 +275,9 @@ class MainWindow(QMainWindow, Ui_MainWindow):
     def ver_visibility_toggle(self):
         _ = self.listView_2.isVisible()
         if _:
-            self.pushButton_15.setText(l18n.string("upArrow"))
+            self.pushButton_15.setText(l18n.string("ui", "upArrow"))
         else:
-            self.pushButton_15.setText(l18n.string("downArrow"))
+            self.pushButton_15.setText(l18n.string("ui", "downArrow"))
         self.listView_2.setVisible(not _)
 
     def open_folder(self):
