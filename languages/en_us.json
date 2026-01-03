@@ -113,6 +113,19 @@
         "liteloader": "Liteloader",
         "search": "Search",
         "installThisMod": "Install this Mod",
-        "modrinthTab": "Modrinth"
+        "modrinthTab": "Modrinth",
+        "importedJavas": "Imported Javas",
+        "loginAs": "Login as",
+        "saveAccounts": "Save Accounts",
+        "accountType": "Account Type",
+        "offline": "Offline",
+        "microsoft": "Microsoft",
+        "continueViaBrowser": "Continue via Browser",
+        "accountName": "Account Name",
+        "createAccount": "Create Account",
+        "cancel": "Cancel",
+        "newAccount": "New Account",
+        "javaNotFoundOrNoSuitable": "No matching Java found or no suitable Java version available (requires Java ${version})",
+        "accountTab": "Account"
     }
 }

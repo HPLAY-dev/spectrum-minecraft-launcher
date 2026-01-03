@@ -283,7 +283,8 @@ def get_minecraft_version(minecraft_dir, instance_name):
 
 
 def launch(javaw, xmx, minecraft_dir, instance_name, javawrapper=None, username: str = "steve", xmn: str="256M", ms_login=False,
-           access_token=None, width: int = 854, height: int = 480, version_type: str='§1R§2e§3d§4s§5t§6o§7n§8e §9C§ar§be§ca§dt§ei§fo§1n§2s', jvm_args: str='', game_args_extend: str='') -> str:
+           access_token=None, width: int = 854, height: int = 480, version_type: str='§1R§2e§3d§4s§5t§6o§7n§8e §9C§ar§be§ca§dt§ei§fo§1n§2s', 
+           jvm_args: str='', game_args_extend: str='', uuid=None) -> str:
     """生成启动脚本，返回str"""
     # all of the items in lists are NOT ended with space!!!
     # -x args (JVM stuff)
@@ -308,10 +309,12 @@ def launch(javaw, xmx, minecraft_dir, instance_name, javawrapper=None, username:
     # 处理正版登录
     if ms_login:
         if access_token == None:
-            access_token = get_mc_token()
-        uuid = get_mslogin_uuid_name(access_token)[0]
+            access_token = get_mc_token() # shouldnt be here...
+        if uuid is None:
+            uuid = get_mslogin_uuid_name(access_token)[0]
     else:
-        uuid = gen_random_uuid()
+        if uuid is None:
+            uuid = gen_random_uuid()
         access_token = uuid
     minecraft_args = get_minecraft_args(minecraft_dir, mcversion, instance_name)
     if game_args_extend != '':

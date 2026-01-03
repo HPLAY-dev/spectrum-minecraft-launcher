@@ -184,14 +184,19 @@ def xsts_to_mc_token(xsts_return: dict):
         raise
 
 
-def get_mc_token(custom_auth_code=None):
+def get_mc_token(refresh_token=None, custom_auth_code=None, need_refresh_token=False):
     print('Getting auth_code')
-    if custom_auth_code == None:
+    if not custom_auth_code:
         auth_code = oauth.get_auth_code()
     else:
         auth_code = custom_auth_code
     print('Getting access_token')
-    access_token = code_to_token(auth_code)['access_token']
+    if refresh_token:
+        access_token = refresh_token(refresh_token)['access_token']
+    else:
+        token_return = code_to_token(auth_code)
+        refresh_token = token_return['refresh_token']
+        access_token = token_return['access_token']
     print('Getting xbl')
     xbl = access_token_to_xbl(access_token)
     print('Getting xsts')
@@ -199,7 +204,10 @@ def get_mc_token(custom_auth_code=None):
     print('Getting mc_token')
     mc_token = xsts_to_mc_token(xsts)
     print('Finish')
-    return mc_token
+    if need_refresh_token:
+        return mc_token, refresh_token
+    else:
+        return mc_token
 
 
 def is_owned(mc_token, with_profile_data=False):
@@ -246,7 +254,7 @@ def get_mslogin_uuid_name(access_token: str):
         print(f"uuid={uuid}")
         print(f"name={name}")
 
-        return [uuid, name]
+        return (uuid, name)
     else:
         raise Exception('No Minecraft license found or profile not available')
         # if profile_response.status_code != 200:

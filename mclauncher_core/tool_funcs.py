@@ -60,9 +60,9 @@ def get_java_version(java_binary_path='java', detailed=False) -> list:
         if detailed:
             return ver_full
         else:
-            return major_version
+            return int(major_version)
     except:
-        return None
+        return -1
 
 def native():
     """返回当前操作系统类型"""

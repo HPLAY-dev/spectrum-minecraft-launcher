@@ -113,6 +113,19 @@
         "liteloader": "Liteloader",
         "search": "搜索",
         "installThisMod": "安装此Mod",
-        "modrinthTab": "Modrinth"
+        "modrinthTab": "Modrinth",
+        "importedJavas": "导入的 Java",
+        "loginAs": "登录为",
+        "saveAccounts": "保存账户",
+        "accountType": "账户类型",
+        "offline": "离线",
+        "microsoft": "微软账户",
+        "continueViaBrowser": "通过浏览器继续",
+        "accountName": "账户名称",
+        "createAccount": "创建账户",
+        "cancel": "取消",
+        "newAccount": "新建账户",
+        "javaNotFoundOrNoSuitable": "未找到对应的 Java 或无合适版本的 Java 可用（需要 Java ${version}）",
+        "accountTab": "账户"
     }
 }

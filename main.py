@@ -7,9 +7,12 @@ USE_OS_SYSTEM_TO_EXECUTE = 0
 
 import sys
 import os
+
 from PySide6.QtCore import QStringListModel, QProcess, Signal
 from PySide6.QtWidgets import QApplication, QMainWindow, QMessageBox, QFileDialog
 from PySide6.QtGui import QStandardItemModel, QIcon, QStandardItem, QPixmap
+from PySide6.QtCore import Qt
+
 import re
 import json
 from mclauncher_core.javawrapper import download_javawrapper
@@ -34,6 +37,15 @@ import l18n
 
 Ui_MainWindow.retranslateUi = l18n.retranslateUi
 
+def hide_ctrl(ctrl):
+    ctrl.setEnabled(False)
+    ctrl.hide()
+    ctrl.setFocusPolicy(Qt.NoFocus)
+
+def show_ctrl(ctrl):
+    ctrl.setEnabled(True)
+    ctrl.show()
+    ctrl.setFocusPolicy(Qt.StrongFocus)
 
 def log(string: str, type='launcher'):
     import time
@@ -105,19 +117,35 @@ class MainWindow(QMainWindow, Ui_MainWindow):
 
         self.launch_version = None
         # Stuff
-        self.using_mc_login = False
-        self.mc_token = None
         self.autodl_fabric_api = False
 
         self.javas = {}
+        self.accounts = []
+        self.listView_4_Model = []
+        '''
+        format:
+        {
+            'name': 'account name',
+            'type: 'microsoft|offline',
+            'refresh_token': 'xxxxxx', # Only for microsoft account
+        }
+        '''
+
+        temp_access_token = ''
+        temp_refresh_token = ''
+
+        hide_ctrl(self.create_account)
+        # hide_ctrl(self.offline)
+        hide_ctrl(self.microsoft)
 
         self.mainTabWidget.setCurrentIndex(0)
         log("Setting Stylesheets")
         # self.setStyleSheet(stylesheets.main_window)
-        self.LaunchBtn.setStyleSheet(stylesheets.button1)
+        self.launchBtn.setStyleSheet(stylesheets.button1)
         # self.label_6.setStyleSheet(stylesheets.bg_label)
 
         self.load_config()
+        self.load_accounts()
 
         # 设置版本列表
         self.model = QStringListModel()
@@ -136,7 +164,7 @@ class MainWindow(QMainWindow, Ui_MainWindow):
 
         self.lineEdit.editingFinished.connect(self.update_installed_versions) # 更新Minecraft目录
 
-        self.LaunchBtn.clicked.connect(self.launch) # 启动
+        self.launchBtn.clicked.connect(self.launch) # 启动
 
         self.comboBox.currentTextChanged.connect(self.update_ml_version_list)
 
@@ -154,7 +182,7 @@ class MainWindow(QMainWindow, Ui_MainWindow):
         self.DownloadFixBtn.clicked.connect(self.download_fix)
         
         self.pushButton_2.clicked.connect(self.oauth)
-        self.lineEdit_6.textChanged.connect(self.disable_mslogin)
+        # self.lineEdit_6.textChanged.connect(self.disable_mslogin)
         
         self.checkBox_5.clicked.connect(self.toggle_fabric_api_autodownload)
 
@@ -185,8 +213,50 @@ class MainWindow(QMainWindow, Ui_MainWindow):
         self.pushButton_14.clicked.connect(self.open_version_folder)
         # self.pushButton_14.clicked.connect(lambda: os.system(f'cmd /c set /p a={self.comboBox_5.currentText()}'))
 
+        self.comboBox_9.currentIndexChanged.connect(self.change_account_mode)
+        self.pushButton_23.clicked.connect(self.save_accounts)
+        self.pushButton_24.clicked.connect(self.oauth)
+        self.pushButton_22.clicked.connect(lambda: show_ctrl(self.create_account))
+        self.pushButton_2.clicked.connect(self.save_account)
+        self.pushButton_25.clicked.connect(lambda: hide_ctrl(self.create_account))
+        self.pushButton_26.clicked.connect(self.remove_account)
+        
         self.update_installed_versions()
         log("Window created","preparation")
+
+    def change_account_mode(self, index):
+        if index == 0:
+            show_ctrl(self.offline)
+            hide_ctrl(self.microsoft)
+        elif index == 1:
+            hide_ctrl(self.offline)
+            show_ctrl(self.microsoft)
+
+    def save_account(self):
+        if self.comboBox_9.currentIndex() == 0: # Offline
+            name = self.lineEdit_2.text()
+            self.accounts.append({
+                "type": "offline",
+                "name": name
+            })
+        elif self.comboBox_9.currentIndex() == 1: # Microsoft
+            uuid, name = oa.get_mslogin_uuid_name(temp_access_token)
+            self.accounts.append({
+                "type": "microsoft",
+                "refresh_token": temp_refresh_token,
+                "name": name,
+                "uuid": uuid
+            })  
+        self.comboBox_8.addItem(name)
+        self.listView_4_Model.append(name)
+        self.listView_4.setModel(QStringListModel(self.listView_4_Model))
+        hide_ctrl(self.create_account)
+
+    def remove_account(self):
+        index = self.listView_4.selectionModel().selectedIndexes()[0].row()
+        self.listView_4.Model().removeRow(self.listView_4.selectionModel().selectedIndexes()[0].row())
+        self.accounts.pop(index)
+        
 
     def open_version_folder(self):
         open_bin = 'explorer.exe' if downloader.native() == 'windows' else 'xdg-open'
@@ -199,7 +269,7 @@ class MainWindow(QMainWindow, Ui_MainWindow):
 
     def launch_version_select(self):
         self.launch_version = self.listView_2.selectionModel().selectedIndexes()[0].data()
-        self.LaunchBtn.setText(l18n.string("launch")+"\n"+self.launch_version)
+        self.launchBtn.setText(l18n.string("launch")+"\n"+self.launch_version)
         self.ver_visibility_toggle()
 
     def ver_visibility_toggle(self):
@@ -281,23 +351,13 @@ class MainWindow(QMainWindow, Ui_MainWindow):
 
     def debug_log(self, b=''):
         log(b)
-        log(self.using_mc_login)
-        log(self.mc_token)
-
-    def disable_mslogin(self):
-        self.using_mc_login = False
-        self.label_18.setText(self.lineEdit_6.text())
         
     def oauth(self):
         try:
-            self.using_mc_login = True
-            self.mc_token = oa.get_mc_token()
-            self.label_18.setText(oa.get_mslogin_uuid_name(self.mc_token)[1])
+            self.temp_access_token, self.temp_refresh_token = oa.get_mc_token(need_refresh_token=True)
         except Exception as e:
-            input('EXCEPTION: '+str(e))
-            self.using_mc_login = False
-            self.mc_token = None
-            self.label_18.setText(self.lineEdit_6.text())
+            print('OAUTH EXCEPTION: '+str(e))
+            # self.label_18.setText(self.lineEdit_6.text())
 
     def remove_version(self):
         minecraft_dir = self.lineEdit.text().replace('\\', '/')
@@ -532,18 +592,13 @@ class MainWindow(QMainWindow, Ui_MainWindow):
             javaw = self.versions_config[instance_name]['override_java_path']
         else:
             java_major_version = launcher.get_required_java_version(minecraft_dir, instance_name)
-            if java_major_version == 21:
-                javaw = self.lineEdit_4.text()
-            elif java_major_version == 17:
-                javaw = self.lineEdit_3.text()
-            elif java_major_version == 8:
-                javaw = self.lineEdit_2.text()
-            else:
-                javaw = self.lineEdit_8.text()
-
+            javaw = self.get_java(version=java_major_version)
+            if not javaw:
+                QMessageBox.critical(None, l18n.string("appName"), l18n.string("javaNotFoundOrNoSuitable").replace('${version}', str(java_major_version)))
+                return 1
         xmx = self.comboBox_4.currentText()
 
-        username = self.lineEdit_6.text()
+        username = self.accounts[self.comboBox_8.currentIndex()]['name']
         # if len(username) > 16:
         #     QMessageBox.warning(None, l18n.string("appName"), '玩家名称长度>16，可能出现问题。')
         # punctuations = "[!\"#$%&'()*+,-./:;<=>?@[\\]^_`{|}~]"
@@ -559,15 +614,21 @@ class MainWindow(QMainWindow, Ui_MainWindow):
         else:
             javawrapper = None
 
+        if self.accounts[self.comboBox_8.currentIndex()]['type'] == 'offline':
+            access_token = None
+        else:
+            access_token = oa.refresh_token(self.accounts[self.comboBox_8.currentIndex()]['refresh_token'])
+
+        uuid = self.accounts[self.comboBox_8.currentIndex()].get('uuid', None)
         # 使用QProcess启动Minecraft而不阻塞UI\
-        log(self.mc_token)
         cmd = launcher.launch(javaw=javaw, xmx=xmx, minecraft_dir=minecraft_dir, 
                             instance_name=instance_name, javawrapper=javawrapper, 
-                            username=username, ms_login=self.using_mc_login, 
-                            access_token=self.mc_token,
+                            username=username, ms_login=self.accounts[self.comboBox_8.currentIndex()]['type'] == 'microsoft', 
+                            access_token=access_token,
                             version_type=self.lineEdit_10.text(),
                             jvm_args=self.lineEdit_11.text(),
-                            game_args_extend=self.lineEdit_12.text())
+                            game_args_extend=self.lineEdit_12.text(),
+                            uuid=uuid)
         with open('launch.bat', 'w') as f:
             f.write(cmd)
         if USE_OS_SYSTEM_TO_EXECUTE:
@@ -800,6 +861,8 @@ class MainWindow(QMainWindow, Ui_MainWindow):
                 self.lineEdit.setText(config.get('launcher', {}).get('minecraftPath', ''))
                 self.lineEdit_12.setText(config.get('launcher', {}).get('game_extend', ''))
                 self.checkBox_5.setChecked(config.get('launcher', {}).get('auto_download_fabric_api_mod', False))
+                memory = config.get('launcher', {}).get('memory', '2048M')
+                self.comboBox_4.setCurrentText(memory)
                 self.comboBox_7.clear()
                 self.comboBox_7.addItems(config.get('javas', []))
                 for i in config.get('javas', []):
@@ -822,10 +885,34 @@ class MainWindow(QMainWindow, Ui_MainWindow):
         jsonfile['launcher']['launcher_info'] = self.lineEdit_10.text()
         jsonfile['launcher']['jvm_args'] = self.lineEdit_11.text()
         jsonfile['launcher']['game_extend'] = self.lineEdit_12.text()
+        jsonfile['launcher']['memory'] = self.comboBox_4.currentText()
         jsonfile['javas'] = list(self.javas.keys())
 
         with open(app_path+'/cfg.json', 'w') as f:
             f.write(json.dumps(jsonfile))
+    
+    def save_accounts(self):
+        jsonfile = {}
+        for i in self.accounts:
+            jsonfile[i] = self.accounts[i]
+        with open(app_path+'/accounts.json', 'w') as f:
+            f.write(json.dumps(jsonfile))
+    
+    def load_accounts(self):
+        if os.path.exists(app_path+'/accounts.json'):
+            with open(app_path+'/accounts.json', 'r') as f:
+                self.accounts = json.loads(f.read())
+                if not isinstance(self.accounts, list):
+                    self.accounts = []
+                    return
+            for i in self.accounts:
+                self.comboBox_8.addItem(self.accounts[i]['name'])
+                self.listView_4_Model = []
+                for i in self.accounts:
+                    self.listView_4_Model.append(self.accounts[i]['name'])
+                self.listView_4.setModel(QStringListModel(self.listView_4_Model))
+        else:
+            self.accounts = []
 
     def save_version_config(self):
         version=self.comboBox_5.currentText()
@@ -977,6 +1064,7 @@ class MainWindow(QMainWindow, Ui_MainWindow):
         for java in self.javas:
             if self.javas[java] == version:
                 return java
+
 
 
 log(l18n.string("startingMainIs")+__name__)
