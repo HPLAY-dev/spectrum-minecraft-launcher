@@ -39,4 +39,4 @@ pip install PyQt6 PyQt6-Tools requests modrinth_api_wrapper
 ```
 ### 6.2 UI 修改
 运行 `pyside6-designer qt.ui` 来修改 UI.
-运行 `./buildui.bat`(Windows) 来构建. (在其它系统，执行 `pyside6-uic -o .\ui.py .\qt.ui`)
+运行 `./buildui.bat`(Windows) 来构建.
