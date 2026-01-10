@@ -127,6 +127,7 @@
         "cancel": "Cancel",
         "newAccount": "New Account",
         "javaNotFoundOrNoSuitable": "No matching Java found or no suitable Java version available (requires Java ${version})",
-        "accountTab": "Account"
+        "accountTab": "Account",
+        "removeAccount": "Remove Account"
     }
 }

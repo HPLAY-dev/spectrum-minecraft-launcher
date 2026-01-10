@@ -187,3 +187,4 @@ def retranslateUi(self, MainWindow):
     self.pushButton_23.setText(QCoreApplication.translate("MainWindow", string("ui", "createAccount"), None))
     self.pushButton_25.setText(QCoreApplication.translate("MainWindow", string("ui", "cancel"), None))
     self.pushButton_22.setText(QCoreApplication.translate("MainWindow", string("ui", "newAccount"), None))
+    self.pushButton_26.setText(QCoreApplication.translate("MainWindow", string("ui", "removeAccount"), None))

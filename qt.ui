@@ -38,7 +38,7 @@
      <enum>QTabWidget::TabPosition::North</enum>
     </property>
     <property name="currentIndex">
-     <number>0</number>
+     <number>3</number>
     </property>
     <property name="documentMode">
      <bool>false</bool>
@@ -783,7 +783,7 @@
      <widget class="QWidget" name="create_account" native="true">
       <property name="geometry">
        <rect>
-        <x>0</x>
+        <x>140</x>
         <y>0</y>
         <width>711</width>
         <height>351</height>
@@ -880,6 +880,9 @@
          <height>201</height>
         </rect>
        </property>
+       <property name="autoFillBackground">
+        <bool>true</bool>
+       </property>
        <widget class="QLabel" name="label_19">
         <property name="geometry">
          <rect>
@@ -934,6 +937,11 @@
        <string>删除账户</string>
       </property>
      </widget>
+     <zorder>listView_4</zorder>
+     <zorder>pushButton_2</zorder>
+     <zorder>pushButton_22</zorder>
+     <zorder>pushButton_26</zorder>
+     <zorder>create_account</zorder>
     </widget>
     <widget class="QWidget" name="tab_3">
      <attribute name="title">

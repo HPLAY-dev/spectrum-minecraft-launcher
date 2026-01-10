@@ -127,6 +127,7 @@
         "cancel": "取消",
         "newAccount": "新建账户",
         "javaNotFoundOrNoSuitable": "未找到对应的 Java 或无合适版本的 Java 可用（需要 Java ${version}）",
-        "accountTab": "账户"
+        "accountTab": "账户",
+        "removeAccount": "删除账户"
     }
 }

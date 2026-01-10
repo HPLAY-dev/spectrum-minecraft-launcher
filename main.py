@@ -181,7 +181,7 @@ class MainWindow(QMainWindow, Ui_MainWindow):
 
         self.DownloadFixBtn.clicked.connect(self.download_fix)
         
-        self.pushButton_2.clicked.connect(self.oauth)
+        # self.pushButton_2.clicked.connect(self.oauth)
         # self.lineEdit_6.textChanged.connect(self.disable_mslogin)
         
         self.checkBox_5.clicked.connect(self.toggle_fabric_api_autodownload)
@@ -217,9 +217,10 @@ class MainWindow(QMainWindow, Ui_MainWindow):
         self.pushButton_23.clicked.connect(self.save_accounts)
         self.pushButton_24.clicked.connect(self.oauth)
         self.pushButton_22.clicked.connect(lambda: show_ctrl(self.create_account))
-        self.pushButton_2.clicked.connect(self.save_account)
+        self.pushButton_2.clicked.connect(self.save_accounts)
         self.pushButton_25.clicked.connect(lambda: hide_ctrl(self.create_account))
         self.pushButton_26.clicked.connect(self.remove_account)
+        self.pushButton_23.clicked.connect(self.save_account)
         
         self.update_installed_versions()
         log("Window created","preparation")
@@ -892,9 +893,9 @@ class MainWindow(QMainWindow, Ui_MainWindow):
             f.write(json.dumps(jsonfile))
     
     def save_accounts(self):
-        jsonfile = {}
+        jsonfile = []
         for i in self.accounts:
-            jsonfile[i] = self.accounts[i]
+            jsonfile.append(i)
         with open(app_path+'/accounts.json', 'w') as f:
             f.write(json.dumps(jsonfile))
     
@@ -906,10 +907,10 @@ class MainWindow(QMainWindow, Ui_MainWindow):
                     self.accounts = []
                     return
             for i in self.accounts:
-                self.comboBox_8.addItem(self.accounts[i]['name'])
+                self.comboBox_8.addItem(i['name'])
                 self.listView_4_Model = []
                 for i in self.accounts:
-                    self.listView_4_Model.append(self.accounts[i]['name'])
+                    self.listView_4_Model.append(i['name'])
                 self.listView_4.setModel(QStringListModel(self.listView_4_Model))
         else:
             self.accounts = []
