@@ -247,7 +247,7 @@ class MainWindow(QMainWindow, Ui_MainWindow):
                 "refresh_token": temp_refresh_token,
                 "name": name,
                 "uuid": uuid
-            })  
+            })
         self.comboBox_8.addItem(name)
         self.listView_4_Model.append(name)
         self.listView_4.setModel(QStringListModel(self.listView_4_Model))
@@ -255,8 +255,10 @@ class MainWindow(QMainWindow, Ui_MainWindow):
 
     def remove_account(self):
         index = self.listView_4.selectionModel().selectedIndexes()[0].row()
-        self.listView_4.Model().removeRow(self.listView_4.selectionModel().selectedIndexes()[0].row())
+        self.listView_4_Model.pop(self.listView_4.selectionModel().selectedIndexes()[0].row())
+        self.listView_4.setModel(QStringListModel(self.listView_4_Model))
         self.accounts.pop(index)
+        self.comboBox_8.removeItem(index)
         
 
     def open_version_folder(self):
@@ -595,7 +597,7 @@ class MainWindow(QMainWindow, Ui_MainWindow):
             java_major_version = launcher.get_required_java_version(minecraft_dir, instance_name)
             javaw = self.get_java(version=java_major_version)
             if not javaw:
-                QMessageBox.critical(None, l18n.string("appName"), l18n.string("javaNotFoundOrNoSuitable").replace('${version}', str(java_major_version)))
+                QMessageBox.critical(None, l18n.string("appName"), l18n.string("ui", "javaNotFoundOrNoSuitable").replace('${version}', str(java_major_version)))
                 return 1
         xmx = self.comboBox_4.currentText()
 
