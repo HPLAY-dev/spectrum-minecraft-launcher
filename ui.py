@@ -262,6 +262,7 @@ class Ui_MainWindow(object):
         self.microsoft = QWidget(self.create_account)
         self.microsoft.setObjectName(u"microsoft")
         self.microsoft.setGeometry(QRect(10, 60, 551, 201))
+        self.microsoft.setAutoFillBackground(True)
         self.label_19 = QLabel(self.microsoft)
         self.label_19.setObjectName(u"label_19")
         self.label_19.setGeometry(QRect(10, 10, 81, 31))
@@ -353,10 +354,10 @@ class Ui_MainWindow(object):
         self.label_2.setGeometry(QRect(10, 100, 111, 31))
         self.comboBox_7 = QComboBox(self.scrollAreaWidgetContents_2)
         self.comboBox_7.setObjectName(u"comboBox_7")
-        self.comboBox_7.setGeometry(QRect(110, 100, 291, 31))
+        self.comboBox_7.setGeometry(QRect(110, 100, 271, 31))
         self.pushButton_21 = QPushButton(self.scrollAreaWidgetContents_2)
         self.pushButton_21.setObjectName(u"pushButton_21")
-        self.pushButton_21.setGeometry(QRect(400, 100, 61, 31))
+        self.pushButton_21.setGeometry(QRect(380, 100, 41, 31))
         self.comboBox_4 = QComboBox(self.scrollAreaWidgetContents_2)
         self.comboBox_4.addItem("")
         self.comboBox_4.addItem("")
@@ -373,6 +374,9 @@ class Ui_MainWindow(object):
         self.label_10 = QLabel(self.scrollAreaWidgetContents_2)
         self.label_10.setObjectName(u"label_10")
         self.label_10.setGeometry(QRect(10, 250, 54, 31))
+        self.pushButton_27 = QPushButton(self.scrollAreaWidgetContents_2)
+        self.pushButton_27.setObjectName(u"pushButton_27")
+        self.pushButton_27.setGeometry(QRect(420, 100, 41, 31))
         self.scrollArea_2.setWidget(self.scrollAreaWidgetContents_2)
         self.pushButton = QPushButton(self.tab_3)
         self.pushButton.setObjectName(u"pushButton")
@@ -437,7 +441,7 @@ class Ui_MainWindow(object):
 
         self.retranslateUi(MainWindow)
 
-        self.mainTabWidget.setCurrentIndex(3)
+        self.mainTabWidget.setCurrentIndex(4)
 
 
         QMetaObject.connectSlotsByName(MainWindow)
@@ -529,6 +533,7 @@ class Ui_MainWindow(object):
         self.comboBox_4.setItemText(9, QCoreApplication.translate("MainWindow", u"8G", None))
 
         self.label_10.setText(QCoreApplication.translate("MainWindow", u"\u5185\u5b58\u5206\u914d", None))
+        self.pushButton_27.setText(QCoreApplication.translate("MainWindow", u"x", None))
         self.pushButton.setText(QCoreApplication.translate("MainWindow", u"\u4fdd\u5b58\u8bbe\u7f6e", None))
         self.mainTabWidget.setTabText(self.mainTabWidget.indexOf(self.tab_3), QCoreApplication.translate("MainWindow", u"\u8bbe\u7f6e", None))
         self.label_17.setText(QCoreApplication.translate("MainWindow", u"<html><head/><body><p><span style=\" font-size:24pt; font-weight:600;\">Spectrum Launcher</span></p><p>Spectrum Launcher \u662f\u4e00\u4e2a\u8f7b\u91cf\u5316\uff0c\u5f00\u6e90\u7684 Minecraft \u542f\u52a8\u5668\uff0c\u57fa\u4e8e Python \u4e0ePySide6\u3002</p><p>\u517c\u5bb9Fabric, Forge\u7b49 Mod \u52a0\u8f7d\u5668\uff1bModrinth\u6a21\u7ec4\u4e0b\u8f7d\uff1b\u7b80\u5355\u7684\u5404\u7248\u672c\u6587\u4ef6\u7ba1\u7406\uff1b\u6b63\u7248\u767b\u5f55</p><p>Github: <a href=\"https://github.com/HPLAY-dev/spectrum-minecraft/launcher\"><span style=\" text-decoration: underline; color:#0000ff;\">HPLAY-dev/spectrum-minecraft/launcher</span></a></p><p>Bilibili: <a href=\"https://space.bilibili.com/3493108044007466\"><span style=\" text-decoration: underline; color:#0000ff;\">UID: 3493108044007466</span></a></p><p>\u5f00\u6e90\u534f\u8bae: GNU GPL</p></body></html>", None))

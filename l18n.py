@@ -41,23 +41,24 @@ def get_system_locale():
     except:
         return 'en_US'
 
-
-lang = get_system_locale().lower()
-if os.path.exists('languages/'+lang+".json"):
-    try:
-        with open('languages/'+lang+'.json', 'r', encoding='utf-8') as f:
-            _langfile = json.loads(f.read())
-    except Exception as e:
-        print('[l18n] Language File Load Error'+str(e))
-elif os.path.exists("languages/en_us.json"):
-    print('[l18n] Language File Using Fallback')
-    try:
-        with open('languages/en_us.json', 'r', encoding='utf-8') as f:
-            _langfile = json.loads(f.read())
-    except Exception as e:
-        print('[l18n] Language File Load Error'+str(e))
-else:
-    print('[l18n] Language File Missing')
+def load_lang(_lang):
+    global _langfile, lang
+    lang = get_system_locale().lower() if _lang is None else _lang.lower()
+    if os.path.exists('languages/'+lang+".json"):
+        try:
+            with open('languages/'+lang+'.json', 'r', encoding='utf-8') as f:
+                _langfile = json.loads(f.read())
+        except Exception as e:
+            print('[l18n] Language File Load Error'+str(e))
+    elif os.path.exists("languages/en_us.json"):
+        print('[l18n] Language File Using Fallback')
+        try:
+            with open('languages/en_us.json', 'r', encoding='utf-8') as f:
+                _langfile = json.loads(f.read())
+        except Exception as e:
+            print('[l18n] Language File Load Error'+str(e))
+    else:
+        print('[l18n] Language File Missing')
 
 def string(*key: str):
     """递归获取语言文件中的值。

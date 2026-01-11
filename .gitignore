@@ -11,6 +11,9 @@ test/
 *.unknown
 *.temp
 *.pptm
+*.json
+accounts.json
+*.exe
 *.build/
 logs/
 data/

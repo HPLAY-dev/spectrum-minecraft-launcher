@@ -49,7 +49,7 @@
         "memory6G": "6G",
         "memory8G": "8G",
         "memoryAllocation": "Memory",
-        "downloadFixFiles": "Complete Files",
+        "downloadFixFiles": "Fix Missing",
         "upArrow": "▲",
         "downArrow": "▼",
         "launchTab": "Launch",
@@ -128,6 +128,8 @@
         "newAccount": "New Account",
         "javaNotFoundOrNoSuitable": "No matching Java found or no suitable Java version available (requires Java ${version})",
         "accountTab": "Account",
-        "removeAccount": "Remove Account"
+        "removeAccount": "Remove Account",
+        "microsoftAccount": "Microsoft",
+        "offlineAccount": "Offline"
     }
 }

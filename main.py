@@ -37,6 +37,12 @@ import l18n
 
 Ui_MainWindow.retranslateUi = l18n.retranslateUi
 
+
+# Init argv
+for i in sys.argv:
+    if i.startswith('lang='):
+        l18n.load_lang(i.replace('lang=', ''))
+
 def hide_ctrl(ctrl):
     ctrl.setEnabled(False)
     ctrl.hide()
@@ -220,8 +226,8 @@ class MainWindow(QMainWindow, Ui_MainWindow):
         self.pushButton_2.clicked.connect(self.save_accounts)
         self.pushButton_25.clicked.connect(lambda: hide_ctrl(self.create_account))
         self.pushButton_26.clicked.connect(self.remove_account)
-        self.pushButton_23.clicked.connect(self.save_account)
-        
+        self.pushButton_23.clicked.connect(self.add_account)
+        self.pushButton_27.clicked.connect(self.remove_java)
         self.update_installed_versions()
         log("Window created","preparation")
 
@@ -233,23 +239,31 @@ class MainWindow(QMainWindow, Ui_MainWindow):
             hide_ctrl(self.offline)
             show_ctrl(self.microsoft)
 
-    def save_account(self):
-        if self.comboBox_9.currentIndex() == 0: # Offline
+    def add_account(self, microsoft=False, access_token=None, refresh_token=None):
+        if microsoft:
+            uuid, name = oa.get_mslogin_uuid_name(access_token)
+            self.accounts.append({
+                "type": "microsoft",
+                "refresh_token": refresh_token,
+                "name": name,
+                "uuid": uuid
+            })
+        elif self.comboBox_9.currentIndex() == 0: # Offline
             name = self.lineEdit_2.text()
             self.accounts.append({
                 "type": "offline",
                 "name": name
             })
         elif self.comboBox_9.currentIndex() == 1: # Microsoft
-            uuid, name = oa.get_mslogin_uuid_name(temp_access_token)
+            uuid, name = oa.get_mslogin_uuid_name(self.temp_access_token)
             self.accounts.append({
                 "type": "microsoft",
                 "refresh_token": temp_refresh_token,
                 "name": name,
                 "uuid": uuid
             })
-        self.comboBox_8.addItem(name)
-        self.listView_4_Model.append(name)
+        self.comboBox_8.addItem(name+f'\t{l18n.string("ui", "microsoftAccount")}' if microsoft else name+f' ({l18n.string("ui", "offlineAccount")})')
+        self.listView_4_Model.append(name+f'\t{l18n.string("ui", "microsoftAccount")}' if microsoft else name+f' ({l18n.string("ui", "offlineAccount")})')
         self.listView_4.setModel(QStringListModel(self.listView_4_Model))
         hide_ctrl(self.create_account)
 
@@ -286,7 +300,7 @@ class MainWindow(QMainWindow, Ui_MainWindow):
     def open_folder(self):
         return QFileDialog.getExistingDirectory(self, l18n.string("selectFolder"), app_path)
     def open_file(self, filters):
-        filename, _ = QFileDialog.getOpenFileName(self, l18n.string("selectFile"), "", filters, app_path)
+        filename, _ = QFileDialog.getOpenFileName(self, l18n.string("selectFile"), app_path, filters)
         return filename
     def rename_version(self):
         if self.lineEdit_5.text() == "":
@@ -356,11 +370,12 @@ class MainWindow(QMainWindow, Ui_MainWindow):
         log(b)
         
     def oauth(self):
-        try:
-            self.temp_access_token, self.temp_refresh_token = oa.get_mc_token(need_refresh_token=True)
-        except Exception as e:
-            print('OAUTH EXCEPTION: '+str(e))
-            # self.label_18.setText(self.lineEdit_6.text())
+        # try:
+        temp_access_token, temp_refresh_token = oa.get_mc_token(need_refresh_token=True)
+        self.add_account(microsoft=True, access_token=temp_access_token, refresh_token=temp_refresh_token)
+        # except Exception as e:
+        #     print('OAUTH EXCEPTION: '+str(e))
+        #     # self.label_18.setText(self.lineEdit_6.text())
 
     def remove_version(self):
         minecraft_dir = self.lineEdit.text().replace('\\', '/')
@@ -869,7 +884,7 @@ class MainWindow(QMainWindow, Ui_MainWindow):
                 self.comboBox_7.clear()
                 self.comboBox_7.addItems(config.get('javas', []))
                 for i in config.get('javas', []):
-                    self.javas[i] = java.get_java_major_version(i)
+                    self.javas[i] = java.get_java_version(i)
         else:
             self.lineEdit.setText('.minecraft')
 
@@ -909,10 +924,10 @@ class MainWindow(QMainWindow, Ui_MainWindow):
                     self.accounts = []
                     return
             for i in self.accounts:
-                self.comboBox_8.addItem(i['name'])
+                self.comboBox_8.addItem(i['name']+f'\t{l18n.string("ui", "microsoftAccount")}' if i['type']=='microsoft' else i['name']+f'\t{l18n.string("ui", "offlineAccount")}')
                 self.listView_4_Model = []
                 for i in self.accounts:
-                    self.listView_4_Model.append(i['name'])
+                    self.listView_4_Model.append(i['name']+f'\t{l18n.string("ui", "microsoftAccount")}' if i['type']=='microsoft' else i['name']+f'\t{l18n.string("ui", "offlineAccount")}')
                 self.listView_4.setModel(QStringListModel(self.listView_4_Model))
         else:
             self.accounts = []
@@ -1056,12 +1071,17 @@ class MainWindow(QMainWindow, Ui_MainWindow):
     def add_java(self, file_path):
         if file_path in self.javas:
             return
-        v = launcher.get_java_version(file_path)
+        v = java.get_java_version(file_path)
         if not v:
             log('Bad java path: '+file_path)
             return
         self.javas[file_path] = v
         self.comboBox_7.addItem(file_path)
+    
+    def remove_java(self):
+        current_java = self.comboBox_7.currentText()
+        del self.javas[current_java]
+        self.comboBox_7.removeItem(self.comboBox_7.currentIndex())
 
     def get_java(self, version):
         for java in self.javas:

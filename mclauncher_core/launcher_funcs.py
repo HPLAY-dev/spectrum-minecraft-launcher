@@ -1,5 +1,6 @@
 from mclauncher_core.oauth_funcs import get_mc_token, get_mslogin_uuid_name
 from mclauncher_core.tool_funcs import *
+from mclauncher_core.java import get_java_version
 from mclauncher_core.modloader_fabric import is_fabric
 from mclauncher_core.tool_funcs import maven_to_path
 import json, random, shutil, requests
