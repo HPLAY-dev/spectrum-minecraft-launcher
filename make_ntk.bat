@@ -25,17 +25,20 @@ if '%1' neq '' goto CHECKARG
     
     echo Starting Nuitka
         %nuitka% ^
+            --onefile ^
             --mingw64 ^
             --standalone ^
             --jobs=16 ^
             --enable-plugin=pyside6 ^
+            --include-data-dir=./assets=assets ^
+            --include-data-dir=./languages=languages ^
             --assume-yes-for-downloads ^
             --output-dir=build ^
             --show-progress ^
             --windows-console-mode=disable ^
             --windows-file-version=%VERSION% ^
             --windows-product-version=%VERSION% ^
-            --windows-file-description="Just a Minecraft Launcher." ^
+            --windows-file-description="A Minecraft launcher." ^
              main.py
     goto EOF
 
