@@ -57,7 +57,7 @@ def get_mainclass(minecraft_dir, instance_name) -> str:
     return version_data["mainClass"]
 
 
-def get_minecraft_libraries(minecraft_dir, instance_name) -> list:
+def get_minecraft_libraries(minecraft_dir, instance_name, detailed=False) -> list:
     """获取minecraft的所有需要libraries(库)，返回list"""
     # read json
     version_json_path = f'{minecraft_dir}/versions/{instance_name}/{instance_name}.json'
@@ -74,13 +74,16 @@ def get_minecraft_libraries(minecraft_dir, instance_name) -> list:
         # check if required
         if not is_library_required(lib):
             continue
-        lib_path = lib.get('downloads', None).get('artifact', None  ).get('path', None) 
-        if lib_path:  # For fabric stuff format like that
+        if detailed:
+            libraries.append(lib)
+            continue
+        lib_path = lib.get('downloads', {}).get('artifact', {}).get('path', None) 
+        if lib_path is None:  # For fabric stuff format like that
             lib_path = maven_to_path(lib['name'])
         else:
             lib_path = lib["downloads"]["artifact"]["path"]
         local_path = f'{minecraft_dir}/libraries/{lib_path}'
-        if local_path not in libraries: # Due to some f**ked modloaders adding duplicated libraries...
+        if local_path not in libraries:
             libraries.append(local_path)
             print(lib['name'])
     return libraries

@@ -5,7 +5,7 @@ import time
 import threading
 
 import requests, json, os
-from mclauncher_core.launcher_funcs import get_version_manifest, get_assetIndex
+from mclauncher_core.launcher_funcs import get_version_manifest, get_assetIndex, get_minecraft_libraries, is_library_required
 from concurrent.futures import ThreadPoolExecutor, as_completed
 
 from mclauncher_core.modloader_fabric import download_fabric_json, fabric_merge_json
@@ -130,10 +130,8 @@ def download_libraries(minecraft_dir, mcversion, instance_name, print_status=Tru
     with ThreadPoolExecutor(max_workers=max_workers) as executor:
         # 准备所有下载任务
         future_to_lib = {}
-        for lib in version_json["libraries"]:
-            if not is_library_required(lib):
-                continue
-
+        libraries = get_minecraft_libraries(mcversion, instance_name, detailed=True)
+        for lib in libraries:
             # 提交任务到线程池
             future = executor.submit(
                 download_single_library,

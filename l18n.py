@@ -41,19 +41,19 @@ def get_system_locale():
     except:
         return 'en_US'
 
-def load_lang(_lang):
+def load_lang(_lang=None, path=''):
     global _langfile, lang
     lang = get_system_locale().lower() if _lang is None else _lang.lower()
-    if os.path.exists('languages/'+lang+".json"):
+    if os.path.exists(path+'/'+lang+".json"):
         try:
-            with open('languages/'+lang+'.json', 'r', encoding='utf-8') as f:
+            with open(path+'/'+lang+'.json', 'r', encoding='utf-8') as f:
                 _langfile = json.loads(f.read())
         except Exception as e:
             print('[l18n] Language File Load Error'+str(e))
-    elif os.path.exists("languages/en_us.json"):
+    elif os.path.exists(path+"/languages/en_us.json"):
         print('[l18n] Language File Using Fallback')
         try:
-            with open('languages/en_us.json', 'r', encoding='utf-8') as f:
+            with open(path+'/languages/en_us.json', 'r', encoding='utf-8') as f:
                 _langfile = json.loads(f.read())
         except Exception as e:
             print('[l18n] Language File Load Error'+str(e))
@@ -189,3 +189,5 @@ def retranslateUi(self, MainWindow):
     self.pushButton_25.setText(QCoreApplication.translate("MainWindow", string("ui", "cancel"), None))
     self.pushButton_22.setText(QCoreApplication.translate("MainWindow", string("ui", "newAccount"), None))
     self.pushButton_26.setText(QCoreApplication.translate("MainWindow", string("ui", "removeAccount"), None))
+    self.pushButton_21.setText(QCoreApplication.translate("MainWindow", string("ui", "ellipsis"), None))
+    self.pushButton_27.setText(QCoreApplication.translate("MainWindow", 'x', None))

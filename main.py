@@ -32,16 +32,34 @@ import requests
 import hashlib
 from concurrent.futures import ThreadPoolExecutor
 from ui import Ui_MainWindow
+import time
 
 import l18n
 
 Ui_MainWindow.retranslateUi = l18n.retranslateUi
 
+def fpath(path):
+    path = path.replace('\\', '/')
+    if path[-1] == '/':
+        path = path[:-1]
+    return path
+    
+
+if getattr(sys, 'frozen', False):
+    app_path = os.path.dirname(sys.executable)
+else:
+    app_path = os.path.dirname(os.path.abspath(__file__))
+
+app_path = fpath(app_path)
+lang_path = app_path + '/languages'
+log_level = 0
+
 
 # Init argv
+l18n.load_lang(path=lang_path)
 for i in sys.argv:
     if i.startswith('lang='):
-        l18n.load_lang(i.replace('lang=', ''))
+        l18n.load_lang(i.replace('lang=', ''), path=lang_path)
 
 def hide_ctrl(ctrl):
     ctrl.setEnabled(False)
@@ -53,10 +71,12 @@ def show_ctrl(ctrl):
     ctrl.show()
     ctrl.setFocusPolicy(Qt.StrongFocus)
 
-def log(string: str, type='launcher'):
-    import time
+def log(string: str, log_type='STD', file=sys.stdout, level=1):
+    # level: 0 - ALWAYS Level
+    #        1 - Standard Level
+    #        2 - Verbose Level
     t = time.strftime("%H:%M:%S", time.localtime(time.time()))
-    print(f'[{t}][{type}] {str(string)}')
+    print(f'[{t}][{log_type}] {str(string)}', file=file)
 
 def check_update():
     pass
@@ -79,25 +99,12 @@ def check_update():
     # except Exception as e:
     #     QMessageBox.warning(None, '检查更新', '失败: '+str(e))
 
-def fpath(path):
-    path = path.replace('\\', '/')
-    if path[-1] == '/':
-        path = path[:-1]
-    return path
-    
-
-if getattr(sys, 'frozen', False):
-    app_path = os.path.dirname(sys.executable)
-else:
-    app_path = os.path.dirname(os.path.abspath(__file__))
-
-app_path = fpath(app_path)
-
 
 default_icon = app_path + '/assets/default_icon.png'
 
-log("Loading Assets","preparation")
+log("Checking Assets", "INIT", 1)
 if not os.path.exists(default_icon):
+    log("No Assets Path found", "FATAL", 0)
     QMessageBox.critical(None, l18n.string("assetLoadFail"), default_icon)
     sys.exit(1)
 
@@ -109,8 +116,9 @@ class MainWindow(QMainWindow, Ui_MainWindow):
 
     def __init__(self, parent=None):
         # check_update()
-        log("Starting window")
+        log("Create Window", "INIT", level=2)
         super(MainWindow, self).__init__(parent)
+        log("setupUi(self) & initialize", "INIT", level=2)
         self.setupUi(self)
         # Executor and tracking for background download tasks
         self._dl_executor = ThreadPoolExecutor(max_workers=3)
@@ -145,11 +153,12 @@ class MainWindow(QMainWindow, Ui_MainWindow):
         hide_ctrl(self.microsoft)
 
         self.mainTabWidget.setCurrentIndex(0)
-        log("Setting Stylesheets")
+        log("Setting Stylesheets", "INIT", level=2)
         # self.setStyleSheet(stylesheets.main_window)
         self.launchBtn.setStyleSheet(stylesheets.button1)
         # self.label_6.setStyleSheet(stylesheets.bg_label)
-
+        
+        log('Loading Config & Accounts', "INIT", level=1)
         self.load_config()
         self.load_accounts()
 
@@ -158,6 +167,8 @@ class MainWindow(QMainWindow, Ui_MainWindow):
         data = downloader.get_version_list()
         self.model.setStringList(data)
         self.listView.setModel(self.model) # 版本列表
+        
+        log('Binding Functions', "INIT", level=1)
 
         self.checkBox.stateChanged.connect(self.update_version_list)   # 下载页面右边四个CheckBox
         self.checkBox_2.stateChanged.connect(self.update_version_list) # 下载页面右边四个CheckBox
@@ -228,8 +239,9 @@ class MainWindow(QMainWindow, Ui_MainWindow):
         self.pushButton_26.clicked.connect(self.remove_account)
         self.pushButton_23.clicked.connect(self.add_account)
         self.pushButton_27.clicked.connect(self.remove_java)
+        log("Getting Installed Versions", "INIT", level=2)
         self.update_installed_versions()
-        log("Window created","preparation")
+        log("Window created", "INIT", level=1)
 
     def change_account_mode(self, index):
         if index == 0:
@@ -240,6 +252,7 @@ class MainWindow(QMainWindow, Ui_MainWindow):
             show_ctrl(self.microsoft)
 
     def add_account(self, microsoft=False, access_token=None, refresh_token=None):
+        log(f"Adding Account\t{str(microsoft)}\t{access_token}\t{refresh_token}", "MAIN", level=2)
         if microsoft:
             uuid, name = oa.get_mslogin_uuid_name(access_token)
             self.accounts.append({
@@ -262,12 +275,13 @@ class MainWindow(QMainWindow, Ui_MainWindow):
                 "name": name,
                 "uuid": uuid
             })
-        self.comboBox_8.addItem(name+f'\t{l18n.string("ui", "microsoftAccount")}' if microsoft else name+f' ({l18n.string("ui", "offlineAccount")})')
+        self.comboBox_8.addItem(name+f' ({l18n.string("ui", "microsoftAccount")})' if microsoft else name+f' ({l18n.string("ui", "offlineAccount")})')
         self.listView_4_Model.append(name+f'\t{l18n.string("ui", "microsoftAccount")}' if microsoft else name+f' ({l18n.string("ui", "offlineAccount")})')
         self.listView_4.setModel(QStringListModel(self.listView_4_Model))
         hide_ctrl(self.create_account)
 
     def remove_account(self):
+        log(f"Removing Account", "MAIN", level=2)
         index = self.listView_4.selectionModel().selectedIndexes()[0].row()
         self.listView_4_Model.pop(self.listView_4.selectionModel().selectedIndexes()[0].row())
         self.listView_4.setModel(QStringListModel(self.listView_4_Model))
@@ -276,6 +290,7 @@ class MainWindow(QMainWindow, Ui_MainWindow):
         
 
     def open_version_folder(self):
+        log(f"Call File Explorer", "MAIN", level=2)
         open_bin = 'explorer.exe' if downloader.native() == 'windows' else 'xdg-open'
         minecraft_dir = self.lineEdit.text().replace('\\', '/')
         log(f'{l18n.string("opening")} {minecraft_dir}/versions/{self.comboBox_5.currentText()}')
@@ -298,11 +313,16 @@ class MainWindow(QMainWindow, Ui_MainWindow):
         self.listView_2.setVisible(not _)
 
     def open_folder(self):
+        log(f"Call QFileDialog", "MAIN", level=2)
         return QFileDialog.getExistingDirectory(self, l18n.string("selectFolder"), app_path)
+
     def open_file(self, filters):
+        log(f"Call QFileDialog", "MAIN", level=2)
         filename, _ = QFileDialog.getOpenFileName(self, l18n.string("selectFile"), app_path, filters)
         return filename
+        
     def rename_version(self):
+        log(f"Rename Version", "MAIN", level=2)
         if self.lineEdit_5.text() == "":
             QMessageBox.warning(None, l18n.string("appName"), l18n.string("noName"))
         new_name = self.lineEdit_5.text()
@@ -316,10 +336,11 @@ class MainWindow(QMainWindow, Ui_MainWindow):
         self.update_installed_versions()
 
     def download_java(self, major_version: int, callback=None):
-        log('Retrieving url')
+        log(f"Downloading Java {str(major_version)}", "JAVA", level=1)
+        log('Retrieving url', "JAVA", level=1)
         url = java.get_url(major_version, 'jdk', tuna=False).replace('https://github.com/',
                                                                         'https://ghfast.top/https://github.com/')
-        log('Trying: ' + url)
+        log('Trying: ' + url, "JAVA", level=1)
 
         try:
 
@@ -370,6 +391,7 @@ class MainWindow(QMainWindow, Ui_MainWindow):
         log(b)
         
     def oauth(self):
+        log("Call OAUTH", "OAUTH", level=1)
         # try:
         temp_access_token, temp_refresh_token = oa.get_mc_token(need_refresh_token=True)
         self.add_account(microsoft=True, access_token=temp_access_token, refresh_token=temp_refresh_token)
@@ -378,6 +400,7 @@ class MainWindow(QMainWindow, Ui_MainWindow):
         #     # self.label_18.setText(self.lineEdit_6.text())
 
     def remove_version(self):
+        log("remove version", "OAUTH", level=1)
         minecraft_dir = self.lineEdit.text().replace('\\', '/')
         if minecraft_dir[-1] == '/':
             minecraft_dir = minecraft_dir[:-1]
@@ -707,10 +730,10 @@ class MainWindow(QMainWindow, Ui_MainWindow):
         java_major_version = downloader.get_version_json(mcversion).get('javaVersion', {}).get('majorVersion', 0)
         if not java_major_version:
             java_major_version = 8  # default to Java 8 if not specified
-        java = self.get_java(version=java_major_version)
+        javaw = self.get_java(version=java_major_version)
 
         # Start asynchronous download to avoid blocking the UI
-        self.start_download(minecraft_dir=minecraft_dir, mcversion=mcversion, instance_name=instance_name, modloader=modloader, modloader_version=modloader_version, java=java)
+        self.start_download(minecraft_dir=minecraft_dir, mcversion=mcversion, instance_name=instance_name, modloader=modloader, modloader_version=modloader_version, java=javaw)
         # update will be handled when finished via signal handler
 
     def download_fix(self):
@@ -924,7 +947,7 @@ class MainWindow(QMainWindow, Ui_MainWindow):
                     self.accounts = []
                     return
             for i in self.accounts:
-                self.comboBox_8.addItem(i['name']+f'\t{l18n.string("ui", "microsoftAccount")}' if i['type']=='microsoft' else i['name']+f'\t{l18n.string("ui", "offlineAccount")}')
+                self.comboBox_8.addItem(i['name']+f' ({l18n.string("ui", "microsoftAccount")})' if i['type']=='microsoft' else i['name']+f' ({l18n.string("ui", "offlineAccount")})')
                 self.listView_4_Model = []
                 for i in self.accounts:
                     self.listView_4_Model.append(i['name']+f'\t{l18n.string("ui", "microsoftAccount")}' if i['type']=='microsoft' else i['name']+f'\t{l18n.string("ui", "offlineAccount")}')
@@ -1093,7 +1116,7 @@ class MainWindow(QMainWindow, Ui_MainWindow):
 log(l18n.string("startingMainIs")+__name__)
 if __name__ in ("__main__", "__compiled__", "__mp_main__"):
     if launcher.native() == "windows" and not os.path.exists(app_path+'/JavaWrapper.jar'):
-        log(l18n.string("javaWrapper"))
+        log(l18n.string("javaWrapper"), "INIT", level=1)
         download_javawrapper()
     app = QApplication(sys.argv)
     win = MainWindow()

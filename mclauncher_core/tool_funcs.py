@@ -1,4 +1,4 @@
-import subprocess as s
+# import subprocess as s
 import platform
 import os
 import sys
