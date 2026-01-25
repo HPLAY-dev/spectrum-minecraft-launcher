@@ -66,6 +66,7 @@ def get_minecraft_libraries(minecraft_dir, instance_name, detailed=False) -> lis
         with open(version_json_path, 'r', encoding='utf-8') as f:
             version_data = json.loads(f.read())
     except FileNotFoundError:
+        print("version.JSON not found ")
         return []
 
     libraries = []
@@ -278,7 +279,9 @@ def get_minecraft_version(minecraft_dir, instance_name):
     """从json中获取Minecraft版本，返回str"""
     with open(f'{minecraft_dir}/versions/{instance_name}/{instance_name}.json', 'r') as f:
         version_json = json.loads(f.read())
-    if "inheritsFrom" in version_json:
+    if "id" in version_json:
+        return version_json["id"]
+    elif "inheritsFrom" in version_json:
         return version_json["inheritsFrom"]
     elif "clientVersion" in version_json: # idk how this appears...
         return version_json["clientVersion"]

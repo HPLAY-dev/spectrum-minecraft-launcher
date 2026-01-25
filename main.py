@@ -71,7 +71,7 @@ def show_ctrl(ctrl):
     ctrl.show()
     ctrl.setFocusPolicy(Qt.StrongFocus)
 
-def log(string: str, log_type='STD', file=sys.stdout, level=1):
+def log(string: str, log_type='STD', level=1, file=sys.stdout):
     # level: 0 - ALWAYS Level
     #        1 - Standard Level
     #        2 - Verbose Level
@@ -338,7 +338,7 @@ class MainWindow(QMainWindow, Ui_MainWindow):
     def download_java(self, major_version: int, callback=None):
         log(f"Downloading Java {str(major_version)}", "JAVA", level=1)
         log('Retrieving url', "JAVA", level=1)
-        url = java.get_url(major_version, 'jdk', tuna=False).replace('https://github.com/',
+        url = java.get_url(major_version, 'jre', tuna=True).replace('https://github.com/',
                                                                         'https://ghfast.top/https://github.com/')
         log('Trying: ' + url, "JAVA", level=1)
 
@@ -635,7 +635,9 @@ class MainWindow(QMainWindow, Ui_MainWindow):
             java_major_version = launcher.get_required_java_version(minecraft_dir, instance_name)
             javaw = self.get_java(version=java_major_version)
             if not javaw:
-                QMessageBox.critical(None, l18n.string("appName"), l18n.string("ui", "javaNotFoundOrNoSuitable").replace('${version}', str(java_major_version)))
+                QMessageBox.critical(None, l18n.string("appName"), l18n.string("ui", "javaNotFoundOrNoSuitable")\
+                    .replace('${version}', str(java_major_version))\
+                    .replace('${hint_url}', java.get_url(java_major_version, 'jre', tuna=True)))
                 return 1
         xmx = self.comboBox_4.currentText()
 
@@ -648,7 +650,7 @@ class MainWindow(QMainWindow, Ui_MainWindow):
         #     QMessageBox.warning(None, l18n.string("appName"), '玩家名称含有其他语言字符，可能出现问题。')
 
         if launcher.native() == 'windows':
-            javawrapper = os.path.join(app_path, 'JavaWrapper.jar')
+            javawrapper = app_path + '/JavaWrapper.jar'
             if not os.path.exists(javawrapper):
                 QMessageBox.critical(None, l18n.string("appName"), l18n.string("javaWrapperInvalid"))
                 return 1
@@ -737,10 +739,10 @@ class MainWindow(QMainWindow, Ui_MainWindow):
         # update will be handled when finished via signal handler
 
     def download_fix(self):
-        if self.launch_version == None:
+        if self.comboBox_5.currentText() == None:
             QMessageBox.critical(None, l18n.string("appName"), l18n.string("selectVersion"))
             return 1
-        instance_name = self.launch_version
+        instance_name = self.comboBox_5.currentText()
 
         minecraft_dir = self.lineEdit.text().replace('\\', '/')
         if minecraft_dir[-1] == '/':

@@ -130,7 +130,7 @@ def download_libraries(minecraft_dir, mcversion, instance_name, print_status=Tru
     with ThreadPoolExecutor(max_workers=max_workers) as executor:
         # 准备所有下载任务
         future_to_lib = {}
-        libraries = get_minecraft_libraries(mcversion, instance_name, detailed=True)
+        libraries = get_minecraft_libraries(minecraft_dir, instance_name, detailed=True)
         for lib in libraries:
             # 提交任务到线程池
             future = executor.submit(
@@ -189,10 +189,6 @@ def download_fallback_library(minecraft_dir, lib, bmclapi):
     name = "$SEP$".join(name)  # org$SEP$ow2$SEP$asm$SEP$asm$SEP$9.8
     path = name.replace("$SEP$", '/')  # org/ow2/asm/asm/9.8
 
-    # # 仍然不知道如何下载qaq
-    # if lib['name'].split(':')[0] == 'net.minecraftforge':
-    #     filename = filename.replace('.jar', '-universal.jar')
-
     url = url_base + path + '/' + filename
     local_path = f'{minecraft_dir}/libraries/{path}'
     os.makedirs(local_path, exist_ok=True)
@@ -210,35 +206,35 @@ def download_fallback_library(minecraft_dir, lib, bmclapi):
 
 
 def download_modern_library(minecraft_dir, instance_name, lib, bmclapi):
-    """处理新版格式的库文件，返回None"""
+    """处理正常格式的库文件，返回None"""
     # 检查规则
     if not is_library_required(lib):
         return "跳过: 不符合规则"
 
-    if_artifact = "downloads" in lib and "artifact" in lib["downloads"]
-    if_natives = "natives" in lib
-    if_natives_late_versions = if_artifact and f"natives-{native()}" in lib["name"].lower()
+    # if_artifact = "downloads" in lib and "artifact" in lib["downloads"]
+    # if_natives = "natives" in lib
+    # if_natives_late_versions = if_artifact and f"natives-{native()}" in lib["name"].lower()
+    relative_path = lib.get('downloads', {}).get('artifact', {}).get('path', None)
+    url = lib.get('downloads', {}).get('artifact', {}).get('url', None)
 
-    if if_artifact:
-        relative_path = lib["downloads"]["artifact"]["path"]
-        url = lib["downloads"]["artifact"]["url"]
+    if (relative_path is not None) and (url is not None):
+        pass
 
-    elif 'classifiers' in lib['downloads']:
-        if 'natives-' + get_architecture_key() in lib['downloads']['classifiers']:
-            relative_path = lib['downloads']['classifiers']['natives-' + get_architecture_key()]['path']
-            url = lib['downloads']['classifiers']['natives-' + get_architecture_key()]["url"]
-
-        elif 'natives-' + native() + '-' + get_system_bits() in lib['downloads']['classifiers']:
-            relative_path = lib['downloads']['classifiers']['natives-' + native() + '-' + get_system_bits()]['path']
-            url = lib['downloads']['classifiers']['natives-' + native() + '-' + get_system_bits()]["url"]
-
-        elif 'natives-' + native() in lib['downloads']['classifiers']:
-            relative_path = lib['downloads']['classifiers']['natives-' + native()]['path']
-            url = lib["downloads"]['classifiers']['natives-' + native()]['url']
     else:
-        return 1
-    
-    print(url)
+        downloads = lib.get('downloads', {})
+        classifiers = downloads.get('classifiers', {}) or {}
+
+        key_arch = 'natives-' + get_architecture_key()
+        key_native_bits = 'natives-' + native() + '-' + get_system_bits()
+        key_native = 'natives-' + native()
+
+        entry = classifiers.get(key_arch) or classifiers.get(key_native_bits) or classifiers.get(key_native)
+
+        if entry:
+            relative_path = entry.get('path')
+            url = entry.get('url')
+        else:
+            return 1
 
     path = f'{minecraft_dir}/libraries/{relative_path}'
     path = path.split('/')[:-1]
@@ -246,29 +242,24 @@ def download_modern_library(minecraft_dir, instance_name, lib, bmclapi):
     os.makedirs(path, exist_ok=True)
     local_path = f'{minecraft_dir}/libraries/{relative_path}'
 
-    if os.path.exists(local_path):
-        if if_natives or if_natives_late_versions:
-            download_native_library(minecraft_dir, instance_name, lib, if_natives_late_versions, url,
-                                       bmclapi)
-        return f"已存在: {local_path}"
-
     with open(f'{minecraft_dir}/libraries/{relative_path}', 'wb') as f:
         item = requests.get(url)
         f.write(item.content)
 
+    # if_natives = "natives" in lib
+    # if_natives_late_versions = if_artifact and f"natives-{native()}" in lib["name"].lower()
 
-    if if_natives or if_natives_late_versions:
-        return download_native_library(minecraft_dir, instance_name, lib, if_natives_late_versions, url,
-                                       bmclapi)
+
+    if "natives" in lib or ('natives' in lib['name']):
+        return download_native_library(minecraft_dir, instance_name, lib,
+                                       bmclapi=bmclapi)
 
     return "下载成功"
 
-def download_native_library(minecraft_dir, instance_name, lib, if_natives_late_versions, url='',
-                            bmclapi=False):
+def download_native_library(minecraft_dir, instance_name, lib, url='', bmclapi=False):
     """处理natives(原生)库文件，返回None"""
-    if if_natives_late_versions:
-        natives = []
-    elif "classifiers" in lib["downloads"]:
+    print('N^T1V3S')
+    if "classifiers" in lib["downloads"]:
         if "natives-" + native() in lib["downloads"]["classifiers"]:
             natives = lib["downloads"]["classifiers"]["natives-" + native()]
             url = natives['url']
@@ -276,7 +267,13 @@ def download_native_library(minecraft_dir, instance_name, lib, if_natives_late_v
             natives = lib["downloads"]["classifiers"]["natives-" + native() + '-' + get_system_bits()]
             url = natives['url']
     else:
-        return "无法找到原生库"
+        url1 = "natives-" + native() in lib.get('downloads', {}).get('artifact', {}).get('url', '')
+        url2 = "natives-" + native() + '-' + get_system_bits() in lib.get('downloads', {}).get('artifact', {}).get('url', '')
+        if url1 or url2:
+            url = lib.get('downloads', {}).get('artifact', {}).get('url')
+            # url = lib.get('downloads', {}).get('artifact', {}).get('url')
+        else:
+            print("无法找到原生库下载地址")
 
     natives_path = f'{minecraft_dir}/versions/{instance_name}/{instance_name}-natives'
     os.makedirs(natives_path, exist_ok=True)
@@ -286,7 +283,7 @@ def download_native_library(minecraft_dir, instance_name, lib, if_natives_late_v
     temp_zip = natives_path + f'/temp1.zip'
     while keep_going:
         i += 1
-        temp_zip = natives_path + f'/temp{i}.zip'
+        temp_zip = natives_path + f'/temp{str(i)}.zip'
         if not os.path.exists(temp_zip):
             keep_going = False
 
@@ -302,9 +299,7 @@ def download_native_library(minecraft_dir, instance_name, lib, if_natives_late_v
         with zipf.ZipFile(temp_zip, 'r') as f:
             f.extractall(natives_path)
     except zipf.BadZipFile as e:
-        1
-        2
-        4
+        print("BADZIPFILE")
     # 清理临时文件
     keep_remove = True
     while keep_remove:

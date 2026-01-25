@@ -126,7 +126,7 @@
         "createAccount": "创建账户",
         "cancel": "取消",
         "newAccount": "新建账户",
-        "javaNotFoundOrNoSuitable": "未找到对应的 Java 或无合适版本的 Java 可用（需要 Java ${version}）",
+        "javaNotFoundOrNoSuitable": "未找到对应的 Java 或无合适版本的 Java 可用 (需要 Java ${version})\n你可以从${hint_url}下载并安装对应版本的 Java。\n若你已经下载并安装，请在设置页面添加该java的路径(选择java.exe)。",
         "accountTab": "账户",
         "removeAccount": "删除账户",
         "microsoftAccount": "正版",
