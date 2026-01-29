@@ -19,7 +19,7 @@
     "minecraftOut": "Minecraft Output",
     "minecraftErr": "Minecraft Error",
     "minecraftExit": "Minecraft exited with code",
-    "nameAlreadyExists": "This name already exists",
+    "nameAlreadyExists": "该名称已存在",
     "selectModLoaderVersion": "Please select a mod loader version",
     "failToDownloadTheVersionWithThisModLoader": "Failed to download the version with this mod loader",
     "modloaderDownloadFail": "Mod loader download failed",

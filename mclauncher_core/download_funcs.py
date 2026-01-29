@@ -14,6 +14,7 @@ from mclauncher_core.modloader_neoforge import download_neoforge_json
 from mclauncher_core.tool_funcs import *
 import zipfile as zipf
 import shutil
+import hashlib
 
 
 def get_version_list(show_snapshot=False, show_old=False, show_release=True, bmclapi=False) -> list:
@@ -133,6 +134,7 @@ def download_libraries(minecraft_dir, mcversion, instance_name, print_status=Tru
         libraries = get_minecraft_libraries(minecraft_dir, instance_name, detailed=True)
         for lib in libraries:
             # 提交任务到线程池
+            current += 1
             future = executor.submit(
                 download_single_library,
                 minecraft_dir, instance_name, lib, bmclapi, print_status
@@ -142,7 +144,6 @@ def download_libraries(minecraft_dir, mcversion, instance_name, print_status=Tru
         # 处理完成的任务
         for future in as_completed(future_to_lib):
             lib = future_to_lib[future]
-            current += 1
             if progress_callback:
                 progress_callback(current, file_amount, f"[LIB][{current}/{file_amount}]")
             # result = future.result()
@@ -189,7 +190,11 @@ def download_fallback_library(minecraft_dir, lib, bmclapi):
     name = "$SEP$".join(name)  # org$SEP$ow2$SEP$asm$SEP$asm$SEP$9.8
     path = name.replace("$SEP$", '/')  # org/ow2/asm/asm/9.8
 
-    url = url_base + path + '/' + filename
+    if 'url' in lib:
+        url = lib['url']
+    else:
+        raise Exception('IDK how to download this library. '+json.dumps(lib))
+    # url = url_base + path + '/' + filename
     local_path = f'{minecraft_dir}/libraries/{path}'
     os.makedirs(local_path, exist_ok=True)
     file_path = local_path + '/' + filename
@@ -378,6 +383,7 @@ def download_assets(minecraft_dir, instance_name, print_status=True, bmclapi=Fal
     current_count = 0
     total_count = len(asset_json["objects"])
     lock = threading.Lock()
+    # sha1 = hashlib.sha1()
 
     def update_progress():
         """线程安全的进度更新"""
@@ -387,30 +393,38 @@ def download_assets(minecraft_dir, instance_name, print_status=True, bmclapi=Fal
             if progress_callback:
                 progress_callback(current_count, total_count, f"[AST][{current_count}/{total_count}]")
             if print_status:
-                pass
-                # print(f"{current_count}/{total_count}")
+                # pass
+                print(f"{current_count}/{total_count}")
 
     def download_file(object_info):
         """下载单个文件的函数"""
         object_name, object_data = object_info
         hash = object_data["hash"]
-        url = f'https://resources.download.minecraft.net/{hash[0:2]}/{hash}'
+        url = f'https://resources.download.minecraft.net/{hash[:2]}/{hash}'
 
         if ("map_to_resources" in asset_json) and (asset_json["map_to_resources"] == True):
             local = f'{minecraft_dir}/versions/{instance_name}/resources/{object_name}'
             current_directory = '/'.join(local.split('/')[0:-1])
             os.makedirs(current_directory, exist_ok=True)
         else:
-            os.makedirs(f'{minecraft_dir}/assets/objects/{hash[0:2]}', exist_ok=True)
-            local = f'{minecraft_dir}/assets/objects/{hash[0:2]}/{hash}'
+            os.makedirs(f'{minecraft_dir}/assets/objects/{hash[:2]}', exist_ok=True)
+            local = f'{minecraft_dir}/assets/objects/{hash[:2]}/{hash}'
 
-        # 如果文件已存在，跳过下载
+        # # 如果文件已存在，跳过下载
+        # if os.path.exists(local):
+        #     update_progress()
+        #     return True
+        sha1 = hashlib.sha1()
+
         if os.path.exists(local):
-            update_progress()
-            return True
-
+            with open(local, 'rb') as f:
+                while chunk := f.read(65536):
+                    sha1.update(chunk)
+            if sha1.hexdigest() == hash:
+                update_progress()
+                return True
         try:
-            response = requests.get(url, timeout=30)
+            response = requests.get(url, timeout=3)
             if response.status_code != 200:
                 raise Exception(f"Request Fail: {response.status_code}\nurl: {url}")
 

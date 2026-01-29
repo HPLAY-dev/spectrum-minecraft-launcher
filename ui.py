@@ -3,7 +3,7 @@
 ################################################################################
 ## Form generated from reading UI file 'qt.ui'
 ##
-## Created by: Qt User Interface Compiler version 6.10.1
+## Created by: Qt User Interface Compiler version 6.9.3
 ##
 ## WARNING! All changes made in this file will be lost when recompiling UI file!
 ################################################################################
@@ -120,6 +120,28 @@ class Ui_MainWindow(object):
         self.checkBox_5.setGeometry(QRect(340, 130, 171, 16))
         self.checkBox_5.setChecked(True)
         self.mainTabWidget.addTab(self.tab_2, "")
+        self.tab_4 = QWidget()
+        self.tab_4.setObjectName(u"tab_4")
+        self.pushButton_28 = QPushButton(self.tab_4)
+        self.pushButton_28.setObjectName(u"pushButton_28")
+        self.pushButton_28.setGeometry(QRect(10, 240, 121, 31))
+        self.checkBox_7 = QCheckBox(self.tab_4)
+        self.checkBox_7.setObjectName(u"checkBox_7")
+        self.checkBox_7.setGeometry(QRect(340, 20, 141, 16))
+        self.listView_5 = QListView(self.tab_4)
+        self.listView_5.setObjectName(u"listView_5")
+        self.listView_5.setGeometry(QRect(90, 10, 241, 181))
+        self.listView_5.setEditTriggers(QAbstractItemView.EditTrigger.NoEditTriggers)
+        self.label_30 = QLabel(self.tab_4)
+        self.label_30.setObjectName(u"label_30")
+        self.label_30.setGeometry(QRect(10, 200, 78, 21))
+        self.lineEdit_14 = QLineEdit(self.tab_4)
+        self.lineEdit_14.setObjectName(u"lineEdit_14")
+        self.lineEdit_14.setGeometry(QRect(90, 200, 241, 31))
+        self.label_31 = QLabel(self.tab_4)
+        self.label_31.setObjectName(u"label_31")
+        self.label_31.setGeometry(QRect(10, 10, 78, 31))
+        self.mainTabWidget.addTab(self.tab_4, "")
         self.tab_5 = QWidget()
         self.tab_5.setObjectName(u"tab_5")
         self.label_12 = QLabel(self.tab_5)
@@ -441,7 +463,7 @@ class Ui_MainWindow(object):
 
         self.retranslateUi(MainWindow)
 
-        self.mainTabWidget.setCurrentIndex(4)
+        self.mainTabWidget.setCurrentIndex(2)
 
 
         QMetaObject.connectSlotsByName(MainWindow)
@@ -468,6 +490,11 @@ class Ui_MainWindow(object):
 
         self.checkBox_5.setText(QCoreApplication.translate("MainWindow", u"\u81ea\u52a8\u4e0b\u8f7d Fabric-API(mod)", None))
         self.mainTabWidget.setTabText(self.mainTabWidget.indexOf(self.tab_2), QCoreApplication.translate("MainWindow", u"\u4e0b\u8f7d", None))
+        self.pushButton_28.setText(QCoreApplication.translate("MainWindow", u"\u4e0b\u8f7d", None))
+        self.checkBox_7.setText(QCoreApplication.translate("MainWindow", u"BMCLAPI \u955c\u50cf\u6e90", None))
+        self.label_30.setText(QCoreApplication.translate("MainWindow", u"\u7248\u672c\u540d\u79f0", None))
+        self.label_31.setText(QCoreApplication.translate("MainWindow", u"\u7248\u672c\u5217\u8868", None))
+        self.mainTabWidget.setTabText(self.mainTabWidget.indexOf(self.tab_4), QCoreApplication.translate("MainWindow", u"\u4e0b\u8f7d LabyMod \u7248\u672c", None))
         self.label_12.setText(QCoreApplication.translate("MainWindow", u"Minecraft \u5b9e\u4f8b", None))
         self.pushButton_4.setText(QCoreApplication.translate("MainWindow", u"\u5220\u9664", None))
         self.pushButton_9.setText(QCoreApplication.translate("MainWindow", u"\u91cd\u547d\u540d", None))

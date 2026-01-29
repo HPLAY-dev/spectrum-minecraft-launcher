@@ -24,7 +24,9 @@ import mclauncher_core.java as java
 import mclauncher_core.modloader_fabric as fabric
 import mclauncher_core.modloader_forge as forge
 import mclauncher_core.modloader_neoforge as neoforge
+import mclauncher_core.labymod as labymod
 import stylesheets
+# import hashlib
 
 import shutil
 import zipfile as z
@@ -162,6 +164,9 @@ class MainWindow(QMainWindow, Ui_MainWindow):
         self.load_config()
         self.load_accounts()
 
+        log('Loading LabyMod versions', "INIT", level=1)
+        self.listView_5.setModel(QStringListModel(labymod.get_versions()))
+
         # 设置版本列表
         self.model = QStringListModel()
         data = downloader.get_version_list()
@@ -239,6 +244,7 @@ class MainWindow(QMainWindow, Ui_MainWindow):
         self.pushButton_26.clicked.connect(self.remove_account)
         self.pushButton_23.clicked.connect(self.add_account)
         self.pushButton_27.clicked.connect(self.remove_java)
+        self.pushButton_28.clicked.connect(self.download_labymod)
         log("Getting Installed Versions", "INIT", level=2)
         self.update_installed_versions()
         log("Window created", "INIT", level=1)
@@ -735,8 +741,32 @@ class MainWindow(QMainWindow, Ui_MainWindow):
         javaw = self.get_java(version=java_major_version)
 
         # Start asynchronous download to avoid blocking the UI
-        self.start_download(minecraft_dir=minecraft_dir, mcversion=mcversion, instance_name=instance_name, modloader=modloader, modloader_version=modloader_version, java=javaw)
+        self.start_download(minecraft_dir=minecraft_dir, mcversion=mcversion, instance_name=instance_name, modloader=modloader, modloader_version=modloader_version, java=javaw, bmclapi=self.checkBox.isChecked())
         # update will be handled when finished via signal handler
+
+    def download_labymod(self):
+        if len(self.listView_5.selectionModel().selectedIndexes()) == 0:
+            QMessageBox.critical(None, l18n.string("appName"), l18n.string("selectVersion"))
+            return 1
+        mcversion = self.listView_5.selectionModel().selectedIndexes()[0].data()
+
+        minecraft_dir = self.lineEdit.text().replace('\\', '/')
+        if minecraft_dir[-1] == '/':
+            minecraft_dir = minecraft_dir[:-1]
+
+        instance_name = self.lineEdit_14.text()
+        os.makedirs(minecraft_dir+'/versions', exist_ok=True)
+        if instance_name in os.listdir(minecraft_dir+'/versions'):
+            QMessageBox.critical(None, l18n.string("appName"), l18n.string("nameAlreadyExists"))
+            return 1
+        
+        labymod.download(minecraftDirectory=minecraft_dir, version=4, mcversion=mcversion, instance_name=instance_name)
+        downloader.auto_download(minecraft_dir, mcversion, instance_name, bmclapi=self.checkBox_7.isChecked())
+
+
+        
+
+
 
     def download_fix(self):
         if self.comboBox_5.currentText() == None:
@@ -768,53 +798,77 @@ class MainWindow(QMainWindow, Ui_MainWindow):
 
     def _on_download_finished(self, result, instance_name, minecraft_dir):
         """Handle completion in main thread."""
-        # Re-enable UI
+        # 重新启用UI
         try:
             self.pushButton_3.setEnabled(True)
+            self.progressBar.setValue(0)
+            self.progressBar_2.setValue(0)
         except Exception:
             pass
-
-        # Update installed versions regardless
+        
+        # 无论结果如何都更新已安装版本
         try:
             self.update_installed_versions()
         except Exception:
             pass
-
-        # Show messages based on result
-        if isinstance(result, dict) and result.get('status') == 'exists':
-            QMessageBox.information(None, l18n.string("appName"), l18n.string("downloadInProgress"))
-            return
-        if isinstance(result, dict) and result.get('status') == 'error':
-            QMessageBox.warning(None, l18n.string("appName"), l18n.string("downloadFail") + str(result.get('exc')))
-            return
-        # If downloader returned the magic 721 code, show the specific warning
+        
+        # 根据结果显示消息
+        if isinstance(result, dict):
+            if result.get('status') == 'exists':
+                QMessageBox.information(None, l18n.string("appName"), l18n.string("downloadInProgress"))
+                return
+            if result.get('status') == 'error':
+                QMessageBox.warning(None, l18n.string("appName"), 
+                                l18n.string("downloadFail") + str(result.get('exc')))
+                return
+        
+        # 如果downloader返回了魔法数字721，显示特定警告
         if result == 721:
             QMessageBox.warning(None, l18n.string("appName"), l18n.string("modloaderDownloadFail"))
             return
-
-        # Optionally auto-download Fabric API in background
+        
+        # 成功下载
+        # if result == 0 or result is None or (isinstance(result, dict) and result.get('status') == 'success'):
+        #     QMessageBox.information(None, l18n.string("appName"), l18n.string("downloadComplete"))
+        
+        # 可选地在后台自动下载Fabric API
         try:
-            if self.autodl_fabric_api == True:
-                # run fabric download in background to avoid blocking UI
-                self._dl_executor.submit(fabric.download_fabric_api, minecraft_dir, launcher.get_minecraft_version(minecraft_dir, instance_name), instance_name)
+            if self.autodl_fabric_api and instance_name:
+                # 在后台运行fabric下载以避免阻塞UI
+                self._dl_executor.submit(
+                    fabric.download_fabric_api, 
+                    minecraft_dir, 
+                    launcher.get_minecraft_version(minecraft_dir, instance_name), 
+                    instance_name
+                )
         except Exception:
             pass
-
+        
     def _create_lock_file(self, key):
         """Atomically create a lock file for a given key. Returns True if created, False if exists."""
         path = os.path.join(self._dl_lock_dir, f"{key}.lock")
+        
+        # 首先检查内存中的集合
+        if key in self._downloads_in_progress:
+            return False
+        
         try:
+            # 尝试创建锁文件
             fd = os.open(path, os.O_CREAT | os.O_EXCL | os.O_WRONLY)
             os.close(fd)
-            return True
-        except FileExistsError:
-            return False
-        except Exception:
-            # In case of weird filesystem errors, fallback to an in-process set check
-            if key in self._downloads_in_progress:
-                return False
+            # 创建成功后添加到内存集合
             self._downloads_in_progress.add(key)
             return True
+        except FileExistsError:
+            # 文件已存在，也添加到内存集合（避免重复检查）
+            if key not in self._downloads_in_progress:
+                self._downloads_in_progress.add(key)
+            return False
+        except Exception:
+            # 其他错误，保守处理，认为已存在
+            if key not in self._downloads_in_progress:
+                self._downloads_in_progress.add(key)
+            return False
 
     def _remove_lock_file(self, key):
         path = os.path.join(self._dl_lock_dir, f"{key}.lock")
@@ -829,7 +883,7 @@ class MainWindow(QMainWindow, Ui_MainWindow):
         except Exception:
             pass
 
-    def _run_download_task(self, minecraft_dir, mcversion, instance_name, modloader, modloader_version, java):
+    def _run_download_task(self, minecraft_dir, mcversion, instance_name, modloader, modloader_version, java, bmclapi):
         """Runs the blocking download in background thread while managing lock files.
         This is executed inside executor threads."""
         # Create a stable key based on minecraft_dir and instance_name
@@ -841,52 +895,94 @@ class MainWindow(QMainWindow, Ui_MainWindow):
 
         try:
             # Call into the existing downloader while forwarding progress via _emit_progress
-            res = downloader.auto_download(minecraft_dir=minecraft_dir, mcversion=mcversion, instance_name=instance_name, modloader=modloader, modloader_version=modloader_version, progress_callback=self._emit_progress, java=java)
+            res = downloader.auto_download(minecraft_dir=minecraft_dir, mcversion=mcversion, instance_name=instance_name, modloader=modloader, modloader_version=modloader_version, progress_callback=self._emit_progress, java=java, bmclapi=bmclapi)
             return res
         except Exception as e:
             return {'status': 'error', 'exc': str(e)}
         finally:
             self._remove_lock_file(key)
 
-    def start_download(self, minecraft_dir, mcversion, instance_name, modloader='vanilla', modloader_version='latest', java='java'):
+    def start_download(self, minecraft_dir, mcversion, instance_name, modloader='vanilla', modloader_version='latest', java='java', bmclapi=False):
         """Public method to start a download asynchronously without blocking the UI."""
-        # Quick sanity checks
-        if instance_name in os.listdir(os.path.join(minecraft_dir, 'versions')) if os.path.exists(os.path.join(minecraft_dir, 'versions')) else False:
-            # If folder exists, proceed but still allow choosing
-            pass
-
-        # prevent repeated clicks in UI
-        try:
-            self.pushButton_3.setEnabled(False)
-        except Exception:
-            pass
-
-        key = hashlib.md5(minecraft_dir.encode('utf-8')).hexdigest() + '_' + str(instance_name)
+        # 快速检查实例名是否为空
+        if not instance_name:
+            QMessageBox.critical(None, l18n.string("appName"), l18n.string("pleaseEnterInstanceName"))
+            self.pushButton_3.setEnabled(True)
+            return
+        
+        # 检查Minecraft目录是否存在
+        if not os.path.exists(minecraft_dir):
+            QMessageBox.critical(None, l18n.string("appName"), l18n.string("minecraftPathInvalid"))
+            self.pushButton_3.setEnabled(True)
+            return
+        
+        # 创建versions目录
+        os.makedirs(os.path.join(minecraft_dir, 'versions'), exist_ok=True)
+        
+        # 检查实例是否已存在
+        versions_dir = os.path.join(minecraft_dir, 'versions')
+        # if os.path.exists(versions_dir) and instance_name in os.listdir(versions_dir):
+        #     reply = QMessageBox.question(None, l18n.string("appName"), 
+        #                                 l18n.string("nameAlreadyExists") + l18n.string("confirmOverwrite"),
+        #                                 QMessageBox.Yes | QMessageBox.No)
+        #     if reply == QMessageBox.No:
+        #         self.pushButton_3.setEnabled(True)
+        #         return
+        
+        # 防止重复点击UI
+        self.pushButton_3.setEnabled(False)
+        
+        # 生成唯一的key
+        key = hashlib.md5(f"{minecraft_dir}_{instance_name}".encode('utf-8')).hexdigest()
+        
+        # 先检查是否已在下载中
         if key in self._downloads_in_progress:
             QMessageBox.information(None, l18n.string("appName"), l18n.string("downloadInProgress"))
-            try:
-                self.pushButton_3.setEnabled(True)
-            except Exception:
-                pass
+            self.pushButton_3.setEnabled(True)
             return
+        
+        # 添加到进行中的下载集合
         self._downloads_in_progress.add(key)
-
-        # submit the blocking work to executor
-        future = self._dl_executor.submit(self._run_download_task, minecraft_dir, mcversion, instance_name, modloader, modloader_version, java)
-
+        
+        # 在UI上显示下载开始
+        self.progressBar.setValue(0)
+        self.progressBar_2.setValue(0)
+        
+        # 提交阻塞工作到执行器
+        future = self._dl_executor.submit(
+            self._run_download_task, 
+            minecraft_dir, 
+            mcversion, 
+            instance_name, 
+            modloader, 
+            modloader_version, 
+            java, 
+            bmclapi
+        )
+        
         def _done(fut):
             try:
                 res = fut.result()
             except Exception as e:
                 res = {'status': 'error', 'exc': str(e)}
-            # remove from in-memory tracking
+            
+            # 从内存跟踪中移除
             try:
                 self._downloads_in_progress.discard(key)
             except Exception:
                 pass
-            # emit finished signal (runs on main thread handler) and include directory
+            
+            # 移除锁文件
+            lock_path = os.path.join(self._dl_lock_dir, f"{key}.lock")
+            try:
+                if os.path.exists(lock_path):
+                    os.remove(lock_path)
+            except Exception:
+                pass
+            
+            # 发送完成信号（在主线程处理程序中运行）并包含目录
             self.download_finished.emit(res, instance_name, minecraft_dir)
-
+        
         future.add_done_callback(_done)
 
     def progress_callback(self, current, total, description):
