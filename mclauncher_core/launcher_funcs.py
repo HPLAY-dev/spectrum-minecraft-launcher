@@ -290,25 +290,27 @@ def get_minecraft_version(minecraft_dir, instance_name):
 
 
 def launch(javaw, xmx, minecraft_dir, instance_name, javawrapper=None, username: str = "steve", xmn: str="256M", ms_login=False,
-           access_token=None, width: int = 854, height: int = 480, version_type: str='§1R§2e§3d§4s§5t§6o§7n§8e §9C§ar§be§ca§dt§ei§fo§1n§2s', 
+           access_token=None, width: int = 854, height: int = 480, version_type: str='Launcher', 
            jvm_args: str='', game_args_extend: str='', uuid=None) -> str:
     """生成启动脚本，返回str"""
     # all of the items in lists are NOT ended with space!!!
     # -x args (JVM stuff)
     mcversion = get_minecraft_version(minecraft_dir, instance_name)
     minecraft_dir = minecraft_dir.replace('\\', '/')
-    if jvm_args == '':
-        x_args = [f"-Xmx{xmx}",
-                f"-Xmn{xmn}",
-                "-XX:+UseG1GC",
-                "-XX:-UseAdaptiveSizePolicy",
-                "-XX:-OmitStackTraceInFastThrow"]
-        if jvm_args != '':
-            x_args.append(jvm_args)
-        x_args = ' '.join(x_args)
+    x_args = [f"-Xmx{xmx}",
+            f"-Xmn{xmn}",
+            "-XX:+UseG1GC",
+            "-XX:-UseAdaptiveSizePolicy",
+            "-XX:-OmitStackTraceInFastThrow"]
+    if jvm_args != '':
+        x_args.append(jvm_args)
+    x_args = ' '.join(x_args)
 
-        # -d args (jvm system properties)
-        d_args = get_jvm_args(minecraft_dir, mcversion, instance_name)
+    # -d args (jvm system properties)
+    d_args = get_jvm_args(minecraft_dir, mcversion, instance_name)
+
+    d_args += jvm_args
+
     jvm_args = x_args+' '+d_args
 
 

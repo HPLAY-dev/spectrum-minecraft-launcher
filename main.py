@@ -165,13 +165,13 @@ class MainWindow(QMainWindow, Ui_MainWindow):
         self.load_accounts()
 
         log('Loading LabyMod versions', "INIT", level=1)
-        self.listView_5.setModel(QStringListModel(labymod.get_versions()))
+        try:
+            self.listView_5.setModel(QStringListModel(labymod.get_versions()))
+        except:
+            log('FAIL TO RETRIEVE LABYMOD VERSIONS', 'WARN', level=0)
 
         # 设置版本列表
-        self.model = QStringListModel()
-        data = downloader.get_version_list()
-        self.model.setStringList(data)
-        self.listView.setModel(self.model) # 版本列表
+        self.update_version_list()
         
         log('Binding Functions', "INIT", level=1)
 
@@ -670,11 +670,16 @@ class MainWindow(QMainWindow, Ui_MainWindow):
 
         uuid = self.accounts[self.comboBox_8.currentIndex()].get('uuid', None)
         # 使用QProcess启动Minecraft而不阻塞UI\
+        if self.lineEdit_10.text() != '':
+            version_type = self.lineEdit_10.text()
+        else:
+            version_type = '§l§1S§9p§2e§ac§3t§br§9u§1m§r Launcher'
+            # version_type = 'NullPointerException'
         cmd = launcher.launch(javaw=javaw, xmx=xmx, minecraft_dir=minecraft_dir, 
                             instance_name=instance_name, javawrapper=javawrapper, 
                             username=username, ms_login=self.accounts[self.comboBox_8.currentIndex()]['type'] == 'microsoft', 
                             access_token=access_token,
-                            version_type=self.lineEdit_10.text(),
+                            version_type=version_type,
                             jvm_args=self.lineEdit_11.text(),
                             game_args_extend=self.lineEdit_12.text(),
                             uuid=uuid)
@@ -1072,10 +1077,13 @@ class MainWindow(QMainWindow, Ui_MainWindow):
         with open(app_path+'/versions.json', 'w') as f:
             f.write(json.dumps(jsonfile))
 
-    def update_version_list(self, state):
-        current_list = self.model.stringList()
-        current_list = downloader.get_version_list(self.checkBox_2.isChecked(), self.checkBox_3.isChecked(), self.checkBox_4.isChecked(), self.checkBox.isChecked())
-        self.model.setStringList(current_list)
+    def update_version_list(self, state=None):
+        try:
+            current_list = downloader.get_version_list(self.checkBox_2.isChecked(), self.checkBox_3.isChecked(), self.checkBox_4.isChecked(), self.checkBox.isChecked())
+        except:
+            current_list = []
+            log('FAIL TO RETRIEVE MINECRAFT VERSIONS', 'WARN', level=0)
+        self.listView.setModel(QStringListModel(current_list)) # 版本列表
 
     def update_ml_version_list(self, state):
         if len(self.listView.selectionModel().selectedIndexes()) == 0:
