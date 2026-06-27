@@ -53,7 +53,7 @@ Item {
 
             SpectrumCard {
                 width: (parent.width - 20) / 2
-                height: 280
+                height: 360
 
                 Column {
                     anchors.fill: parent
@@ -87,11 +87,16 @@ Item {
                         model: App.getInstances()
                         onActivated: {
                             App.selectInstance(model[currentIndex])
+                            javaCombo.reloadForInstance(model[currentIndex])
                             root.reloadStatus()
                         }
                         Component.onCompleted: {
+                            App.refreshInstances()
                             instCombo.model = App.getInstances()
+                            accountCombo.model = App.getAccounts()
                             reloadStatus()
+                            if (instCombo.currentIndex >= 0 && instCombo.model.length > 0)
+                                javaCombo.reloadForInstance(instCombo.model[instCombo.currentIndex])
                         }
                     }
 
@@ -103,6 +108,73 @@ Item {
                         model: App.getAccounts()
                         textRole: "name"
                         onActivated: App.selectAccount(currentIndex)
+                    }
+
+                    Text { text: "Java 运行时"; font.pixelSize: 13; color: SpectrumTheme.textMuted; topPadding: 4 }
+
+                    ComboBox {
+                        id: javaCombo
+                        width: parent.width
+                        textRole: "label"
+                        valueRole: "path"
+                        enabled: count > 0
+                        onActivated: {
+                            if (currentIndex >= 0 && model[currentIndex])
+                                App.selectLaunchJava(model[currentIndex].path)
+                        }
+
+                        function reloadForInstance(instanceName) {
+                            if (!instanceName) {
+                                model = []
+                                return
+                            }
+                            try {
+                                var all = JSON.parse(App.getJavaOptionsForInstance(instanceName))
+                                var enabled = []
+                                for (var i = 0; i < all.length; i++) {
+                                    if (all[i].enabled)
+                                        enabled.push(all[i])
+                                }
+                                model = enabled.length ? enabled : all
+                            } catch (e) {
+                                model = []
+                            }
+                            var pick = -1
+                            for (var j = 0; j < model.length; j++) {
+                                if (model[j].enabled !== false) {
+                                    if (model[j].recommended) {
+                                        pick = j
+                                        break
+                                    }
+                                    if (pick < 0)
+                                        pick = j
+                                }
+                            }
+                            currentIndex = pick
+                            if (pick >= 0)
+                                App.selectLaunchJava(model[pick].path)
+                        }
+                    }
+
+                    CheckBox {
+                        id: ignoreJavaWarn
+                        text: "忽略 Java 兼容警告"
+                        checked: App.getIgnoreJavaWarnings()
+                        onCheckedChanged: App.setIgnoreJavaWarnings(checked)
+                        font.pixelSize: 12
+                    }
+
+                    Text {
+                        width: parent.width
+                        wrapMode: Text.WordWrap
+                        visible: root.status.minJava > 0 && root.status.mcVersion
+                        font.pixelSize: 11
+                        color: SpectrumTheme.textMuted
+                        text: root.status.mcVersion
+                            ? (root.status.java8Only
+                                ? ("MC " + root.status.mcVersion + " · 仅支持 Java 8")
+                                : ("MC " + root.status.mcVersion + " · 最低 Java " + root.status.minJava))
+                            : ""
                     }
 
                     Row {
@@ -142,7 +214,7 @@ Item {
 
             SpectrumCard {
                 width: (parent.width - 20) / 2
-                height: 280
+                height: 360
 
                 Column {
                     anchors.fill: parent
@@ -159,9 +231,11 @@ Item {
                         font.pixelSize: 13
                         color: SpectrumTheme.textMuted
                         lineHeight: 1.8
-                        text: "Java：已检测 " + root.status.javaCount + " 个\n"
+                        text: "Java：已检测 " + root.status.javaCount + " 个"
+                            + (root.status.java8Only ? "（仅 Java 8）" : (root.status.minJava ? "（需要 ≥" + root.status.minJava + "）" : "")) + "\n"
                             + "内存：" + root.status.memory + " 分配\n"
                             + "当前实例：" + root.status.instance + "\n"
+                            + (root.status.mcVersion ? ("MC 版本：" + root.status.mcVersion + "\n") : "")
                             + "模组：" + root.status.modCount
                     }
                 }
@@ -174,6 +248,13 @@ Item {
         function onAccountsChanged() { accountCombo.model = App.getAccounts() }
         function onInstancesChanged() {
             instCombo.model = App.getInstances()
+            reloadStatus()
+            if (instCombo.currentIndex >= 0 && instCombo.model.length > 0)
+                javaCombo.reloadForInstance(instCombo.model[instCombo.currentIndex])
+        }
+        function onJavaRuntimesChanged() {
+            if (instCombo.currentIndex >= 0 && instCombo.model.length > 0)
+                javaCombo.reloadForInstance(instCombo.model[instCombo.currentIndex])
             reloadStatus()
         }
     }

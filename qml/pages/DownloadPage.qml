@@ -35,6 +35,15 @@ SpectrumCard {
                     clip: true
                     spacing: 2
                     model: App.getVersionList()
+                    highlight: Rectangle {
+                        radius: 4
+                        color: SpectrumTheme.primary
+                        opacity: 0.25
+                    }
+                    onCurrentIndexChanged: {
+                        if (currentIndex >= 0)
+                            App.selectDownloadVersion(currentIndex)
+                    }
                     delegate: Rectangle {
                         width: versionList.width
                         height: 36
@@ -49,10 +58,7 @@ SpectrumCard {
                         }
                         MouseArea {
                             anchors.fill: parent
-                            onClicked: {
-                                versionList.currentIndex = index
-                                App.selectDownloadVersion(index)
-                            }
+                            onClicked: versionList.currentIndex = index
                         }
                     }
                 }
@@ -66,7 +72,6 @@ SpectrumCard {
                 }
                 function filterChanged() {
                     App.setVersionFilters(cbBmcl.checked, cbSnap.checked, cbAlpha.checked, cbBeta.checked)
-                    versionList.model = App.getVersionList()
                 }
             }
 
@@ -97,7 +102,14 @@ SpectrumCard {
                 PrimaryButton {
                     text: "开始下载"
                     width: parent.width
-                    onClicked: App.download()
+                    enabled: versionList.currentIndex >= 0
+                    onClicked: {
+                        if (versionList.currentIndex < 0) {
+                            return
+                        }
+                        App.selectDownloadVersion(versionList.currentIndex)
+                        App.download()
+                    }
                 }
             }
         }
@@ -109,5 +121,27 @@ SpectrumCard {
             if (desc.indexOf("AST") >= 0) progAst.value = pct
             else progMain.value = pct
         }
+        function onDownloadFinished(ok, name) {
+            progMain.value = ok ? 100 : 0
+            progAst.value = ok ? 100 : 0
+            versionList.model = App.getVersionList()
+        }
+        function onVersionsChanged() {
+            var sel = App.getSelectedDownloadVersion()
+            versionList.model = App.getVersionList()
+            if (sel) {
+                for (var i = 0; i < versionList.model.length; i++) {
+                    if (versionList.model[i] === sel) {
+                        versionList.currentIndex = i
+                        break
+                    }
+                }
+            }
+        }
+    }
+
+    Component.onCompleted: {
+        App.refreshVersionList()
+        versionList.model = App.getVersionList()
     }
 }

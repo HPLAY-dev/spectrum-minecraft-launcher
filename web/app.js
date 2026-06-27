@@ -15,10 +15,9 @@ createApp({
         new QWebChannel(qt.webChannelTransport, (channel) => {
           bridge = channel.objects.web;
           if (bridge && bridge.getInstances) {
-            bridge.getInstances((list) => {
-              instances.value = list || [];
-              if (instances.value.length) targetInstance.value = instances.value[0];
-            });
+            const list = bridge.getInstances();
+            instances.value = Array.isArray(list) ? list : [];
+            if (instances.value.length) targetInstance.value = instances.value[0];
           }
         });
       }

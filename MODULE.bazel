@@ -3,5 +3,6 @@ module(name = "spectrum_launcher", version = "0.1.0")
 bazel_dep(name = "platforms", version = "1.0.0")
 bazel_dep(name = "bazel_skylib", version = "1.8.2")
 
-# Rust is built via cargo_build.ps1 (see build.ps1).
-# Full Bazel Rust (rules_rust + crate_universe) requires Windows Developer Mode for symlinks.
+# Rust: Cargo genrule | Python: assemble_launcher | Nuitka: //:build_release
+# 开发: .\build.ps1  或  bazel build //:build_all
+# 发布: .\build_release.ps1  或  bazel build //:build_release

@@ -65,8 +65,12 @@ set "PYTHONPATH=%CD%\python;%PYTHONPATH%"
 python make_tools.py nuitka --mingw64 --standalone --jobs=16 --enable-plugin=pyside6 ^
     --include-package=spectrum_core ^
     --include-package=modrinth_api_wrapper ^
+    --include-package=app ^
     --include-data-dir=./assets=assets ^
     --include-data-dir=./languages=languages ^
+    --include-data-dir=./qml=qml ^
+    --include-data-dir=./themes=themes ^
+    --include-data-dir=./web=web ^
     !NUITKA_PYD! ^
     --assume-yes-for-downloads ^
     --output-dir=build ^

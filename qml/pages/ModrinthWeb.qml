@@ -9,27 +9,6 @@ WebEngineView {
 
     webChannel: WebChannel {
         id: channel
-        registeredObjects: [webHost]
-    }
-
-    QtObject {
-        id: webHost
-        WebChannel.id: "web"
-
-        function searchModrinth(query, loader) {
-            return Web.searchModrinth(query, loader)
-        }
-
-        function installMod(index) {
-            return Web.installMod(index)
-        }
-
-        function getInstances(callback) {
-            callback(Web.getInstances())
-        }
-
-        function setTargetInstance(name) {
-            Web.setTargetInstance(name)
-        }
+        registeredObjects: [Web]
     }
 }

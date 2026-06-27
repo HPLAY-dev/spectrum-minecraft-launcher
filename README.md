@@ -41,8 +41,11 @@ pip install PySide6 requests modrinth_api_wrapper nuitka
 ### Run from source
 ```powershell
 pip install PySide6 requests modrinth_api_wrapper
+pip install PySide6-WebEngine   # 模组页 Modrinth 搜索（可选）
 python main.py
 ```
+
+`main_qml.py` 为兼容别名，等价于 `main.py`。
 
 主程序已切换至 `spectrum_core`（Rust 核心 + Python 桥接）。`SPECTRUM_USE_RUST=0` 可回退纯 Python 实现（`python/spectrum_core/py_fallback/`）。
 

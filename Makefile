@@ -19,8 +19,12 @@ NUITKA_BASE = --mingw64 \
 	--enable-plugin=pyside6 \
 	--include-package=spectrum_core \
 	--include-package=modrinth_api_wrapper \
+	--include-package=app \
 	--include-data-dir=./assets=assets \
 	--include-data-dir=./languages=languages \
+	--include-data-dir=./qml=qml \
+	--include-data-dir=./themes=themes \
+	--include-data-dir=./web=web \
 	--assume-yes-for-downloads \
 	--output-dir=$(BUILD_DIR) \
 	--show-progress \

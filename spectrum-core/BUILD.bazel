@@ -1,20 +1,22 @@
-load("@rules_rust//rust:defs.bzl", "rust_shared_library")
-load("@crates//:defs.bzl", "aliases", "all_crate_deps")
-
 package(default_visibility = ["//visibility:public"])
 
-rust_shared_library(
+# Rust PyO3 扩展：通过 Cargo 构建（Bazel 编排，避免 rules_rust 在 Windows 上的 symlink 限制）
+genrule(
     name = "spectrum_core_native",
-    srcs = glob(["src/**/*.rs"]),
-    aliases = aliases(),
-    crate_features = ["python"],
-    edition = "2021",
-    proc_macro_deps = all_crate_deps(
-        proc_macro = True,
-    ),
-    deps = all_crate_deps(),
-    rustc_flags = select({
-        "@platforms//os:windows": ["-C", "link-arg=/EXPORT:PyInit__spectrum_core"],
-        "//conditions:default": [],
+    srcs = glob(
+        ["src/**/*.rs"],
+        allow_empty = False,
+    ) + [
+        "Cargo.toml",
+        "Cargo.lock",
+    ],
+    outs = ["_spectrum_core.pyd"],
+    cmd = select({
+        "@platforms//os:windows": "cmd.exe /C powershell.exe -NoProfile -ExecutionPolicy Bypass -File \"$(execpath //:cargo_build.ps1)\" -OutPath \"$(OUTS)\"",
+        "//conditions:default": "bash \"$(execpath //:cargo_build.sh)\" \"$(OUTS)\"",
+    }),
+    tools = select({
+        "@platforms//os:windows": ["//:cargo_build.ps1"],
+        "//conditions:default": ["//:cargo_build.sh"],
     }),
 )

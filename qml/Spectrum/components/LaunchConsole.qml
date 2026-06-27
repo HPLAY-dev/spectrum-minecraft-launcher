@@ -7,6 +7,8 @@ Item {
     width: 360
     implicitHeight: column.implicitHeight + 28
 
+    // Text 组件内部不能写 Text.ElideRight（会解析为自身而非类型枚举）
+    readonly property int elideRight: 3
     property int progress: 0
     property int maxLogLines: 8
 
@@ -50,7 +52,7 @@ Item {
                 font.pixelSize: 12
                 font.family: SpectrumTheme.fontEnBody
                 color: SpectrumTheme.textMuted
-                elide: Text.ElRight
+                elide: root.elideRight
             }
         }
 

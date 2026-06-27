@@ -5,6 +5,7 @@ import Spectrum
 
 SpectrumCard {
     id: root
+    readonly property int elideRight: 3
     Layout.fillWidth: true
     Layout.fillHeight: true
 
@@ -184,7 +185,7 @@ SpectrumCard {
                                 font.pixelSize: 13
                                 anchors.verticalCenter: parent.verticalCenter
                                 width: parent.width - 80
-                                elide: Text.ElideRight
+                                elide: root.elideRight
                             }
                             PrimaryButton {
                                 text: "删除"

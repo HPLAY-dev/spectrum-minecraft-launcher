@@ -10,8 +10,12 @@ import os
 
 # spectrum_core 包位于 python/ 目录
 _PYTHON_ROOT = os.path.join(os.path.dirname(os.path.abspath(__file__)), "python")
-if _PYTHON_ROOT not in sys.path:
-    sys.path.insert(0, _PYTHON_ROOT)
+for _p in (
+    os.path.join(os.path.dirname(os.path.abspath(__file__)), "bazel-bin", "python"),
+    _PYTHON_ROOT,
+):
+    if os.path.isdir(_p) and _p not in sys.path:
+        sys.path.insert(0, _p)
 
 from PySide6.QtCore import QStringListModel, QProcess, Signal
 from PySide6.QtWidgets import QApplication, QMainWindow, QMessageBox, QFileDialog, QInputDialog
@@ -30,6 +34,7 @@ import spectrum_core.modloader_fabric as fabric
 import spectrum_core.modloader_forge as forge
 import spectrum_core.modloader_neoforge as neoforge
 import spectrum_core.labymod as labymod
+import spectrum_core.java_policy as java_policy
 import spectrum_core as spectrum_core_mod
 import stylesheets
 # import hashlib
@@ -154,6 +159,8 @@ class MainWindow(QMainWindow, Ui_MainWindow):
         self.autodl_fabric_api = False
 
         self.javas = {}
+        self.ignore_java_warnings = False
+        self._launch_java_path = None
         self.accounts = []
         self.listView_4_Model = []
         '''
@@ -233,7 +240,7 @@ class MainWindow(QMainWindow, Ui_MainWindow):
         self.pushButton_9.clicked.connect(self.rename_version)
 
         self.pushButton_13.clicked.connect(lambda: self.lineEdit.setText(self.open_folder()))
-        self.pushButton_21.clicked.connect(lambda: self.add_java(self.open_file("Java (*.*);;Java.exe (*.exe)")))
+        self.pushButton_21.clicked.connect(lambda: self.add_java_with_prompt(self.open_file("Java (*.*);;Java.exe (*.exe)")))
         self.pushButton_15.clicked.connect(self.ver_visibility_toggle)
         self.listView_2.clicked.connect(self.launch_version_select)
         
@@ -625,12 +632,18 @@ class MainWindow(QMainWindow, Ui_MainWindow):
         else:
             self.setAcceptDrops(False)
 
-    def update_installed_versions(self):
+    def get_minecraft_dir(self) -> str:
         minecraft_dir = self.lineEdit.text().replace('\\', '/')
         if minecraft_dir == '':
-            return 1
+            return ''
         if minecraft_dir[-1] == '/':
             minecraft_dir = minecraft_dir[:-1]
+        return minecraft_dir
+
+    def update_installed_versions(self):
+        minecraft_dir = self.get_minecraft_dir()
+        if minecraft_dir == '':
+            return 1
         if os.path.exists(minecraft_dir+'/versions'):
             versions = os.listdir(minecraft_dir+'/versions')
 
@@ -641,10 +654,8 @@ class MainWindow(QMainWindow, Ui_MainWindow):
             self.comboBox_6.setModel(_)
     
     def launch(self):
-        minecraft_dir = self.lineEdit.text().replace('\\', '/')
-        if minecraft_dir[-1] == '/':
-            minecraft_dir = minecraft_dir[:-1]
-        if not os.path.exists(minecraft_dir):
+        minecraft_dir = self.get_minecraft_dir()
+        if not minecraft_dir or not os.path.exists(minecraft_dir):
             QMessageBox.critical(None, l18n.string("appName"), l18n.string("minecraftPathInvalid"))
             return 1
         
@@ -656,12 +667,24 @@ class MainWindow(QMainWindow, Ui_MainWindow):
         if instance_name in self.versions_config and self.versions_config[instance_name]['if_override_java']:
             javaw = self.versions_config[instance_name]['override_java_path']
         else:
-            java_major_version = launcher.get_required_java_version(minecraft_dir, instance_name)
-            javaw = self.get_java(version=java_major_version)
+            javaw, err = self.resolve_java_path(
+                minecraft_dir,
+                instance_name,
+                ignore_warnings=self.ignore_java_warnings,
+            )
+            if err:
+                QMessageBox.critical(None, l18n.string("appName"), err)
+                return 1
             if not javaw:
-                QMessageBox.critical(None, l18n.string("appName"), l18n.string("ui", "javaNotFoundOrNoSuitable")\
-                    .replace('${version}', str(java_major_version))\
-                    .replace('${hint_url}', java.get_url(java_major_version, 'jre', tuna=True)))
+                mc_version = launcher.get_minecraft_version(minecraft_dir, instance_name)
+                min_java = java_policy.get_min_java(mc_version)
+                QMessageBox.critical(
+                    None,
+                    l18n.string("appName"),
+                    l18n.string("ui", "javaNotFoundOrNoSuitable")
+                    .replace("${version}", str(min_java))
+                    .replace("${hint_url}", java.get_url(min_java, "jre", tuna=True)),
+                )
                 return 1
         xmx = self.comboBox_4.currentText()
 
@@ -732,11 +755,19 @@ class MainWindow(QMainWindow, Ui_MainWindow):
     def handle_minecraft_finished(self, exit_code, exit_status):
         log(f"{l18n.string("minecraftExit")}: {exit_code}")
         
-    def download(self):
-        if len(self.listView.selectionModel().selectedIndexes()) == 0:
-            QMessageBox.critical(None, l18n.string("appName"), l18n.string("selectVersion"))
-            return 1
-        mcversion = self.listView.selectionModel().selectedIndexes()[0].data()
+    def download(self, mcversion=None):
+        if mcversion is None:
+            if len(self.listView.selectionModel().selectedIndexes()) == 0:
+                QMessageBox.critical(None, l18n.string("appName"), l18n.string("selectVersion"))
+                return 1
+            mcversion = self.listView.selectionModel().selectedIndexes()[0].data()
+        else:
+            mcversion = str(mcversion).strip()
+            if not mcversion:
+                QMessageBox.critical(None, l18n.string("appName"), l18n.string("selectVersion"))
+                return 1
+
+        log(f"Download Minecraft {mcversion}", "DL", level=1)
 
         minecraft_dir = self.lineEdit.text().replace('\\', '/')
         if minecraft_dir[-1] == '/':
@@ -760,8 +791,12 @@ class MainWindow(QMainWindow, Ui_MainWindow):
         
         java_major_version = downloader.get_version_json(mcversion).get('javaVersion', {}).get('majorVersion', 0)
         if not java_major_version:
-            java_major_version = 8  # default to Java 8 if not specified
-        javaw = self.get_java(version=java_major_version)
+            java_major_version = java_policy.get_min_java(mcversion)
+        javaw = self.pick_java_for_mc_version(
+            mcversion,
+            "vanilla",
+            java_major_version,
+        )
 
         # Start asynchronous download to avoid blocking the UI
         self.start_download(minecraft_dir=minecraft_dir, mcversion=mcversion, instance_name=instance_name, modloader=modloader, modloader_version=modloader_version, java=javaw, bmclapi=self.checkBox.isChecked())
@@ -1023,6 +1058,7 @@ class MainWindow(QMainWindow, Ui_MainWindow):
                 self.lineEdit.setText(config.get('launcher', {}).get('minecraftPath', ''))
                 self.lineEdit_12.setText(config.get('launcher', {}).get('game_extend', ''))
                 self.checkBox_5.setChecked(config.get('launcher', {}).get('auto_download_fabric_api_mod', False))
+                self.ignore_java_warnings = config.get('launcher', {}).get('ignore_java_warnings', False)
                 memory = config.get('launcher', {}).get('memory', '2048M')
                 self.comboBox_4.setCurrentText(memory)
                 self.javas.clear()
@@ -1048,6 +1084,7 @@ class MainWindow(QMainWindow, Ui_MainWindow):
         jsonfile['launcher']['jvm_args'] = self.lineEdit_11.text()
         jsonfile['launcher']['game_extend'] = self.lineEdit_12.text()
         jsonfile['launcher']['memory'] = self.comboBox_4.currentText()
+        jsonfile['launcher']['ignore_java_warnings'] = self.ignore_java_warnings
         jsonfile['javas'] = list(self.javas.keys())
 
         with open(app_path+'/cfg.json', 'w') as f:
@@ -1217,17 +1254,128 @@ class MainWindow(QMainWindow, Ui_MainWindow):
 
     def refresh_java_combo(self):
         self.comboBox_7.clear()
-        for path, version in sorted(
-            self.javas.items(), key=lambda item: item[1], reverse=True
-        ):
-            self.comboBox_7.addItem(f"Java {version} — {path}", path)
+        runtimes = self.collect_java_runtimes()
+        for rt in sorted(runtimes, key=lambda r: (r.major, r.path), reverse=True):
+            self.comboBox_7.addItem(
+                java_policy.format_java_label(rt),
+                rt.path,
+            )
+
+    def collect_java_runtimes(self):
+        runtimes = []
+        seen = set()
+        for path, major in self.javas.items():
+            norm = path.replace("\\", "/")
+            if norm in seen:
+                continue
+            seen.add(norm)
+            info = java_policy.inspect_java(path, major)
+            if info:
+                runtimes.append(info)
+        return runtimes
+
+    def pick_java_for_mc_version(
+        self,
+        mc_version: str,
+        modloader: str,
+        json_min_java: int | None = None,
+        minecraft_dir: str | None = None,
+        instance_name: str | None = None,
+    ):
+        if minecraft_dir and instance_name:
+            ctx = java_policy.build_instance_context(minecraft_dir, instance_name)
+        else:
+            loader = modloader if modloader in ("fabric", "forge", "neoforge") else "vanilla"
+            ctx = java_policy.InstanceJavaContext(
+                mc_version=mc_version,
+                modloader=loader,
+                java8_only=not java_policy.mc_version_ge(mc_version, "1.13"),
+            )
+
+        runtimes = self.collect_java_runtimes()
+        preferred = self._launch_java_path or self.comboBox_7.currentData()
+        picked, validation = java_policy.pick_java(ctx, runtimes, preferred_path=preferred)
+        if picked and not (validation and validation.blocked):
+            if ctx.java8_only:
+                return picked.path if picked.major == 8 else None
+            policy_min = java_policy.get_min_java(mc_version)
+            min_java = max(policy_min, json_min_java or 0)
+            if picked.major >= min_java:
+                return picked.path
+        for rt, val in java_policy.rank_javas(ctx, runtimes):
+            if not val.blocked:
+                return rt.path
+        return None
+
+    def resolve_java_path(
+        self,
+        minecraft_dir: str,
+        instance_name: str,
+        ignore_warnings: bool = False,
+    ):
+        ctx = java_policy.build_instance_context(minecraft_dir, instance_name)
+        try:
+            json_min = launcher.get_required_java_version(minecraft_dir, instance_name)
+        except Exception:
+            json_min = None
+        policy_min = java_policy.get_min_java(ctx.mc_version)
+        effective_min = 8 if ctx.java8_only else max(policy_min, json_min or 0)
+
+        preferred = self._launch_java_path or self.comboBox_7.currentData()
+        runtimes = self.collect_java_runtimes()
+        picked, validation = java_policy.pick_java(
+            ctx,
+            runtimes,
+            preferred_path=preferred,
+        )
+
+        if not picked:
+            return None, (
+                validation.block_reason
+                if validation and validation.block_reason
+                else (
+                    "此实例仅支持 Java 8，请安装 Java 8 并在设置中添加 java.exe。"
+                    if ctx.java8_only
+                    else f"未找到满足 Java {effective_min}+ 的运行时。"
+                )
+            )
+
+        val = java_policy.validate_java(ctx, picked)
+        if val.blocked:
+            return None, val.block_reason
+
+        if val.warning and not ignore_warnings:
+            reply = QMessageBox.warning(
+                None,
+                l18n.string("appName"),
+                val.warning + "\n\n是否仍要继续启动？",
+                QMessageBox.Yes | QMessageBox.No,
+                QMessageBox.No,
+            )
+            if reply != QMessageBox.Yes:
+                return None, None
+
+        if ctx.java8_only and picked.major != 8:
+            return None, val.block_reason or "此实例仅支持 Java 8。"
+
+        if not ctx.java8_only and picked.major < effective_min:
+            return None, (
+                f"Java 版本过低：当前 Java {picked.major}，"
+                f"运行 {ctx.mc_version} 至少需要 Java {effective_min}。"
+            )
+
+        return picked.path, None
 
     def scan_system_javas(self):
         log("Scanning system Java installations", "JAVA", level=1)
+        added = 0
         for entry in java.find_javas():
             path = entry["path"] if isinstance(entry, dict) else entry.path
-            self.add_java(path)
-        self.refresh_java_combo()
+            ok, _ = self.register_java_path(path)
+            if ok:
+                added += 1
+        if added:
+            log(f"Found {added} Java installation(s)", "JAVA", level=1)
 
     def prompt_download_java(self):
         version, ok = QInputDialog.getItem(
@@ -1241,39 +1389,174 @@ class MainWindow(QMainWindow, Ui_MainWindow):
         if ok and version:
             self.download_java(int(version))
 
+    def browse_java_executable(self) -> str:
+        return self.open_file("Java (java.exe javaw.exe);;java.exe (*.exe);;All (*.*)") or ""
+
+    @staticmethod
+    def normalize_java_executable(path: str) -> str | None:
+        if not path:
+            return None
+        path = os.path.normpath(path)
+        if os.path.isdir(path):
+            for sub in (
+                os.path.join("bin", "java.exe"),
+                os.path.join("bin", "javaw.exe"),
+                os.path.join("bin", "java"),
+                os.path.join("jre", "bin", "java.exe"),
+                os.path.join("jre", "bin", "java"),
+            ):
+                candidate = os.path.join(path, sub)
+                if os.path.isfile(candidate):
+                    path = candidate
+                    break
+            else:
+                return None
+
+        if not os.path.isfile(path):
+            return None
+
+        name = os.path.basename(path).lower()
+        if name not in ("java.exe", "javaw.exe", "java", "javaw"):
+            return None
+
+        if name.startswith("javaw"):
+            java_sibling = os.path.join(os.path.dirname(path), "java.exe")
+            if os.path.isfile(java_sibling):
+                path = java_sibling
+        return path
+
+    def register_java_path(self, path: str) -> tuple[bool, str]:
+        exe = self.normalize_java_executable(path)
+        if not exe:
+            return False, "不是有效的 Java 路径，请选择 java.exe 或 JDK 安装目录。"
+
+        if exe in self.javas:
+            return True, f"Java {self.javas[exe]} 已在列表中：{exe}"
+
+        info = java_policy.inspect_java(exe)
+        if not info:
+            return False, f"无法识别 Java：{exe}\n请确认可执行 java -version。"
+
+        self.javas[exe] = info.major
+        self.refresh_java_combo()
+        self.save_config()
+        bits = "64位" if info.is_64bit else "32位"
+        ver = info.full_version or str(info.major)
+        return True, f"已添加 Java {info.major} ({bits}) — {ver}"
+
     def add_java(self, file_path):
-        if file_path in self.javas:
-            return
-        v = java.get_java_version(file_path)
-        if not v:
-            log('Bad java path: '+file_path)
-            return
-        self.javas[file_path] = v
-    
+        ok, _ = self.register_java_path(file_path)
+        return ok
+
+    def add_java_with_prompt(self, file_path):
+        ok, msg = self.register_java_path(file_path)
+        if ok:
+            return True
+        QMessageBox.warning(None, l18n.string("appName"), msg)
+        return False
+
+    def remove_java_path(self, path: str) -> bool:
+        if not path:
+            return False
+        norm = os.path.normpath(path)
+        removed = False
+        for key in list(self.javas.keys()):
+            if os.path.normpath(key) == norm:
+                del self.javas[key]
+                removed = True
+        if removed:
+            self.refresh_java_combo()
+            self.save_config()
+        return removed
+
     def remove_java(self):
         current_java = self.comboBox_7.currentData() or self.comboBox_7.currentText()
-        if current_java in self.javas:
-            del self.javas[current_java]
-        self.refresh_java_combo()
+        if current_java:
+            self.remove_java_path(current_java)
 
     def get_java(self, version):
-        for java in self.javas:
-            if self.javas[java] == version:
-                return java
+        runtimes = self.collect_java_runtimes()
+        if version <= 8:
+            j8 = [r for r in runtimes if r.major == 8]
+            if j8:
+                j8.sort(key=lambda r: (0 if r.is_64bit else 1, r.path))
+                return j8[0].path
+        candidates = [r for r in runtimes if r.major >= version]
+        if not candidates:
+            return None
+        candidates.sort(key=lambda r: (r.major - version, 0 if r.is_lts else 1))
+        return candidates[0].path
 
 
-
-log(l18n.string("startingMainIs")+__name__)
-if __name__ in ("__main__", "__compiled__", "__mp_main__"):
+def _bootstrap() -> None:
     if spectrum_core_mod.rust_available():
         spectrum_core_mod.require_native().init(
             use_bmclapi=os.environ.get("SPECTRUM_USE_BMCLAPI", "1").lower()
             not in ("0", "false", "no")
         )
-    if launcher.native() == "windows" and not os.path.exists(app_path+'/JavaWrapper.jar'):
+    if launcher.native() == "windows" and not os.path.exists(app_path + "/JavaWrapper.jar"):
         log(l18n.string("javaWrapper"), "INIT", level=1)
         download_javawrapper()
+
+
+def run_qml_ui() -> int:
+    """QML + QSS + Vue 新界面入口。"""
+    from PySide6.QtCore import QUrl
+    from PySide6.QtQml import QQmlApplicationEngine
+    from PySide6.QtQuickControls2 import QQuickStyle
+
+    try:
+        from PySide6.QtWebEngineQuick import QtWebEngineQuick
+
+        QtWebEngineQuick.initialize()
+        has_webengine = True
+    except ImportError:
+        has_webengine = False
+
+    from app.bridge import AppBridge, WebBridge
+    from app.local_fonts import fonts_dir_url, register_local_fonts
+
+    _bootstrap()
+
     app = QApplication(sys.argv)
-    win = MainWindow()
-    win.show()
-    sys.exit(app.exec())
+    register_local_fonts(app_path)
+    QQuickStyle.setStyle("Basic")
+    qss_path = os.path.join(app_path, "themes", "spectrum.qss")
+    if os.path.isfile(qss_path):
+        with open(qss_path, encoding="utf-8") as f:
+            app.setStyleSheet(f.read())
+
+    backend = MainWindow()
+    backend.hide()
+
+    bridge = AppBridge(backend)
+    web_bridge = WebBridge(backend)
+    web_bridge.setObjectName("web")
+
+    engine = QQmlApplicationEngine()
+
+    def _on_qml_warnings(warnings):
+        for w in warnings:
+            log(f"QML: {w.toString()}", "FATAL", 0)
+
+    engine.warnings.connect(_on_qml_warnings)
+    engine.rootContext().setContextProperty("App", bridge)
+    engine.rootContext().setContextProperty("Web", web_bridge)
+    engine.rootContext().setContextProperty("hasWebEngine", has_webengine)
+    engine.rootContext().setContextProperty("fontsDir", fonts_dir_url(app_path))
+
+    qml_dir = os.path.join(app_path, "qml")
+    engine.addImportPath(qml_dir)
+    engine.load(QUrl.fromLocalFile(os.path.join(qml_dir, "main.qml")))
+
+    if not engine.rootObjects():
+        log("QML 加载失败", "FATAL", 0)
+        return 1
+
+    log("QML UI started", "INIT", 1)
+    return app.exec()
+
+
+log(l18n.string("startingMainIs")+__name__)
+if __name__ in ("__main__", "__compiled__", "__mp_main__"):
+    sys.exit(run_qml_ui())

@@ -21,6 +21,8 @@ ApplicationWindow {
     property string toastLevel: ""
     property bool toastVisible: false
 
+    property bool javaDropActive: false
+
     readonly property var navItems: [
         "启动", "版本管理", "模组", "设置"
     ]
@@ -63,6 +65,66 @@ ApplicationWindow {
             font.pixelSize: 13
             font.family: SpectrumTheme.fontCnBody
             font.weight: SpectrumTheme.weightCnBody
+        }
+    }
+
+    function isJavaDropUrl(url) {
+        var s = url.toString().toLowerCase()
+        return s.indexOf("java.exe") >= 0
+            || s.indexOf("javaw.exe") >= 0
+            || s.indexOf("/bin/java") >= 0
+            || s.indexOf("\\bin\\java") >= 0
+    }
+
+    function acceptJavaDrop(drag) {
+        if (!drag.hasUrls)
+            return false
+        for (var i = 0; i < drag.urls.length; ++i) {
+            if (isJavaDropUrl(drag.urls[i]))
+                return true
+        }
+        return false
+    }
+
+    DropArea {
+        id: javaDropArea
+        anchors.fill: parent
+        z: 80
+        keys: ["text/uri-list"]
+
+        onEntered: (drag) => {
+            if (drag.hasUrls) {
+                drag.accepted = true
+                window.javaDropActive = true
+            }
+        }
+        onExited: window.javaDropActive = false
+        onDropped: (drop) => {
+            window.javaDropActive = false
+            if (!drop.hasUrls)
+                return
+            var urls = []
+            for (var i = 0; i < drop.urls.length; ++i)
+                urls.push(drop.urls[i])
+            App.addJavaFromDropUrls(urls)
+        }
+    }
+
+    CutCornerBox {
+        visible: window.javaDropActive
+        z: 81
+        anchors.fill: parent
+        anchors.margins: 12
+        cut: SpectrumTheme.cutLg
+        fillColor: Qt.rgba(0.72, 0.82, 0.75, 0.18)
+        borderColor: SpectrumTheme.sageLight
+
+        Text {
+            anchors.centerIn: parent
+            text: "释放以添加 Java"
+            font.pixelSize: 18
+            font.family: SpectrumTheme.fontCnTitle
+            color: SpectrumTheme.textTitle
         }
     }
 

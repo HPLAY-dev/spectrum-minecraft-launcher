@@ -1,12 +1,3 @@
-# Bazel packaging only (Rust via Cargo). Use build.ps1 for the full project build.
-
+# 全链路 Bazel 编译（同 build.ps1）
 $ErrorActionPreference = "Stop"
-Set-Location $PSScriptRoot
-
-Write-Host "[build] Bazel //:build_all ..."
-bazel build //:build_all
-if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
-
-Write-Host ""
-Write-Host "Bazel packaging complete."
-Write-Host "For Rust extension, run: .\cargo_build.ps1  or  .\build.ps1"
+& "$PSScriptRoot\build.ps1"

@@ -1,6 +1,18 @@
 package(default_visibility = ["//visibility:public"])
 
 filegroup(
+    name = "spectrum_core_src",
+    srcs = glob(
+        ["spectrum_core/**/*.py"],
+        exclude = [
+            "**/__pycache__/**",
+            "spectrum_core/_spectrum_core.pyd",
+            "spectrum_core/_spectrum_core_test.pyd",
+        ],
+    ),
+)
+
+filegroup(
     name = "spectrum_core",
-    srcs = glob(["spectrum_core/**/*"]),
+    srcs = [":spectrum_core_src"] + ["//spectrum-core:spectrum_core_native"],
 )
