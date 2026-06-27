@@ -33,6 +33,20 @@ class InstanceJavaContext:
     modloader: ModLoaderKind
     java8_only: bool = False
     uses_launchwrapper: bool = False
+    min_java: int = 8
+
+
+def normalize_mc_version(raw: str) -> str:
+    """从实例 id / 版本 id 中提取可比较的 Minecraft 版本号。"""
+    if not raw:
+        return raw
+    v = raw.strip()
+    v = re.split(r"[-+]", v, maxsplit=1)[0]
+    m = re.match(
+        r"^(\d+w\d+[a-z]?|\d+\.\d+(?:\.\d+)?|\d{2,}(?:\.\d+)*)",
+        v.lower(),
+    )
+    return m.group(1) if m else v.strip()
 
 
 @dataclass
@@ -122,9 +136,12 @@ def parse_mc_version_key(mc_version: str) -> tuple:
     if parts[0] == "1" and len(parts) >= 2:
         try:
             minor = int(parts[1])
-            patch = int(parts[2]) if len(parts) > 2 else 0
         except ValueError:
             return (0, 0, 0, 0, 0)
+        patch = 0
+        if len(parts) > 2:
+            pm = re.match(r"^(\d+)", parts[2])
+            patch = int(pm.group(1)) if pm else 0
         release_rank = 1 if is_pre else 2
         return (0, minor, patch, release_rank, pre_num)
 
@@ -136,7 +153,7 @@ def mc_version_ge(a: str, b: str) -> bool:
 
 
 def get_min_java(mc_version: str) -> int:
-    v = mc_version.strip()
+    v = normalize_mc_version(mc_version.strip())
     if not v:
         return 8
 
@@ -160,10 +177,27 @@ def requires_64bit_java(mc_version: str) -> bool:
 
 
 def detect_modloader(minecraft_dir: str, instance_name: str) -> ModLoaderKind:
+    data = _read_instance_json(minecraft_dir, instance_name)
+    if data:
+        main_class = str(data.get("mainClass", "")).lower()
+        lib_text = " ".join(
+            lib if isinstance(lib, str) else lib.get("name", "")
+            for lib in data.get("libraries", [])
+            if isinstance(lib, (str, dict))
+        ).lower()
+        if "bootstraplauncher" in main_class or "net.neoforged" in lib_text:
+            return "neoforge"
+        if "knotclient" in main_class or "fabric-loader" in lib_text:
+            return "fabric"
+        if "modlauncher" in main_class or "launchwrapper" in main_class:
+            return "forge"
+        if "labymod" in lib_text:
+            return "labymod"  # type: ignore[return-value]
+
     name = instance_name.lower()
-    if "neoforge" in name:
+    if "neoforge" in name or name.endswith("nf"):
         return "neoforge"
-    if "forge" in name and "neoforge" not in name:
+    if "forge" in name:
         return "forge"
     try:
         from spectrum_core import modloader_fabric as fabric
@@ -226,22 +260,36 @@ def requires_java8_only(
 
 
 def build_instance_context(minecraft_dir: str, instance_name: str) -> InstanceJavaContext:
-    mc_version = instance_name
+    mc_version = normalize_mc_version(instance_name)
+    json_min: int | None = None
     try:
         import spectrum_core.launcher_funcs as launcher
 
-        mc_version = launcher.get_minecraft_version(minecraft_dir, instance_name)
+        mc_version = normalize_mc_version(
+            launcher.get_minecraft_version(minecraft_dir, instance_name)
+        )
+        try:
+            json_min = int(launcher.get_required_java_version(minecraft_dir, instance_name))
+            if json_min <= 0:
+                json_min = None
+        except Exception:
+            json_min = None
     except Exception:
         pass
 
     modloader = detect_modloader(minecraft_dir, instance_name)
     uses_lw = instance_uses_launchwrapper(minecraft_dir, instance_name)
     java8_only = requires_java8_only(minecraft_dir, instance_name, mc_version, modloader)
+    if java8_only:
+        min_java = 8
+    else:
+        min_java = max(get_min_java(mc_version), json_min or 0)
     return InstanceJavaContext(
         mc_version=mc_version,
         modloader=modloader,
         java8_only=java8_only,
         uses_launchwrapper=uses_lw,
+        min_java=min_java,
     )
 
 
@@ -257,7 +305,7 @@ def validate_java(
 ) -> JavaValidation:
     mc_version = ctx.mc_version
     modloader = ctx.modloader
-    min_java = get_min_java(mc_version)
+    min_java = ctx.min_java
     result = JavaValidation()
 
     if ctx.java8_only and runtime.major != 8:
@@ -327,7 +375,7 @@ def _sort_key_for_mc(ctx: InstanceJavaContext, runtime: JavaRuntimeInfo) -> tupl
             0 if runtime.is_64bit else 1,
             runtime.path.lower(),
         )
-    min_java = get_min_java(ctx.mc_version)
+    min_java = ctx.min_java
     lts_rank = 0 if runtime.is_lts else 1
     match_dist = abs(runtime.major - min_java)
     arch_rank = 0 if runtime.is_64bit else 1
@@ -345,11 +393,20 @@ def rank_javas(
     return items
 
 
-def format_java_label(runtime: JavaRuntimeInfo, *, recommended: bool = False) -> str:
+def format_java_label(
+    runtime: JavaRuntimeInfo,
+    *,
+    recommended: bool = False,
+    blocked: bool = False,
+    block_reason: str = "",
+) -> str:
     bits = "64位" if runtime.is_64bit else "32位"
     lts = " LTS" if runtime.is_lts else ""
     tag = " [推荐]" if recommended else ""
     ver = runtime.full_version or str(runtime.major)
+    if blocked:
+        short = block_reason.split("。")[0] if block_reason else "不兼容"
+        return f"Java {runtime.major} ({bits}) — 不可用：{short}"
     return f"Java {runtime.major} ({bits}{lts}) — {ver}{tag}"
 
 
@@ -360,7 +417,7 @@ def pick_java(
 ) -> tuple[JavaRuntimeInfo | None, JavaValidation | None]:
     ranked = rank_javas(ctx, runtimes)
     if not ranked:
-        need = 8 if ctx.java8_only else get_min_java(ctx.mc_version)
+        need = ctx.min_java
         return None, JavaValidation(
             blocked=True,
             block_reason=(
@@ -387,28 +444,34 @@ def java_options_payload(
     ctx: InstanceJavaContext,
     runtimes: Iterable[JavaRuntimeInfo],
 ) -> list[dict]:
-    min_java = 8 if ctx.java8_only else get_min_java(ctx.mc_version)
+    min_java = ctx.min_java
     ranked = rank_javas(ctx, runtimes)
     options: list[dict] = []
     best_path = None
     for rt, val in ranked:
         if not val.blocked and best_path is None:
             best_path = rt.path
+        is_rec = rt.path == best_path and not val.blocked
         options.append(
             {
                 "path": rt.path,
                 "major": rt.major,
                 "label": format_java_label(
-                    rt, recommended=(rt.path == best_path and not val.blocked)
+                    rt,
+                    recommended=is_rec,
+                    blocked=val.blocked,
+                    block_reason=val.block_reason,
                 ),
                 "is64bit": rt.is_64bit,
                 "isLts": rt.is_lts,
-                "recommended": rt.path == best_path and not val.blocked,
+                "recommended": is_rec,
                 "enabled": not val.blocked,
                 "blocked": val.blocked,
                 "blockReason": val.block_reason,
                 "warning": val.warning,
                 "java8Only": ctx.java8_only,
+                "minJava": min_java,
+                "modloader": ctx.modloader,
             }
         )
     if options and all(o["blocked"] for o in options):

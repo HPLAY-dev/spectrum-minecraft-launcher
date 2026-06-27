@@ -1,7 +1,6 @@
 //! Forge / NeoForge 客户端 JSON 安装（PyO3 与 Python download_*_json 对齐）
 
 use super::forge::ForgeInstaller;
-use super::json_merge::merge_version_json;
 use super::neoforge::NeoForgeInstaller;
 use super::ModLoaderInstaller;
 use crate::http_client::HttpClient;
@@ -69,11 +68,16 @@ pub async fn download_forge_json(
 
     let mut manifest = ManifestManager::new(client.clone());
     let mut vjm = VersionJsonManager::new(client);
-    let vanilla_vj = vjm.get_version_json(mc_version, &mut manifest).await?;
-    let merged = merge_version_json(&forge_vj, &vanilla_vj)?;
-
     let json_path = instance_dir.join(format!("{instance_name}.json"));
-    vjm.save_to_file(&merged, &json_path).await?;
+    super::instance_json::merge_and_save_instance_json(
+        &mut vjm,
+        &mut manifest,
+        forge_vj,
+        mc_version,
+        instance_name,
+        &json_path,
+    )
+    .await?;
     Ok(())
 }
 
@@ -102,11 +106,16 @@ pub async fn download_neoforge_json(
 
     let mut manifest = ManifestManager::new(client.clone());
     let mut vjm = VersionJsonManager::new(client);
-    let vanilla_vj = vjm.get_version_json(mc_version, &mut manifest).await?;
-    let merged = merge_version_json(&neo_vj, &vanilla_vj)?;
-
     let json_path = instance_dir.join(format!("{instance_name}.json"));
-    vjm.save_to_file(&merged, &json_path).await?;
+    super::instance_json::merge_and_save_instance_json(
+        &mut vjm,
+        &mut manifest,
+        neo_vj,
+        mc_version,
+        instance_name,
+        &json_path,
+    )
+    .await?;
     Ok(())
 }
 

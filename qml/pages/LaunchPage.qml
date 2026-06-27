@@ -117,9 +117,18 @@ Item {
                         width: parent.width
                         textRole: "label"
                         valueRole: "path"
-                        enabled: count > 0
+
+                        delegate: ItemDelegate {
+                            width: javaCombo.width
+                            enabled: modelData && modelData.enabled !== false
+                            text: modelData ? modelData.label : ""
+                            font.pixelSize: 12
+                            opacity: enabled ? 1.0 : 0.45
+                        }
+
                         onActivated: {
-                            if (currentIndex >= 0 && model[currentIndex])
+                            if (currentIndex >= 0 && model[currentIndex]
+                                    && model[currentIndex].enabled !== false)
                                 App.selectLaunchJava(model[currentIndex].path)
                         }
 
@@ -129,13 +138,7 @@ Item {
                                 return
                             }
                             try {
-                                var all = JSON.parse(App.getJavaOptionsForInstance(instanceName))
-                                var enabled = []
-                                for (var i = 0; i < all.length; i++) {
-                                    if (all[i].enabled)
-                                        enabled.push(all[i])
-                                }
-                                model = enabled.length ? enabled : all
+                                model = JSON.parse(App.getJavaOptionsForInstance(instanceName))
                             } catch (e) {
                                 model = []
                             }
@@ -153,7 +156,21 @@ Item {
                             currentIndex = pick
                             if (pick >= 0)
                                 App.selectLaunchJava(model[pick].path)
+                            else
+                                App.selectLaunchJava("")
                         }
+                    }
+
+                    Text {
+                        width: parent.width
+                        wrapMode: Text.WordWrap
+                        visible: javaCombo.currentIndex >= 0 && javaCombo.model.length > 0
+                                && javaCombo.model[javaCombo.currentIndex]
+                                && javaCombo.model[javaCombo.currentIndex].warning
+                        font.pixelSize: 11
+                        color: "#c9a227"
+                        text: (javaCombo.currentIndex >= 0 && javaCombo.model[javaCombo.currentIndex])
+                            ? (javaCombo.model[javaCombo.currentIndex].warning || "") : ""
                     }
 
                     CheckBox {
@@ -173,7 +190,10 @@ Item {
                         text: root.status.mcVersion
                             ? (root.status.java8Only
                                 ? ("MC " + root.status.mcVersion + " · 仅支持 Java 8")
-                                : ("MC " + root.status.mcVersion + " · 最低 Java " + root.status.minJava))
+                                : ("MC " + root.status.mcVersion
+                                    + (root.status.modloader && root.status.modloader !== "vanilla"
+                                        ? (" · " + root.status.modloader) : "")
+                                    + " · 最低 Java " + root.status.minJava))
                             : ""
                     }
 

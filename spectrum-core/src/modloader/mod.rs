@@ -11,6 +11,7 @@ pub mod labymod;
 pub mod maven_meta;
 pub mod json_merge;
 pub mod client_json;
+pub mod instance_json;
 
 use crate::http_client::HttpClient;
 use crate::types::*;

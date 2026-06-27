@@ -120,7 +120,7 @@ impl DownloadEngine {
         .await
         .map_err(|_| CoreError::Unknown("channel closed".into()))?;
 
-        if !json_path.exists() {
+        if self.needs_version_json_install(&json_path, &opts).await? {
             self.install_version_json(minecraft_dir, &instance_dir, &opts, &tx)
                 .await?;
         }
@@ -139,7 +139,31 @@ impl DownloadEngine {
             .resolve_instance_json(&json_path, &mut self.manifest_mgr)
             .await?;
 
-        // ========== 2. Client JAR ==========
+        self.sync_instance_artifacts(
+            minecraft_dir,
+            &instance_dir,
+            &opts.instance_name,
+            &merged,
+            &tx,
+        )
+        .await?;
+
+        tx.send(DownloadEvent::Completed)
+            .await
+            .map_err(|_| CoreError::Unknown("channel closed".into()))?;
+
+        Ok(DownloadResult::Success)
+    }
+
+    /// 下载 client.jar、libraries、assets（JSON 已就绪时）
+    async fn sync_instance_artifacts(
+        &self,
+        minecraft_dir: &Path,
+        instance_dir: &Path,
+        instance_name: &str,
+        merged: &VersionJson,
+        tx: &mpsc::Sender<DownloadEvent>,
+    ) -> CoreResult<()> {
         if let Some(ref client_download) = merged.downloads.as_ref().and_then(|d| d.client.as_ref()) {
             tx.send(DownloadEvent::Progress {
                 stage: DownloadStage::ClientJar,
@@ -149,7 +173,7 @@ impl DownloadEngine {
             .await
             .map_err(|_| CoreError::Unknown("channel closed".into()))?;
 
-            let jar_path = instance_dir.join(format!("{}.jar", opts.instance_name));
+            let jar_path = instance_dir.join(format!("{instance_name}.jar"));
             let resolved_url = self.client.resolve_url(&client_download.url);
 
             if !jar_path.exists()
@@ -179,31 +203,165 @@ impl DownloadEngine {
             .map_err(|_| CoreError::Unknown("channel closed".into()))?;
         }
 
-        // ========== 3. Libraries + Natives ==========
         let lib_dir = minecraft_dir.join("libraries");
-        self.download_libraries(
-            &merged,
-            &lib_dir,
+        self.download_libraries(merged, &lib_dir, instance_dir, instance_name, tx)
+            .await?;
+
+        if let Some(ref asset_index) = merged.asset_index {
+            let assets_dir = minecraft_dir.join("assets");
+            self.download_assets(asset_index, &assets_dir, tx).await?;
+        }
+
+        Ok(())
+    }
+
+    /// 启动前补全缺失的 libraries / client.jar / assets
+    pub async fn ensure_instance_libraries(
+        &mut self,
+        minecraft_dir: &Path,
+        instance_name: &str,
+    ) -> CoreResult<()> {
+        let instance_dir = minecraft_dir.join("versions").join(instance_name);
+        let json_path = instance_dir.join(format!("{instance_name}.json"));
+        if !json_path.exists() {
+            return Ok(());
+        }
+
+        let merged = self
+            .version_json_mgr
+            .resolve_instance_json(&json_path, &mut self.manifest_mgr)
+            .await?;
+
+        let lib_dir = minecraft_dir.join("libraries");
+        let missing = Self::count_missing_libraries(&merged, &lib_dir);
+        let jar_path = instance_dir.join(format!("{instance_name}.jar"));
+        let client_missing = merged
+            .downloads
+            .as_ref()
+            .and_then(|d| d.client.as_ref())
+            .is_some_and(|_| !jar_path.exists());
+
+        if missing == 0 && !client_missing {
+            return Ok(());
+        }
+
+        log::info!(
+            "实例 {instance_name} 缺少 {missing} 个库{}，正在补全…",
+            if client_missing { " 及 client.jar" } else { "" }
+        );
+
+        let (tx, mut rx) = mpsc::channel::<DownloadEvent>(32);
+        tokio::spawn(async move {
+            while rx.recv().await.is_some() {}
+        });
+
+        self.sync_instance_artifacts(
+            minecraft_dir,
             &instance_dir,
-            &opts.instance_name,
+            instance_name,
+            &merged,
+            &tx,
+        )
+        .await
+    }
+
+    fn count_missing_libraries(version_json: &VersionJson, lib_dir: &Path) -> usize {
+        version_json
+            .libraries
+            .iter()
+            .filter(|lib| Self::is_library_compatible(lib))
+            .filter(|lib| {
+                if let Some(ref dl) = lib.downloads {
+                    if let Some(ref artifact) = dl.artifact {
+                        return !lib_dir.join(&artifact.path).exists();
+                    }
+                }
+                if let Ok(maven_path) = maven_to_path(&lib.name) {
+                    return !lib_dir.join(&maven_path).exists();
+                }
+                false
+            })
+            .count()
+    }
+
+    /// 启动前修复：实例名暗示 ModLoader 但 JSON 仍是原版配置
+    pub async fn repair_modloader_json_if_needed(
+        &mut self,
+        minecraft_dir: &Path,
+        instance_name: &str,
+    ) -> CoreResult<bool> {
+        let instance_dir = minecraft_dir.join("versions").join(instance_name);
+        let json_path = instance_dir.join(format!("{instance_name}.json"));
+        if !json_path.exists() {
+            return Ok(false);
+        }
+
+        let content = tokio::fs::read_to_string(&json_path).await?;
+        let raw: VersionJson = serde_json::from_str(&content)?;
+        if !modloader::instance_json::is_vanilla_launch_profile(&raw) {
+            return Ok(false);
+        }
+
+        let Some(loader) = modloader::instance_json::guess_modloader_from_name(instance_name) else {
+            return Ok(false);
+        };
+
+        let mc_version = modloader::instance_json::guess_mc_version(instance_name, &raw);
+        log::info!(
+            "检测到 {instance_name} 缺少 ModLoader 配置，正在安装 {:?}…",
+            loader
+        );
+
+        let opts = AutoDownloadOptions {
+            mc_version,
+            instance_name: instance_name.to_string(),
+            modloader: loader,
+            modloader_version: None,
+        };
+
+        let (tx, mut rx) = mpsc::channel::<DownloadEvent>(32);
+        tokio::spawn(async move {
+            while rx.recv().await.is_some() {}
+        });
+
+        self.install_version_json(minecraft_dir, &instance_dir, &opts, &tx)
+            .await?;
+
+        let merged = self
+            .version_json_mgr
+            .resolve_instance_json(&json_path, &mut self.manifest_mgr)
+            .await?;
+        self.sync_instance_artifacts(
+            minecraft_dir,
+            &instance_dir,
+            instance_name,
+            &merged,
             &tx,
         )
         .await?;
 
-        // ========== 4. Assets ==========
-        if let Some(ref asset_index) = merged.asset_index {
-            let assets_dir = minecraft_dir.join("assets");
-            self.download_assets(asset_index, &assets_dir, &tx).await?;
-        }
-
-        tx.send(DownloadEvent::Completed)
-            .await
-            .map_err(|_| CoreError::Unknown("channel closed".into()))?;
-
-        Ok(DownloadResult::Success)
+        Ok(true)
     }
 
-    /// 首次安装：写入 version JSON（Vanilla 或 ModLoader）
+    /// 是否需要写入/修复 version JSON
+    async fn needs_version_json_install(
+        &self,
+        json_path: &Path,
+        opts: &AutoDownloadOptions,
+    ) -> CoreResult<bool> {
+        if !json_path.exists() {
+            return Ok(true);
+        }
+        if opts.modloader == ModLoader::Vanilla {
+            return Ok(false);
+        }
+        let content = tokio::fs::read_to_string(json_path).await?;
+        let existing: VersionJson = serde_json::from_str(&content)?;
+        let detected = modloader::instance_json::detect_modloader_in_json(&existing);
+        Ok(detected != opts.modloader)
+    }
+
+    /// 首次安装或修复：写入合并后的 version JSON（Vanilla 或 ModLoader）
     async fn install_version_json(
         &mut self,
         minecraft_dir: &Path,
@@ -215,10 +373,11 @@ impl DownloadEngine {
 
         match opts.modloader {
             ModLoader::Vanilla => {
-                let vj = self
+                let mut vj = self
                     .version_json_mgr
                     .get_version_json(&opts.mc_version, &mut self.manifest_mgr)
                     .await?;
+                vj.id = opts.instance_name.clone();
                 self.version_json_mgr.save_to_file(&vj, &json_path).await?;
             }
             loader => {
@@ -234,7 +393,7 @@ impl DownloadEngine {
                     CoreError::Installer(format!("不支持的 ModLoader: {loader:?}"))
                 })?;
 
-                let vj = installer
+                let loader_vj = installer
                     .install(
                         &opts.mc_version,
                         opts.modloader_version.as_deref(),
@@ -247,8 +406,15 @@ impl DownloadEngine {
                         CoreError::Installer(format!("ModLoader 安装失败: {e}"))
                     })?;
 
-                // 统一保存为 {instance_name}.json（与 Python 一致）
-                self.version_json_mgr.save_to_file(&vj, &json_path).await?;
+                modloader::instance_json::merge_and_save_instance_json(
+                    &mut self.version_json_mgr,
+                    &mut self.manifest_mgr,
+                    loader_vj,
+                    &opts.mc_version,
+                    &opts.instance_name,
+                    &json_path,
+                )
+                .await?;
 
                 tx.send(DownloadEvent::Progress {
                     stage: DownloadStage::ModLoader,

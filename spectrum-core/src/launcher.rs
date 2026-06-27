@@ -58,13 +58,18 @@ impl LaunchCommandBuilder {
             }
         }
 
-        let classpath = Self::build_classpath(config, version_json)?;
-        args.push("-cp".into());
-        args.push(classpath);
+        let uses_module_path = Self::uses_module_path(version_json);
+        if !uses_module_path {
+            let classpath = Self::build_classpath(config, version_json)?;
+            args.push("-cp".into());
+            args.push(classpath);
+        }
 
         if let Some(ref wrapper) = config.javawrapper {
-            args.push("-jar".into());
-            args.push(wrapper.to_string_lossy().to_string());
+            if !Self::should_skip_javawrapper(version_json) {
+                args.push("-jar".into());
+                args.push(wrapper.to_string_lossy().to_string());
+            }
         }
 
         args.push(version_json.main_class.clone());
@@ -121,6 +126,32 @@ impl LaunchCommandBuilder {
                 Argument::Rules { .. } => {}
             }
         }
+    }
+
+    /// NeoForge / Fabric 等使用 `-p` 模块路径启动，不应再追加 `-cp`。
+    fn uses_module_path(vj: &VersionJson) -> bool {
+        if vj.main_class.to_lowercase().contains("bootstraplauncher") {
+            return true;
+        }
+        let Some(ref arguments) = vj.arguments else {
+            return false;
+        };
+        arguments.jvm.iter().any(|arg| match arg {
+            Argument::Value(s) => s == "-p",
+            Argument::Rules { value, .. } => match value {
+                ArgumentValue::Single(s) => s == "-p",
+                ArgumentValue::Multi(v) => v.iter().any(|s| s == "-p"),
+            },
+        })
+    }
+
+    /// BootstrapLauncher 等模组入口不能经 JavaWrapper 间接启动。
+    fn should_skip_javawrapper(vj: &VersionJson) -> bool {
+        let mc = vj.main_class.to_lowercase();
+        mc.contains("bootstraplauncher")
+            || mc.contains("knotclient")
+            || mc.contains("modlauncher")
+            || mc.contains("launchwrapper")
     }
 
     fn build_classpath(config: &LaunchConfig, version_json: &VersionJson) -> CoreResult<String> {

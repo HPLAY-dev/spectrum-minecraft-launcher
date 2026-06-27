@@ -26,9 +26,10 @@ class AppBridge(QObject):
     managerDataChanged = Signal()
     javaRuntimesChanged = Signal()
 
-    def __init__(self, backend: "MainWindow", parent=None):
+    def __init__(self, backend: "MainWindow", web_bridge: "WebBridge | None" = None, parent=None):
         super().__init__(parent)
         self._backend = backend
+        self._web_bridge = web_bridge
         self._current_page = 0
         self._nav_to_backend = {0: 0, 1: 3, 2: 7, 3: 5}
         self._selected_instance = ""
@@ -113,6 +114,36 @@ class AppBridge(QObject):
     def selectInstance(self, name: str):
         self._selected_instance = name
         self._backend.launch_version = name or None
+        if name:
+            idx = self._backend.comboBox_6.findText(name)
+            if idx >= 0:
+                self._backend.comboBox_6.setCurrentIndex(idx)
+
+    @Slot(QObject, result=bool)
+    def registerModrinthWebChannel(self, web_view) -> bool:
+        """在 QML WebChannel 上注册 WebBridge（QML 负责注入 qt 传输层）。"""
+        if not self._web_bridge or web_view is None:
+            return False
+        try:
+            channel = web_view.property("webChannel")
+            if channel is None:
+                from PySide6.QtWebChannel import QWebChannel
+
+                channel = QWebChannel(web_view)
+                page = web_view.page()
+                if page is None:
+                    return False
+                page.setWebChannel(channel)
+
+            channel.registerObject("web", self._web_bridge)
+            self._web_bridge.setParent(channel)
+            if not hasattr(self, "_modrinth_channels"):
+                self._modrinth_channels = {}
+            self._modrinth_channels[id(web_view)] = channel
+            return True
+        except Exception as exc:
+            self.toast.emit(f"Modrinth WebChannel 注册失败: {exc}", "error")
+            return False
 
     @Slot(int)
     def selectAccount(self, index: int):
@@ -497,7 +528,7 @@ class AppBridge(QObject):
         from pathlib import Path
 
         web = Path(__file__).resolve().parent.parent / "web" / "index.html"
-        return QUrl.fromLocalFile(str(web)).toString()
+        return QUrl.fromLocalFile(str(web)).toString() + "?v=3"
 
     @Slot(result=str)
     def getLaunchStatus(self) -> str:
@@ -506,6 +537,7 @@ class AppBridge(QObject):
         min_java = 8
         mc_version = ""
         java8_only = False
+        modloader = "vanilla"
         try:
             mc = self._backend.get_minecraft_dir()
             if inst and mc:
@@ -515,8 +547,9 @@ class AppBridge(QObject):
                 mod_count = len(list(manager.get_mods(mc, inst)))
                 ctx = java_policy.build_instance_context(mc, inst)
                 mc_version = ctx.mc_version
-                min_java = 8 if ctx.java8_only else java_policy.get_min_java(mc_version)
+                min_java = ctx.min_java
                 java8_only = ctx.java8_only
+                modloader = ctx.modloader
         except Exception:
             pass
         return json.dumps(
@@ -528,6 +561,7 @@ class AppBridge(QObject):
                 "mcVersion": mc_version,
                 "minJava": min_java,
                 "java8Only": java8_only,
+                "modloader": modloader,
             },
             ensure_ascii=False,
         )
@@ -552,11 +586,20 @@ class WebBridge(QObject):
     def __init__(self, backend: "MainWindow", parent=None):
         super().__init__(parent)
         self._backend = backend
+        self._target_instance = ""
+        self._target_loader = "fabric"
+
+    def _target_instance_name(self) -> str:
+        if self._target_instance:
+            return self._target_instance
+        if self._backend.launch_version:
+            return self._backend.launch_version
+        return self._backend.comboBox_6.currentText() or ""
 
     def _target_mc_version(self) -> str | None:
         try:
             mc_dir = self._backend.get_minecraft_dir().replace("\\", "/").rstrip("/")
-            instance = self._backend.comboBox_6.currentText()
+            instance = self._target_instance_name()
             if not mc_dir or not instance:
                 return None
             import spectrum_core.launcher_funcs as launcher
@@ -565,14 +608,26 @@ class WebBridge(QObject):
         except Exception:
             return None
 
+    @Slot(result=str)
+    def getDefaultInstance(self) -> str:
+        return self._target_instance_name()
+
+    @Slot(str)
+    def setTargetLoader(self, loader: str):
+        self._target_loader = (loader or "fabric").strip().lower()
+        idx = self._backend.comboBox_3.findText(self._target_loader)
+        if idx >= 0:
+            self._backend.comboBox_3.setCurrentIndex(idx)
+
     @Slot(str, str, result=str)
     def searchModrinth(self, query: str, loader: str) -> str:
         from spectrum_core import modrinth_api
 
+        self.setTargetLoader(loader)
         try:
             hits = modrinth_api.search(
                 query,
-                loader=loader,
+                loader=self._target_loader,
                 game_version=self._target_mc_version(),
             )
             self._backend.mods = [h.get("project_id", h.get("slug", "")) for h in hits]
@@ -602,13 +657,15 @@ class WebBridge(QObject):
                 return False
 
             project_id = mods[index]
-            loader = self._backend.comboBox_3.currentText()
+            loader = self._target_loader or self._backend.comboBox_3.currentText()
             game_version = self._target_mc_version()
             if not game_version:
                 return False
 
             mc_dir = self._backend.get_minecraft_dir().replace("\\", "/").rstrip("/")
-            instance = self._backend.comboBox_6.currentText()
+            instance = self._target_instance_name()
+            if not instance:
+                return False
             mods_dir = f"{mc_dir}/versions/{instance}/mods"
 
             from spectrum_core import modrinth_api
@@ -623,7 +680,7 @@ class WebBridge(QObject):
         except Exception:
             return False
 
-    @Slot(result=list)
+    @Slot(result="QVariantList")
     def getInstances(self) -> list:
         try:
             from spectrum_core import manager
@@ -634,6 +691,7 @@ class WebBridge(QObject):
 
     @Slot(str)
     def setTargetInstance(self, name: str):
-        idx = self._backend.comboBox_6.findText(name)
+        self._target_instance = (name or "").strip()
+        idx = self._backend.comboBox_6.findText(self._target_instance)
         if idx >= 0:
             self._backend.comboBox_6.setCurrentIndex(idx)

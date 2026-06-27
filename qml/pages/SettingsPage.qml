@@ -114,6 +114,7 @@ SpectrumCard {
                     height: 40
                     radius: SpectrumTheme.radiusSm
                     color: SpectrumTheme.surfaceHover
+                    required property var modelData
                     Row {
                         anchors.fill: parent
                         anchors.margins: 8
@@ -121,7 +122,7 @@ SpectrumCard {
                         Text {
                             width: parent.width - 72
                             anchors.verticalCenter: parent.verticalCenter
-                            text: model.label || model.path
+                            text: modelData.label || modelData.path || ""
                             font.pixelSize: 12
                             color: SpectrumTheme.text
                             clip: true
@@ -131,7 +132,7 @@ SpectrumCard {
                             filled: false
                             anchors.verticalCenter: parent.verticalCenter
                             onClicked: {
-                                App.removeJava(model.path)
+                                App.removeJava(modelData.path)
                                 root.reloadJavaList()
                             }
                         }

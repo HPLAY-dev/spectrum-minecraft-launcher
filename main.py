@@ -664,6 +664,8 @@ class MainWindow(QMainWindow, Ui_MainWindow):
             return 1
         instance_name = self.launch_version
 
+        ctx = java_policy.build_instance_context(minecraft_dir, instance_name)
+
         if instance_name in self.versions_config and self.versions_config[instance_name]['if_override_java']:
             javaw = self.versions_config[instance_name]['override_java_path']
         else:
@@ -676,8 +678,7 @@ class MainWindow(QMainWindow, Ui_MainWindow):
                 QMessageBox.critical(None, l18n.string("appName"), err)
                 return 1
             if not javaw:
-                mc_version = launcher.get_minecraft_version(minecraft_dir, instance_name)
-                min_java = java_policy.get_min_java(mc_version)
+                min_java = ctx.min_java
                 QMessageBox.critical(
                     None,
                     l18n.string("appName"),
@@ -685,6 +686,24 @@ class MainWindow(QMainWindow, Ui_MainWindow):
                     .replace("${version}", str(min_java))
                     .replace("${hint_url}", java.get_url(min_java, "jre", tuna=True)),
                 )
+                return 1
+
+        java_info = java_policy.inspect_java(javaw)
+        if not java_info:
+            QMessageBox.critical(None, l18n.string("appName"), f"无法识别 Java：{javaw}")
+            return 1
+        java_val = java_policy.validate_java(ctx, java_info)
+        if java_val.blocked:
+            QMessageBox.critical(None, l18n.string("appName"), java_val.block_reason)
+            return 1
+        if java_val.warning and not self.ignore_java_warnings:
+            reply = QMessageBox.warning(
+                None,
+                l18n.string("appName"),
+                java_val.warning + "\n\n是否仍要启动？",
+                QMessageBox.Yes | QMessageBox.No,
+            )
+            if reply != QMessageBox.Yes:
                 return 1
         xmx = self.comboBox_4.currentText()
 
@@ -697,10 +716,29 @@ class MainWindow(QMainWindow, Ui_MainWindow):
         #     QMessageBox.warning(None, l18n.string("appName"), '玩家名称含有其他语言字符，可能出现问题。')
 
         if launcher.native() == 'windows':
-            javawrapper = app_path + '/JavaWrapper.jar'
-            if not os.path.exists(javawrapper):
-                QMessageBox.critical(None, l18n.string("appName"), l18n.string("javaWrapperInvalid"))
-                return 1
+            main_class = ""
+            try:
+                json_path = os.path.join(
+                    minecraft_dir, "versions", instance_name, f"{instance_name}.json"
+                )
+                if os.path.isfile(json_path):
+                    with open(json_path, encoding="utf-8") as f:
+                        main_class = json.load(f).get("mainClass", "").lower()
+            except Exception:
+                pass
+            mod_main_classes = (
+                "bootstraplauncher",
+                "knotclient",
+                "modlauncher",
+                "launchwrapper",
+            )
+            if any(m in main_class for m in mod_main_classes):
+                javawrapper = None
+            else:
+                javawrapper = app_path + '/JavaWrapper.jar'
+                if not os.path.exists(javawrapper):
+                    QMessageBox.critical(None, l18n.string("appName"), l18n.string("javaWrapperInvalid"))
+                    return 1
         else:
             javawrapper = None
 
@@ -729,7 +767,13 @@ class MainWindow(QMainWindow, Ui_MainWindow):
         if USE_OS_SYSTEM_TO_EXECUTE:
             os.system(cmd)
         else:
-            # 创建QProcess对象
+            if getattr(self, "minecraft_process", None) is not None:
+                try:
+                    if self.minecraft_process.state() != QProcess.NotRunning:
+                        self.minecraft_process.kill()
+                        self.minecraft_process.waitForFinished(3000)
+                except Exception:
+                    pass
             self.minecraft_process = QProcess()
             self.minecraft_process.readyReadStandardOutput.connect(self.handle_minecraft_output)
             self.minecraft_process.readyReadStandardError.connect(self.handle_minecraft_error)
@@ -1298,9 +1342,7 @@ class MainWindow(QMainWindow, Ui_MainWindow):
         if picked and not (validation and validation.blocked):
             if ctx.java8_only:
                 return picked.path if picked.major == 8 else None
-            policy_min = java_policy.get_min_java(mc_version)
-            min_java = max(policy_min, json_min_java or 0)
-            if picked.major >= min_java:
+            if picked.major >= ctx.min_java:
                 return picked.path
         for rt, val in java_policy.rank_javas(ctx, runtimes):
             if not val.blocked:
@@ -1314,12 +1356,7 @@ class MainWindow(QMainWindow, Ui_MainWindow):
         ignore_warnings: bool = False,
     ):
         ctx = java_policy.build_instance_context(minecraft_dir, instance_name)
-        try:
-            json_min = launcher.get_required_java_version(minecraft_dir, instance_name)
-        except Exception:
-            json_min = None
-        policy_min = java_policy.get_min_java(ctx.mc_version)
-        effective_min = 8 if ctx.java8_only else max(policy_min, json_min or 0)
+        effective_min = ctx.min_java
 
         preferred = self._launch_java_path or self.comboBox_7.currentData()
         runtimes = self.collect_java_runtimes()
@@ -1529,9 +1566,10 @@ def run_qml_ui() -> int:
     backend = MainWindow()
     backend.hide()
 
-    bridge = AppBridge(backend)
     web_bridge = WebBridge(backend)
     web_bridge.setObjectName("web")
+
+    bridge = AppBridge(backend, web_bridge)
 
     engine = QQmlApplicationEngine()
 

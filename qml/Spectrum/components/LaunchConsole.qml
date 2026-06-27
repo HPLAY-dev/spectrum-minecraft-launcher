@@ -4,13 +4,15 @@ import Spectrum
 
 Item {
     id: root
-    width: 360
-    implicitHeight: column.implicitHeight + 28
+    width: expanded ? 360 : 132
+    implicitHeight: expanded ? (column.implicitHeight + 40) : 36
 
-    // Text 组件内部不能写 Text.ElideRight（会解析为自身而非类型枚举）
     readonly property int elideRight: 3
     property int progress: 0
     property int maxLogLines: 8
+    property bool expanded: false
+
+    Behavior on width { NumberAnimation { duration: 200; easing.type: Easing.OutCubic } }
 
     function appendLog(line) {
         if (!line)
@@ -18,7 +20,8 @@ Item {
         if (logModel.count >= maxLogLines)
             logModel.remove(0)
         logModel.append({ "line": line })
-        logView.positionViewAtEnd()
+        if (expanded)
+            logView.positionViewAtEnd()
     }
 
     ListModel { id: logModel }
@@ -30,13 +33,42 @@ Item {
         borderColor: SpectrumTheme.border
     }
 
+    MouseArea {
+        anchors.fill: parent
+        onClicked: expanded = !expanded
+        cursorShape: Qt.PointingHandCursor
+    }
+
+    Text {
+        id: headerTitle
+        anchors.left: parent.left
+        anchors.top: parent.top
+        anchors.margins: 10
+        text: expanded ? "运行日志" : "日志"
+        font.pixelSize: 12
+        font.family: SpectrumTheme.fontCnBody
+        color: SpectrumTheme.textMuted
+    }
+
+    Text {
+        anchors.right: parent.right
+        anchors.top: parent.top
+        anchors.margins: 10
+        text: progress > 0 && !expanded ? (progress + "%  ▸") : (expanded ? "▾" : "▸")
+        font.pixelSize: 11
+        font.family: SpectrumTheme.fontEnBody
+        color: progress > 0 && !expanded ? SpectrumTheme.sageLight : SpectrumTheme.textMuted
+    }
+
     Column {
         id: column
         anchors.left: parent.left
         anchors.right: parent.right
-        anchors.top: parent.top
-        anchors.margins: 14
+        anchors.top: headerTitle.bottom
+        anchors.margins: 4
+        anchors.topMargin: 8
         spacing: 10
+        visible: expanded
 
         ListView {
             id: logView

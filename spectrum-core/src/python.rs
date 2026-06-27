@@ -287,7 +287,17 @@ fn build_launch_script(
     let json_path = instance_dir.join(format!("{instance_name}.json"));
 
     let client = http().clone();
+    let instance_name_owned = instance_name.to_string();
+    let minecraft_dir_owned = minecraft_dir.clone();
     let vj = run_async(py, async move {
+        let mut eng = DownloadEngine::new(client.clone());
+        let mc_dir = PathBuf::from(&minecraft_dir_owned);
+        let _ = eng
+            .repair_modloader_json_if_needed(&mc_dir, &instance_name_owned)
+            .await;
+        eng.ensure_instance_libraries(&mc_dir, &instance_name_owned)
+            .await?;
+
         let mut mgr = VersionJsonManager::new(client.clone());
         let mut manifest = crate::manifest::ManifestManager::new(client);
         mgr.resolve_instance_json(&json_path, &mut manifest).await
