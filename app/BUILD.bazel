@@ -1,9 +1,0 @@
-package(default_visibility = ["//visibility:public"])
-
-filegroup(
-    name = "app_src",
-    srcs = glob(
-        ["**/*.py"],
-        exclude = ["**/__pycache__/**"],
-    ),
-)
