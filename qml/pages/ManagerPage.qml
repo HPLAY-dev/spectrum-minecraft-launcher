@@ -6,8 +6,7 @@ import Spectrum
 SpectrumCard {
     id: root
     readonly property int elideRight: 3
-    Layout.fillWidth: true
-    Layout.fillHeight: true
+    anchors.fill: parent
 
     property string selectedInstance: ""
     property var detail: ({ saves: [], mods: [], resourcepacks: [], shaderpacks: [] })
@@ -39,7 +38,20 @@ SpectrumCard {
         return "shader"
     }
 
-    Column {
+    function reloadInstances() {
+        instModel.clear()
+        var items = App.getInstances()
+        for (var i = 0; i < items.length; ++i) {
+            var item = items[i]
+            var name = item.name || item
+            var label = item.label || name
+            instModel.append({ "name": name, "label": label })
+        }
+    }
+
+    ListModel { id: instModel }
+
+    ColumnLayout {
         anchors.fill: parent
         spacing: 12
 
@@ -50,56 +62,82 @@ SpectrumCard {
             font.weight: SpectrumTheme.weightCnTitle
         }
 
-        Row {
+        RowLayout {
+            Layout.fillWidth: true
+            Layout.fillHeight: true
             spacing: 16
-            width: parent.width
-            height: parent.height - 48
 
-            Column {
-                width: parent.width * 0.32
+            ColumnLayout {
+                Layout.preferredWidth: Math.round(root.width * 0.30)
+                Layout.fillHeight: true
                 spacing: 8
 
                 Text { text: "已安装实例"; color: SpectrumTheme.textMuted; font.pixelSize: 13 }
 
                 ListView {
                     id: instList
-                    width: parent.width
-                    height: 320
+                    Layout.fillWidth: true
+                    Layout.fillHeight: true
                     clip: true
                     spacing: 4
-                    model: App.getInstances()
+                    model: instModel
                     currentIndex: -1
                     delegate: Rectangle {
                         width: instList.width
-                        height: 40
+                        height: 48
                         radius: SpectrumTheme.radiusSm
                         color: instList.currentIndex === index ? SpectrumTheme.primary : SpectrumTheme.surfaceHover
-                        Text {
-                            anchors.centerIn: parent
-                            text: modelData
-                            color: instList.currentIndex === index ? SpectrumTheme.onPrimary : SpectrumTheme.text
-                            font.pixelSize: 13
+                        scale: instList.currentIndex === index ? 1 : (mouseArea.containsMouse ? 1.01 : 1)
+                        Behavior on color {
+                            ColorAnimation { duration: SpectrumMotion.normal; easing.type: SpectrumMotion.easeOut }
+                        }
+                        Behavior on scale {
+                            NumberAnimation { duration: SpectrumMotion.fast; easing.type: SpectrumMotion.easeOut }
+                        }
+                        Column {
+                            anchors.verticalCenter: parent.verticalCenter
+                            anchors.left: parent.left
+                            anchors.leftMargin: 10
+                            spacing: 2
+                            Text {
+                                text: model.name
+                                color: instList.currentIndex === index ? SpectrumTheme.onPrimary : SpectrumTheme.text
+                                font.pixelSize: 13
+                                font.weight: Font.Medium
+                            }
+                            Text {
+                                visible: model.label && model.label !== model.name
+                                text: model.label || ""
+                                color: instList.currentIndex === index ? SpectrumTheme.onPrimary : SpectrumTheme.textMuted
+                                font.pixelSize: 11
+                                opacity: 0.85
+                            }
                         }
                         MouseArea {
+                            id: mouseArea
                             anchors.fill: parent
+                            hoverEnabled: true
                             onClicked: {
                                 instList.currentIndex = index
-                                root.selectedInstance = modelData
+                                root.selectedInstance = model.name
                                 root.reloadDetail()
                             }
                         }
                     }
-                    Component.onCompleted: App.refreshInstances()
+                    Component.onCompleted: {
+                        root.reloadInstances()
+                        App.refreshInstances()
+                    }
                 }
 
-                Row {
+                RowLayout {
+                    Layout.fillWidth: true
                     spacing: 6
-                    width: parent.width
                     PrimaryButton {
                         text: "刷新"
                         filled: false
                         onClicked: {
-                            instList.model = App.getInstances()
+                            App.refreshInstances()
                             if (root.selectedInstance)
                                 root.reloadDetail()
                         }
@@ -113,16 +151,17 @@ SpectrumCard {
                 }
             }
 
-            Column {
-                width: parent.width * 0.64
+            ColumnLayout {
+                Layout.fillWidth: true
+                Layout.fillHeight: true
                 spacing: 10
 
-                Row {
+                RowLayout {
+                    Layout.fillWidth: true
                     spacing: 8
-                    width: parent.width
                     TextField {
                         id: renameField
-                        width: parent.width - 280
+                        Layout.fillWidth: true
                         placeholderText: "新实例名称"
                         enabled: root.selectedInstance !== ""
                     }
@@ -132,7 +171,6 @@ SpectrumCard {
                         enabled: root.selectedInstance !== "" && renameField.text.length > 0
                         onClicked: {
                             App.renameInstance(root.selectedInstance, renameField.text)
-                            instList.model = App.getInstances()
                             root.selectedInstance = renameField.text
                             renameField.text = ""
                             root.reloadDetail()
@@ -145,7 +183,6 @@ SpectrumCard {
                         onClicked: {
                             var name = root.selectedInstance
                             App.deleteInstance(name)
-                            instList.model = App.getInstances()
                             root.selectedInstance = ""
                             root.reloadDetail()
                         }
@@ -154,7 +191,7 @@ SpectrumCard {
 
                 TabBar {
                     id: tabs
-                    width: parent.width
+                    Layout.fillWidth: true
                     currentIndex: root.contentTab
                     onCurrentIndexChanged: root.contentTab = currentIndex
                     TabButton { text: "存档" }
@@ -165,8 +202,8 @@ SpectrumCard {
 
                 ListView {
                     id: contentList
-                    width: parent.width
-                    height: 260
+                    Layout.fillWidth: true
+                    Layout.fillHeight: true
                     clip: true
                     spacing: 2
                     model: root.currentItems()
@@ -175,13 +212,16 @@ SpectrumCard {
                         height: 36
                         radius: 4
                         color: contentList.currentIndex === index ? SpectrumTheme.primary : "transparent"
+                        Behavior on color {
+                            ColorAnimation { duration: SpectrumMotion.normal; easing.type: SpectrumMotion.easeOut }
+                        }
                         Row {
                             anchors.fill: parent
                             anchors.margins: 8
                             spacing: 8
                             Text {
-                            text: modelData
-                            color: contentList.currentIndex === index ? SpectrumTheme.onPrimary : SpectrumTheme.text
+                                text: modelData
+                                color: contentList.currentIndex === index ? SpectrumTheme.onPrimary : SpectrumTheme.text
                                 font.pixelSize: 13
                                 anchors.verticalCenter: parent.verticalCenter
                                 width: parent.width - 80
@@ -213,6 +253,6 @@ SpectrumCard {
     Connections {
         target: App
         function onManagerDataChanged() { root.reloadDetail() }
-        function onInstancesChanged() { instList.model = App.getInstances() }
+        function onInstancesChanged() { root.reloadInstances() }
     }
 }

@@ -1,8 +1,8 @@
 [package]
 name = "spectrum-core"
-version = "0.1.0"
+version = "26.2.0"
 edition = "2021"
-description = "Spectrum Launcher — Rust async core library"
+description = "SerenaLauncher (Okra) — Rust async core library"
 
 [lib]
 name = "spectrum_core"

@@ -1,5 +1,6 @@
 import QtQuick
 import QtQuick.Shapes
+import Spectrum
 
 Item {
     id: root
@@ -7,6 +8,20 @@ Item {
     property color borderColor: "#CBCBCB"
     property real borderWidth: 1
     property real cut: 6
+
+    Behavior on fillColor {
+        ColorAnimation {
+            duration: SpectrumMotion.normal
+            easing.type: SpectrumMotion.easeOut
+        }
+    }
+
+    Behavior on borderColor {
+        ColorAnimation {
+            duration: SpectrumMotion.normal
+            easing.type: SpectrumMotion.easeOut
+        }
+    }
 
     Shape {
         anchors.fill: parent

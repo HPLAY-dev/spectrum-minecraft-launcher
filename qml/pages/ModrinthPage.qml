@@ -3,8 +3,7 @@ import QtQuick.Layouts
 import Spectrum
 
 Item {
-    Layout.fillWidth: true
-    Layout.fillHeight: true
+    anchors.fill: parent
 
     Loader {
         anchors.fill: parent
@@ -32,5 +31,5 @@ Item {
         }
     }
 
-    property bool webAvailable: hasWebEngine
+    property bool webAvailable: App.webEngineReady
 }

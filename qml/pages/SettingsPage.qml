@@ -5,8 +5,7 @@ import Spectrum
 
 SpectrumCard {
     id: root
-    Layout.fillWidth: true
-    Layout.fillHeight: true
+    anchors.fill: parent
 
     function reloadJavaList() {
         javaCombo.model = App.getJavaRuntimes()

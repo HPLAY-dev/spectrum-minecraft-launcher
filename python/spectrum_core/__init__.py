@@ -1,4 +1,4 @@
-"""Spectrum Launcher — Rust/Python 混合核心桥接层。
+"""SerenaLauncher — Rust/Python 混合核心桥接层。
 
 环境变量:
   SPECTRUM_USE_RUST=1   启用 Rust 核心（默认）
@@ -9,6 +9,8 @@ from __future__ import annotations
 
 import os
 import sys
+
+__version__ = "26.2.0"
 
 USE_RUST = os.environ.get("SPECTRUM_USE_RUST", "1").lower() not in ("0", "false", "no")
 

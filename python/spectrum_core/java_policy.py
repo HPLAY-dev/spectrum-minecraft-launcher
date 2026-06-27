@@ -42,6 +42,13 @@ def normalize_mc_version(raw: str) -> str:
         return raw
     v = raw.strip()
     v = re.split(r"[-+]", v, maxsplit=1)[0]
+    lower = v.lower()
+    for suffix in ("neoforge", "fabric", "forge", "optifine", "nf"):
+        if lower.endswith(suffix) and len(v) > len(suffix):
+            base = v[: -len(suffix)]
+            if base and base[-1].isdigit():
+                v = base
+                break
     m = re.match(
         r"^(\d+w\d+[a-z]?|\d+\.\d+(?:\.\d+)?|\d{2,}(?:\.\d+)*)",
         v.lower(),

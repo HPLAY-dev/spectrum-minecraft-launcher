@@ -10,7 +10,7 @@
 use crate::http_client::HttpClient;
 use crate::manifest::{AssetIndexManager, ManifestManager, VersionJsonManager};
 use crate::modloader;
-use crate::natives::{extract_natives_archive, flatten_natives_dir, natives_dir, pick_native_artifact};
+use crate::natives::{extract_natives_archive, flatten_natives_dir, natives_dir, pick_native_artifact, native_library_matches_platform, is_standalone_native_library};
 use crate::types::*;
 
 use std::path::Path;
@@ -242,7 +242,9 @@ impl DownloadEngine {
             .is_some_and(|_| !jar_path.exists());
 
         if missing == 0 && !client_missing {
-            return Ok(());
+            return self
+                .ensure_instance_natives(minecraft_dir, instance_name)
+                .await;
         }
 
         log::info!(
@@ -262,7 +264,70 @@ impl DownloadEngine {
             &merged,
             &tx,
         )
-        .await
+        .await?;
+        self.ensure_instance_natives(minecraft_dir, instance_name)
+            .await
+    }
+
+    /// 将已下载的 natives jar 解压到实例 natives 目录（MC 1.21+ 独立 natives 库条目）
+    pub async fn ensure_instance_natives(
+        &mut self,
+        minecraft_dir: &Path,
+        instance_name: &str,
+    ) -> CoreResult<()> {
+        let instance_dir = minecraft_dir.join("versions").join(instance_name);
+        let json_path = instance_dir.join(format!("{instance_name}.json"));
+        if !json_path.exists() {
+            return Ok(());
+        }
+
+        let merged = self
+            .version_json_mgr
+            .resolve_instance_json(&json_path, &mut self.manifest_mgr)
+            .await?;
+
+        let lib_dir = minecraft_dir.join("libraries");
+        let natives_path = natives_dir(&instance_dir, instance_name);
+        tokio::fs::create_dir_all(&natives_path).await?;
+
+        for lib in &merged.libraries {
+            if !Self::is_library_compatible(lib) {
+                continue;
+            }
+
+            let exclude = lib
+                .extract
+                .as_ref()
+                .map(|e| e.exclude.clone())
+                .unwrap_or_default();
+
+            if let Some(ref downloads) = lib.downloads {
+                if is_standalone_native_library(&lib.name) {
+                    if let Some(ref artifact) = downloads.artifact {
+                        let native_jar = lib_dir.join(&artifact.path);
+                        if native_jar.exists() {
+                            extract_natives_archive(&native_jar, &natives_path, &exclude).await?;
+                        }
+                    }
+                    continue;
+                }
+
+                if let Some(ref classifiers) = downloads.classifiers {
+                    if lib.natives.is_some() {
+                        if let Some(native_artifact) = pick_native_artifact(classifiers) {
+                            let native_jar = lib_dir.join(&native_artifact.path);
+                            if native_jar.exists() {
+                                extract_natives_archive(&native_jar, &natives_path, &exclude)
+                                    .await?;
+                            }
+                        }
+                    }
+                }
+            }
+        }
+
+        flatten_natives_dir(&natives_path).await?;
+        Ok(())
     }
 
     fn count_missing_libraries(version_json: &VersionJson, lib_dir: &Path) -> usize {
@@ -306,7 +371,8 @@ impl DownloadEngine {
             return Ok(false);
         };
 
-        let mc_version = modloader::instance_json::guess_mc_version(instance_name, &raw);
+        let mc_version =
+            modloader::instance_json::guess_mc_version_in_dir(instance_name, &raw, Some(&instance_dir));
         log::info!(
             "检测到 {instance_name} 缺少 ModLoader 配置，正在安装 {:?}…",
             loader
@@ -323,6 +389,62 @@ impl DownloadEngine {
         tokio::spawn(async move {
             while rx.recv().await.is_some() {}
         });
+
+        self.install_version_json(minecraft_dir, &instance_dir, &opts, &tx)
+            .await?;
+
+        let merged = self
+            .version_json_mgr
+            .resolve_instance_json(&json_path, &mut self.manifest_mgr)
+            .await?;
+        self.sync_instance_artifacts(
+            minecraft_dir,
+            &instance_dir,
+            instance_name,
+            &merged,
+            &tx,
+        )
+        .await?;
+
+        Ok(true)
+    }
+
+    /// 修复已写入但元数据/NeoForge 处理产物不完整的 ModLoader JSON
+    pub async fn repair_incomplete_modloader_json(
+        &mut self,
+        minecraft_dir: &Path,
+        instance_name: &str,
+    ) -> CoreResult<bool> {
+        let instance_dir = minecraft_dir.join("versions").join(instance_name);
+        let json_path = instance_dir.join(format!("{instance_name}.json"));
+        if !json_path.exists() {
+            return Ok(false);
+        }
+
+        let content = tokio::fs::read_to_string(&json_path).await?;
+        let raw: VersionJson = serde_json::from_str(&content)?;
+        if !modloader::instance_json::neoforge_install_incomplete(minecraft_dir, &raw) {
+            return Ok(false);
+        }
+
+        let mc_version =
+            modloader::instance_json::guess_mc_version_in_dir(instance_name, &raw, Some(&instance_dir));
+        let loader = modloader::instance_json::detect_modloader_in_json(&raw);
+        log::info!(
+            "实例 {instance_name} 的 ModLoader 安装不完整，正在重新处理…"
+        );
+
+        let (tx, mut rx) = mpsc::channel::<DownloadEvent>(32);
+        tokio::spawn(async move {
+            while rx.recv().await.is_some() {}
+        });
+
+        let opts = AutoDownloadOptions {
+            mc_version: mc_version.clone(),
+            instance_name: instance_name.to_string(),
+            modloader: loader,
+            modloader_version: modloader::instance_json::neoforge_version_from_json(&raw),
+        };
 
         self.install_version_json(minecraft_dir, &instance_dir, &opts, &tx)
             .await?;
@@ -529,25 +651,32 @@ impl DownloadEngine {
         let is_native_lib = lib.natives.is_some()
             || lib.name.contains("natives-")
             || lib.name.contains(":natives:");
+        let is_standalone_native = is_standalone_native_library(&lib.name);
+
+        let exclude = lib
+            .extract
+            .as_ref()
+            .map(|e| e.exclude.clone())
+            .unwrap_or_default();
 
         // 1. 下载主 artifact
         if let Some(ref downloads) = lib.downloads {
             if let Some(ref artifact) = downloads.artifact {
                 Self::download_artifact(client, lib_dir, artifact).await?;
+
+                // MC 1.21+：natives 为独立库条目，artifact 即 natives jar
+                if is_standalone_native {
+                    let native_jar = lib_dir.join(&artifact.path);
+                    extract_natives_archive(&native_jar, natives_path, &exclude).await?;
+                }
             }
 
-            // 2. 下载并解压 natives classifier
+            // 2. 旧版：从 classifiers 下载并解压 natives
             if let Some(ref classifiers) = downloads.classifiers {
-                if lib.natives.is_some() || is_native_lib {
+                if lib.natives.is_some() || (is_native_lib && !is_standalone_native) {
                     if let Some(native_artifact) = pick_native_artifact(classifiers) {
                         let native_jar = lib_dir.join(&native_artifact.path);
                         Self::download_artifact(client, lib_dir, native_artifact).await?;
-
-                        let exclude = lib
-                            .extract
-                            .as_ref()
-                            .map(|e| e.exclude.clone())
-                            .unwrap_or_default();
                         extract_natives_archive(&native_jar, natives_path, &exclude).await?;
                     }
                 }
@@ -630,6 +759,10 @@ impl DownloadEngine {
             if !natives.contains_key(os_key) && !natives.contains_key(os_name) {
                 return false;
             }
+        }
+
+        if is_standalone_native_library(&lib.name) && !native_library_matches_platform(&lib.name) {
+            return false;
         }
 
         true

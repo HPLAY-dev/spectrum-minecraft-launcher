@@ -4,10 +4,10 @@ import QtQuick.Layouts
 import Spectrum
 
 SpectrumCard {
-    Layout.fillWidth: true
-    Layout.fillHeight: true
+    id: root
+    anchors.fill: parent
 
-    Column {
+    ColumnLayout {
         anchors.fill: parent
         spacing: 12
 
@@ -18,23 +18,28 @@ SpectrumCard {
             font.weight: SpectrumTheme.weightCnTitle
         }
 
-        Row {
+        RowLayout {
+            Layout.fillWidth: true
+            Layout.fillHeight: true
             spacing: 16
-            width: parent.width
-            height: parent.height - 80
 
-            Column {
-                width: parent.width * 0.45
+            ColumnLayout {
+                Layout.preferredWidth: Math.round(root.width * 0.42)
+                Layout.fillHeight: true
                 spacing: 6
+
                 Text { text: "版本列表"; color: SpectrumTheme.textMuted; font.pixelSize: 13 }
 
-                ListView {
-                    id: versionList
-                    width: parent.width
-                    height: 300
-                    clip: true
-                    spacing: 2
-                    model: App.getVersionList()
+                Item {
+                    Layout.fillWidth: true
+                    Layout.fillHeight: true
+
+                    ListView {
+                        id: versionList
+                        anchors.fill: parent
+                        clip: true
+                        spacing: 2
+                        model: App.getVersionList()
                     highlight: Rectangle {
                         radius: 4
                         color: SpectrumTheme.primary
@@ -61,6 +66,7 @@ SpectrumCard {
                             onClicked: versionList.currentIndex = index
                         }
                     }
+                    }
                 }
 
                 Row {
@@ -75,14 +81,15 @@ SpectrumCard {
                 }
             }
 
-            Column {
-                width: parent.width * 0.5
+            ColumnLayout {
+                Layout.fillWidth: true
+                Layout.fillHeight: true
                 spacing: 10
 
                 Text { text: "实例名称"; color: SpectrumTheme.textMuted; font.pixelSize: 13 }
                 TextField {
                     id: instanceField
-                    width: parent.width
+                    Layout.fillWidth: true
                     placeholderText: "my-instance"
                     onTextChanged: App.setInstanceName(text)
                 }
@@ -90,18 +97,18 @@ SpectrumCard {
                 Text { text: "Mod 加载器"; color: SpectrumTheme.textMuted; font.pixelSize: 13 }
                 ComboBox {
                     id: loaderCombo
-                    width: parent.width
+                    Layout.fillWidth: true
                     model: ["无", "fabric", "forge", "neoforge"]
                     onActivated: App.setModloader(model[currentIndex])
                 }
 
                 Text { text: "下载进度"; color: SpectrumTheme.textMuted; font.pixelSize: 13; topPadding: 8 }
-                ProgressBar { id: progMain; width: parent.width; from: 0; to: 100; value: 0 }
-                ProgressBar { id: progAst; width: parent.width; from: 0; to: 100; value: 0 }
+                ProgressBar { id: progMain; Layout.fillWidth: true; from: 0; to: 100; value: 0 }
+                ProgressBar { id: progAst; Layout.fillWidth: true; from: 0; to: 100; value: 0 }
 
                 PrimaryButton {
                     text: "开始下载"
-                    width: parent.width
+                    Layout.fillWidth: true
                     enabled: versionList.currentIndex >= 0
                     onClicked: {
                         if (versionList.currentIndex < 0) {
@@ -111,6 +118,8 @@ SpectrumCard {
                         App.download()
                     }
                 }
+
+                Item { Layout.fillHeight: true }
             }
         }
     }
@@ -141,7 +150,7 @@ SpectrumCard {
     }
 
     Component.onCompleted: {
-        App.refreshVersionList()
-        versionList.model = App.getVersionList()
+        if (versionList.count === 0)
+            versionList.model = App.getVersionList()
     }
 }

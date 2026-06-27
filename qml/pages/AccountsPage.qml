@@ -4,10 +4,9 @@ import QtQuick.Layouts
 import Spectrum
 
 SpectrumCard {
-    Layout.fillWidth: true
-    Layout.fillHeight: true
+    anchors.fill: parent
 
-    Column {
+    ColumnLayout {
         anchors.fill: parent
         spacing: 16
 
@@ -20,13 +19,13 @@ SpectrumCard {
 
         PrimaryButton {
             text: "Microsoft 登录 (OAuth)"
-            width: 280
+            Layout.preferredWidth: 280
             onClicked: App.oauthLogin()
         }
 
         Rectangle {
-            width: parent.width
-            height: 1
+            Layout.fillWidth: true
+            Layout.preferredHeight: 1
             color: SpectrumTheme.border
         }
 
@@ -34,8 +33,9 @@ SpectrumCard {
 
         ListView {
             id: accList
-            width: parent.width
-            height: 220
+            Layout.fillWidth: true
+            Layout.fillHeight: true
+            Layout.minimumHeight: 120
             clip: true
             spacing: 4
             model: App.getAccounts()
@@ -74,12 +74,12 @@ SpectrumCard {
             }
         }
 
-        Row {
+        RowLayout {
+            Layout.fillWidth: true
             spacing: 8
-            width: parent.width
             TextField {
                 id: offlineName
-                width: parent.width - 120
+                Layout.fillWidth: true
                 placeholderText: "离线玩家名"
             }
             PrimaryButton {

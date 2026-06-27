@@ -19,6 +19,8 @@ if rust_available():
     remove_shaderpack = _r.remove_shaderpack
     rename_version = _r.rename_version
     list_instances = _r.list_instances
+    list_instance_summaries = _r.list_instance_summaries
+    get_instance_version_info = _r.get_instance_version_info
 
 else:
     from spectrum_core.py_fallback.manager import *  # noqa: F403

@@ -12,7 +12,18 @@ Item {
     property int maxLogLines: 8
     property bool expanded: false
 
-    Behavior on width { NumberAnimation { duration: 200; easing.type: Easing.OutCubic } }
+    Behavior on width {
+        NumberAnimation {
+            duration: SpectrumMotion.page
+            easing.type: SpectrumMotion.easeOut
+        }
+    }
+    Behavior on implicitHeight {
+        NumberAnimation {
+            duration: SpectrumMotion.page
+            easing.type: SpectrumMotion.easeOut
+        }
+    }
 
     function appendLog(line) {
         if (!line)
@@ -35,8 +46,9 @@ Item {
 
     MouseArea {
         anchors.fill: parent
-        onClicked: expanded = !expanded
+        hoverEnabled: true
         cursorShape: Qt.PointingHandCursor
+        onClicked: expanded = !expanded
     }
 
     Text {
@@ -58,6 +70,9 @@ Item {
         font.pixelSize: 11
         font.family: SpectrumTheme.fontEnBody
         color: progress > 0 && !expanded ? SpectrumTheme.sageLight : SpectrumTheme.textMuted
+        Behavior on color {
+            ColorAnimation { duration: SpectrumMotion.normal; easing.type: SpectrumMotion.easeOut }
+        }
     }
 
     Column {
@@ -68,7 +83,15 @@ Item {
         anchors.margins: 4
         anchors.topMargin: 8
         spacing: 10
+        opacity: expanded ? 1 : 0
         visible: expanded
+
+        Behavior on opacity {
+            NumberAnimation {
+                duration: SpectrumMotion.normal
+                easing.type: SpectrumMotion.easeOut
+            }
+        }
 
         ListView {
             id: logView
@@ -77,6 +100,10 @@ Item {
             clip: true
             model: logModel
             spacing: 2
+
+            add: Transition {
+                NumberAnimation { property: "opacity"; from: 0; to: 1; duration: SpectrumMotion.fast }
+            }
 
             delegate: Text {
                 width: logView.width
@@ -102,7 +129,12 @@ Item {
             Item {
                 width: Math.max(0, Math.min(parent.width, parent.width * root.progress / 100))
                 height: parent.height
-                Behavior on width { NumberAnimation { duration: 300; easing.type: Easing.OutCubic } }
+                Behavior on width {
+                    NumberAnimation {
+                        duration: SpectrumMotion.page
+                        easing.type: SpectrumMotion.easeOut
+                    }
+                }
 
                 CutCornerBox {
                     anchors.fill: parent

@@ -4,10 +4,10 @@ import QtQuick.Layouts
 import Spectrum
 
 SpectrumCard {
-    Layout.fillWidth: true
-    Layout.fillHeight: true
+    id: root
+    anchors.fill: parent
 
-    Column {
+    ColumnLayout {
         anchors.fill: parent
         spacing: 12
 
@@ -18,53 +18,68 @@ SpectrumCard {
             font.weight: SpectrumTheme.weightCnTitle
         }
 
-        Row {
+        RowLayout {
+            Layout.fillWidth: true
+            Layout.fillHeight: true
             spacing: 16
-            width: parent.width
 
-            ListView {
-                id: lmList
-                width: parent.width * 0.45
-                height: 280
-                clip: true
-                model: App.getLabymodVersions()
-                delegate: Rectangle {
-                    width: lmList.width
-                    height: 36
-                    color: lmList.currentIndex === index ? SpectrumTheme.primary : "transparent"
-                    radius: 4
-                    Text {
-                        anchors.centerIn: parent
-                        text: modelData
-                        color: lmList.currentIndex === index ? SpectrumTheme.onPrimary : SpectrumTheme.text
-                    }
-                    MouseArea {
-                        anchors.fill: parent
-                        onClicked: {
-                            lmList.currentIndex = index
-                            App.selectLabymodVersion(index)
+            Item {
+                Layout.preferredWidth: Math.round(root.width * 0.42)
+                Layout.fillHeight: true
+
+                ListView {
+                    id: lmList
+                    anchors.fill: parent
+                    clip: true
+                    model: App.getLabymodVersions()
+                    delegate: Rectangle {
+                        width: lmList.width
+                        height: 36
+                        color: lmList.currentIndex === index ? SpectrumTheme.primary : "transparent"
+                        radius: 4
+                        Text {
+                            anchors.centerIn: parent
+                            text: modelData
+                            color: lmList.currentIndex === index ? SpectrumTheme.onPrimary : SpectrumTheme.text
+                        }
+                        MouseArea {
+                            anchors.fill: parent
+                            onClicked: {
+                                lmList.currentIndex = index
+                                App.selectLabymodVersion(index)
+                            }
                         }
                     }
                 }
             }
 
-            Column {
+            ColumnLayout {
+                Layout.fillWidth: true
+                Layout.fillHeight: true
                 spacing: 10
-                width: parent.width * 0.45
 
                 Text { text: "实例名称"; color: SpectrumTheme.textMuted; font.pixelSize: 13 }
                 TextField {
-                    width: parent.width
+                    Layout.fillWidth: true
                     placeholderText: "labymod-instance"
                     onTextChanged: App.setLabymodInstanceName(text)
                 }
 
                 PrimaryButton {
                     text: "下载 LabyMod"
-                    width: parent.width
+                    Layout.fillWidth: true
                     onClicked: App.downloadLabymod()
                 }
+
+                Item { Layout.fillHeight: true }
             }
+        }
+    }
+
+    Connections {
+        target: App
+        function onLabymodVersionsChanged() {
+            lmList.model = App.getLabymodVersions()
         }
     }
 }

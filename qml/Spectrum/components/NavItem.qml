@@ -12,6 +12,33 @@ Item {
     implicitWidth: 180
     implicitHeight: 40
 
+    scale: mouseArea.pressed ? SpectrumMotion.pressScale
+        : (mouseArea.containsMouse ? SpectrumMotion.hoverScale : 1)
+
+    Behavior on scale {
+        NumberAnimation {
+            duration: SpectrumMotion.fast
+            easing.type: SpectrumMotion.easeOut
+        }
+    }
+
+    transformOrigin: Item.Left
+
+    Rectangle {
+        width: 3
+        height: parent.height * 0.55
+        anchors.left: parent.left
+        anchors.verticalCenter: parent.verticalCenter
+        color: SpectrumTheme.accent
+        opacity: root.active ? 1 : 0
+        Behavior on opacity {
+            NumberAnimation {
+                duration: SpectrumMotion.normal
+                easing.type: SpectrumMotion.easeOut
+            }
+        }
+    }
+
     CutCornerBox {
         anchors.fill: parent
         cut: SpectrumTheme.cutSm
@@ -29,6 +56,12 @@ Item {
         font.family: SpectrumTheme.fontCnBody
         font.weight: root.active ? SpectrumTheme.weightCnTitle : SpectrumTheme.weightCnBody
         color: root.active ? SpectrumTheme.onPrimary : SpectrumTheme.text
+        Behavior on color {
+            ColorAnimation {
+                duration: SpectrumMotion.normal
+                easing.type: SpectrumMotion.easeOut
+            }
+        }
     }
 
     MouseArea {

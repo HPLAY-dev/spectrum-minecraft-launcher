@@ -1,4 +1,4 @@
-//! # Spectrum Launcher Core
+//! # SerenaLauncher Core (Okra)
 //!
 //! Rust 异步核心库 — 负责所有多线程 / 网络 / 高性能任务。
 //! 提供 C FFI 供 C++ Qt6 GUI 调用。
@@ -14,6 +14,7 @@ pub mod manager;
 pub mod config;
 pub mod modloader;
 pub mod natives;
+pub mod client_jar;
 pub mod ffi;
 
 #[cfg(feature = "python")]

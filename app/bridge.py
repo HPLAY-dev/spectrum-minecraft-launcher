@@ -7,6 +7,8 @@ from typing import TYPE_CHECKING
 
 from PySide6.QtCore import Property, QObject, QUrl, Signal, Slot
 
+from app.branding import branding_dict
+
 if TYPE_CHECKING:
     from main import MainWindow
 
@@ -25,6 +27,8 @@ class AppBridge(QObject):
     currentPageChanged = Signal()
     managerDataChanged = Signal()
     javaRuntimesChanged = Signal()
+    startupLoadingChanged = Signal()
+    webEngineReadyChanged = Signal()
 
     def __init__(self, backend: "MainWindow", web_bridge: "WebBridge | None" = None, parent=None):
         super().__init__(parent)
@@ -36,6 +40,19 @@ class AppBridge(QObject):
         self._selected_download_version = ""
         self._download_pct_main = 0
         self._download_pct_assets = 0
+        self._instances_cache: list = []
+        self._instances_loading = False
+        self._startup_loading = False
+        self._loading_message = "正在加载…"
+        self._startup_pending = 0
+        self._webengine_inited = False
+        self._webengine_available = False
+        try:
+            from PySide6.QtWebEngineQuick import QtWebEngineQuick  # noqa: F401
+
+            self._webengine_available = True
+        except ImportError:
+            pass
 
         backend.download_progress.connect(self._on_download_progress)
         backend.download_finished.connect(self._on_download_finished)
@@ -43,6 +60,57 @@ class AppBridge(QObject):
         import main as main_module
 
         main_module.set_log_listener(self.consoleLog.emit)
+
+    @Property(bool, notify=startupLoadingChanged)
+    def startupLoading(self) -> bool:
+        return self._startup_loading
+
+    @Property(str, notify=startupLoadingChanged)
+    def loadingMessage(self) -> str:
+        return self._loading_message
+
+    def begin_startup_loading(self, message: str, tasks: int = 1) -> None:
+        self._loading_message = message
+        self._startup_pending += max(1, tasks)
+        if not self._startup_loading:
+            self._startup_loading = True
+            self.startupLoadingChanged.emit()
+
+    def finish_startup_loading(self) -> None:
+        self._startup_pending = max(0, self._startup_pending - 1)
+        if self._startup_pending == 0 and self._startup_loading:
+            self._startup_loading = False
+            self.startupLoadingChanged.emit()
+
+    def set_loading_message(self, message: str) -> None:
+        if self._loading_message != message:
+            self._loading_message = message
+            self.startupLoadingChanged.emit()
+
+    @Property(bool, notify=webEngineReadyChanged)
+    def webEngineReady(self) -> bool:
+        return self._webengine_inited
+
+    @Property(bool, constant=True)
+    def webEngineAvailable(self) -> bool:
+        return self._webengine_available
+
+    @Slot(result=bool)
+    def ensureWebEngine(self) -> bool:
+        if not self._webengine_available or self._webengine_inited:
+            return self._webengine_inited
+        self.begin_startup_loading("正在初始化模组浏览器…", tasks=1)
+        try:
+            from PySide6.QtWebEngineQuick import QtWebEngineQuick
+
+            QtWebEngineQuick.initialize()
+            self._webengine_inited = True
+            self.webEngineReadyChanged.emit()
+        except ImportError:
+            self._webengine_available = False
+        finally:
+            self.finish_startup_loading()
+        return self._webengine_inited
 
     @Property(int, notify=currentPageChanged)
     def currentPage(self):
@@ -64,6 +132,10 @@ class AppBridge(QObject):
         self._backend.mainTabWidget.setCurrentIndex(idx)
         self._backend.page_process(idx)
 
+    @Slot(result=str)
+    def getBranding(self) -> str:
+        return json.dumps(branding_dict(), ensure_ascii=False)
+
     @Slot(result=list)
     def getAccounts(self) -> list:
         items = []
@@ -74,6 +146,29 @@ class AppBridge(QObject):
 
     @Slot(result=list)
     def getInstances(self) -> list:
+        if self._instances_cache:
+            return list(self._instances_cache)
+        try:
+            mc = self._backend.get_minecraft_dir()
+            from spectrum_core import manager
+
+            if hasattr(manager, "list_instance_summaries"):
+                import json
+
+                items = [
+                    json.loads(s)
+                    for s in manager.list_instance_summaries(mc)
+                ]
+                self._instances_cache = items
+                return items
+            items = [{"name": n, "label": n} for n in manager.list_instances(mc)]
+            self._instances_cache = items
+            return items
+        except Exception:
+            return []
+
+    @Slot(result=list)
+    def getInstanceNames(self) -> list:
         try:
             mc = self._backend.get_minecraft_dir()
             from spectrum_core import manager
@@ -88,19 +183,20 @@ class AppBridge(QObject):
             m = self._backend.listView.model()
             if m and m.rowCount() > 0:
                 return list(m.stringList())
-            self._backend.update_version_list()
-            m = self._backend.listView.model()
-            return list(m.stringList()) if m else []
+            return []
         except Exception:
             return []
 
     @Slot()
     def refreshVersionList(self):
         saved = self._selected_download_version
-        self._backend.update_version_list()
-        if saved:
-            self._restore_download_selection(saved)
-        self.versionsChanged.emit()
+
+        def _done():
+            if saved:
+                self._restore_download_selection(saved)
+            self.versionsChanged.emit()
+
+        self._backend.refresh_version_list_async(_done)
 
     @Slot(result=list)
     def getLabymodVersions(self) -> list:
@@ -184,9 +280,15 @@ class AppBridge(QObject):
     def launch(self):
         if self._selected_instance:
             self._backend.launch_version = self._selected_instance
-        err = self._backend.launch()
-        if err == 1:
-            pass  # 已在 MainWindow 内弹窗
+        try:
+            err = self._backend.launch()
+            if err == 1:
+                pass  # 已在 MainWindow 内弹窗
+        except Exception as e:
+            from PySide6.QtWidgets import QMessageBox
+            import l18n
+
+            QMessageBox.critical(None, l18n.string("appName"), str(e))
 
     @Slot(bool)
     def setIgnoreJavaWarnings(self, ignore: bool):
@@ -321,7 +423,13 @@ class AppBridge(QObject):
 
     @Slot()
     def downloadLabymod(self):
-        self._backend.download_labymod()
+        try:
+            err = self._backend.download_labymod()
+            if err != 1:
+                self.instancesChanged.emit()
+                self.toast.emit("LabyMod 安装完成", "ok")
+        except Exception as e:
+            self.toast.emit(str(e), "error")
 
     @Slot()
     def saveSettings(self):
@@ -360,15 +468,48 @@ class AppBridge(QObject):
     @Slot()
     def refreshVersions(self):
         saved = self._selected_download_version
-        self._backend.update_version_list()
-        if saved:
-            self._restore_download_selection(saved)
-        self.versionsChanged.emit()
+
+        def _done():
+            if saved:
+                self._restore_download_selection(saved)
+            self.versionsChanged.emit()
+
+        self._backend.refresh_version_list_async(_done)
 
     @Slot()
     def refreshInstances(self):
-        self._backend.update_installed_versions()
-        self.instancesChanged.emit()
+        if self._instances_loading:
+            return
+        self._instances_loading = True
+        mc = self._backend.get_minecraft_dir()
+
+        def _fetch():
+            try:
+                from spectrum_core import manager
+
+                if hasattr(manager, "list_instance_summaries"):
+                    import json
+
+                    return [
+                        json.loads(s)
+                        for s in manager.list_instance_summaries(mc)
+                    ]
+                return [{"name": n, "label": n} for n in manager.list_instances(mc)]
+            except Exception:
+                return []
+
+        def _done(items) -> None:
+            self._instances_loading = False
+            self._instances_cache = list(items or [])
+            try:
+                self._backend.update_installed_versions()
+            except Exception:
+                pass
+            self.instancesChanged.emit()
+
+        from app.background_tasks import run_in_pool
+
+        run_in_pool(self._backend._dl_executor, _fetch, _done, parent=self)
 
     def _sync_manager_instance(self, name: str) -> None:
         idx = self._backend.comboBox_5.findText(name)
@@ -518,10 +659,13 @@ class AppBridge(QObject):
         self._backend.checkBox_3.setChecked(old_alpha)
         self._backend.checkBox_2.setChecked(old_beta)
         saved = self._selected_download_version
-        self._backend.update_version_list()
-        if saved:
-            self._restore_download_selection(saved)
-        self.versionsChanged.emit()
+
+        def _done():
+            if saved:
+                self._restore_download_selection(saved)
+            self.versionsChanged.emit()
+
+        self._backend.refresh_version_list_async(_done)
 
     @Slot(result=str)
     def modrinthWebUrl(self) -> str:
@@ -536,8 +680,10 @@ class AppBridge(QObject):
         mod_count = 0
         min_java = 8
         mc_version = ""
+        loader_version = ""
         java8_only = False
         modloader = "vanilla"
+        version_label = ""
         try:
             mc = self._backend.get_minecraft_dir()
             if inst and mc:
@@ -550,6 +696,15 @@ class AppBridge(QObject):
                 min_java = ctx.min_java
                 java8_only = ctx.java8_only
                 modloader = ctx.modloader
+                if hasattr(manager, "get_instance_version_info"):
+                    try:
+                        info = json.loads(manager.get_instance_version_info(mc, inst))
+                        loader_version = info.get("loaderVersion") or ""
+                        version_label = info.get("label") or mc_version
+                    except Exception:
+                        version_label = mc_version
+                else:
+                    version_label = mc_version
         except Exception:
             pass
         return json.dumps(
@@ -559,6 +714,8 @@ class AppBridge(QObject):
                 "javaCount": len(self._backend.javas),
                 "modCount": mod_count,
                 "mcVersion": mc_version,
+                "loaderVersion": loader_version,
+                "versionLabel": version_label,
                 "minJava": min_java,
                 "java8Only": java8_only,
                 "modloader": modloader,
@@ -602,9 +759,10 @@ class WebBridge(QObject):
             instance = self._target_instance_name()
             if not mc_dir or not instance:
                 return None
-            import spectrum_core.launcher_funcs as launcher
+            import spectrum_core.java_policy as java_policy
 
-            return launcher.get_minecraft_version(mc_dir, instance)
+            ctx = java_policy.build_instance_context(mc_dir, instance)
+            return ctx.mc_version or None
         except Exception:
             return None
 

@@ -138,6 +138,8 @@ class MainWindow(QMainWindow, Ui_MainWindow):
     download_progress = Signal(int, int, str)
     # signal emitted when a download task finished (result, instance_name, minecraft_dir)
     download_finished = Signal(object, str, str)
+    labymod_versions_ready = Signal(list)
+    version_list_ready = Signal(list)
 
     def __init__(self, parent=None):
         # check_update()
@@ -153,6 +155,11 @@ class MainWindow(QMainWindow, Ui_MainWindow):
         # Connect signals (thread-safe) for progress and completion
         self.download_progress.connect(self._on_download_progress)
         self.download_finished.connect(self._on_download_finished)
+        self.labymod_versions_ready.connect(self._on_labymod_versions_ready)
+        self.version_list_ready.connect(self._on_version_list_ready)
+        self._version_list_callback = None
+        self._version_list_loading = False
+        self._startup_init_started = False
 
         self.launch_version = None
         # Stuff
@@ -189,14 +196,9 @@ class MainWindow(QMainWindow, Ui_MainWindow):
         self.load_config()
         self.load_accounts()
 
-        log('Loading LabyMod versions', "INIT", level=1)
-        try:
-            self.listView_5.setModel(QStringListModel(labymod.get_versions()))
-        except:
-            log('FAIL TO RETRIEVE LABYMOD VERSIONS', 'WARN', level=0)
-
-        # 设置版本列表
-        self.update_version_list()
+        # 版本列表与 LabyMod 列表改为后台加载，避免阻塞 UI 启动
+        self.listView_5.setModel(QStringListModel([]))
+        self.listView.setModel(QStringListModel([]))
         
         log('Binding Functions', "INIT", level=1)
 
@@ -273,6 +275,78 @@ class MainWindow(QMainWindow, Ui_MainWindow):
         log("Getting Installed Versions", "INIT", level=2)
         self.update_installed_versions()
         log("Window created", "INIT", level=1)
+
+    def _version_list_filters(self) -> tuple[bool, bool, bool, bool]:
+        return (
+            self.checkBox_2.isChecked(),
+            self.checkBox_3.isChecked(),
+            self.checkBox_4.isChecked(),
+            self.checkBox.isChecked(),
+        )
+
+    def _on_labymod_versions_ready(self, versions: list | None) -> None:
+        self.listView_5.setModel(QStringListModel(versions or []))
+
+    def _on_version_list_ready(self, versions: list | None) -> None:
+        self._version_list_loading = False
+        self.listView.setModel(QStringListModel(versions or []))
+        cb = self._version_list_callback
+        self._version_list_callback = None
+        if cb:
+            cb()
+
+    def refresh_version_list_async(self, callback=None) -> None:
+        from app.background_tasks import fetch_minecraft_versions, run_in_pool
+
+        if self._version_list_loading:
+            if callback:
+                prev = self._version_list_callback
+
+                def _chain(_versions):
+                    if prev:
+                        prev()
+                    callback()
+
+                self._version_list_callback = _chain
+            return
+
+        self._version_list_loading = True
+        self._version_list_callback = callback
+        snap, old, rel, bmcl = self._version_list_filters()
+        run_in_pool(
+            self._dl_executor,
+            lambda: fetch_minecraft_versions(snap, old, rel, bmcl),
+            self.version_list_ready.emit,
+            parent=self,
+        )
+
+    def start_background_init(self) -> None:
+        """QML 显示后在后台拉取远程版本数据。"""
+        if self._startup_init_started:
+            return
+        self._startup_init_started = True
+
+        from app.background_tasks import fetch_labymod_versions, run_in_pool
+
+        log("Background init: fetching remote version data", "INIT", level=2)
+        run_in_pool(
+            self._dl_executor,
+            fetch_labymod_versions,
+            self.labymod_versions_ready.emit,
+            parent=self,
+        )
+        self.refresh_version_list_async()
+        if launcher.native() == "windows" and not os.path.exists(
+            app_path + "/JavaWrapper.jar"
+        ):
+            self._dl_executor.submit(self._download_java_wrapper_bg)
+
+    def _download_java_wrapper_bg(self) -> None:
+        try:
+            log(l18n.string("javaWrapper"), "INIT", level=1)
+            download_javawrapper()
+        except Exception:
+            pass
 
     def change_account_mode(self, index):
         if index == 0:
@@ -745,15 +819,25 @@ class MainWindow(QMainWindow, Ui_MainWindow):
         if self.accounts[self.comboBox_8.currentIndex()]['type'] == 'offline':
             access_token = None
         else:
-            access_token = oa.refresh_token(self.accounts[self.comboBox_8.currentIndex()]['refresh_token'])
+            try:
+                access_token = oa.refresh_token(
+                    self.accounts[self.comboBox_8.currentIndex()]['refresh_token']
+                )
+            except Exception as e:
+                QMessageBox.critical(
+                    None,
+                    l18n.string("appName"),
+                    f"微软账户登录失败：{e}\n\n请检查网络，或改用离线账户启动。",
+                )
+                return 1
 
         uuid = self.accounts[self.comboBox_8.currentIndex()].get('uuid', None)
         # 使用QProcess启动Minecraft而不阻塞UI\
         if self.lineEdit_10.text() != '':
             version_type = self.lineEdit_10.text()
         else:
-            version_type = '§l§1S§9p§2e§ac§3t§br§9u§1m§r Launcher'
-            # version_type = 'NullPointerException'
+            from app.branding import get_branding
+            version_type = get_branding().in_game_version_type
         cmd = launcher.launch(javaw=javaw, xmx=xmx, minecraft_dir=minecraft_dir, 
                             instance_name=instance_name, javawrapper=javawrapper, 
                             username=username, ms_login=self.accounts[self.comboBox_8.currentIndex()]['type'] == 'microsoft', 
@@ -1177,12 +1261,7 @@ class MainWindow(QMainWindow, Ui_MainWindow):
             f.write(json.dumps(jsonfile))
 
     def update_version_list(self, state=None):
-        try:
-            current_list = downloader.get_version_list(self.checkBox_2.isChecked(), self.checkBox_3.isChecked(), self.checkBox_4.isChecked(), self.checkBox.isChecked())
-        except:
-            current_list = []
-            log('FAIL TO RETRIEVE MINECRAFT VERSIONS', 'WARN', level=0)
-        self.listView.setModel(QStringListModel(current_list)) # 版本列表
+        self.refresh_version_list_async()
 
     def update_ml_version_list(self, state):
         if len(self.listView.selectionModel().selectedIndexes()) == 0:
@@ -1531,9 +1610,6 @@ def _bootstrap() -> None:
             use_bmclapi=os.environ.get("SPECTRUM_USE_BMCLAPI", "1").lower()
             not in ("0", "false", "no")
         )
-    if launcher.native() == "windows" and not os.path.exists(app_path + "/JavaWrapper.jar"):
-        log(l18n.string("javaWrapper"), "INIT", level=1)
-        download_javawrapper()
 
 
 def run_qml_ui() -> int:
@@ -1541,14 +1617,6 @@ def run_qml_ui() -> int:
     from PySide6.QtCore import QUrl
     from PySide6.QtQml import QQmlApplicationEngine
     from PySide6.QtQuickControls2 import QQuickStyle
-
-    try:
-        from PySide6.QtWebEngineQuick import QtWebEngineQuick
-
-        QtWebEngineQuick.initialize()
-        has_webengine = True
-    except ImportError:
-        has_webengine = False
 
     from app.bridge import AppBridge, WebBridge
     from app.local_fonts import fonts_dir_url, register_local_fonts
@@ -1580,7 +1648,7 @@ def run_qml_ui() -> int:
     engine.warnings.connect(_on_qml_warnings)
     engine.rootContext().setContextProperty("App", bridge)
     engine.rootContext().setContextProperty("Web", web_bridge)
-    engine.rootContext().setContextProperty("hasWebEngine", has_webengine)
+    engine.rootContext().setContextProperty("hasWebEngine", False)
     engine.rootContext().setContextProperty("fontsDir", fonts_dir_url(app_path))
 
     qml_dir = os.path.join(app_path, "qml")
@@ -1590,6 +1658,21 @@ def run_qml_ui() -> int:
     if not engine.rootObjects():
         log("QML 加载失败", "FATAL", 0)
         return 1
+
+    bridge.begin_startup_loading("正在加载版本数据…", tasks=2)
+
+    def _on_labymod_ready(_versions):
+        bridge.labymodVersionsChanged.emit()
+        bridge.finish_startup_loading()
+
+    def _on_versions_ready(_versions):
+        bridge.versionsChanged.emit()
+        bridge.finish_startup_loading()
+
+    backend.labymod_versions_ready.connect(_on_labymod_ready)
+    backend.version_list_ready.connect(_on_versions_ready)
+    backend.start_background_init()
+    bridge.instancesChanged.emit()
 
     log("QML UI started", "INIT", 1)
     return app.exec()

@@ -6,12 +6,15 @@ import "."
 
 Item {
     id: root
-    Layout.fillWidth: true
-    Layout.fillHeight: true
+    anchors.fill: parent
 
     property int subIndex: tabBar.currentIndex
+    property int tabDirection: 1
+    property int _prevTab: 0
 
     onSubIndexChanged: {
+        tabDirection = subIndex > _prevTab ? 1 : -1
+        _prevTab = subIndex
         var tabs = [5, 4, 6]
         App.setBackendTab(tabs[subIndex])
     }
@@ -28,14 +31,28 @@ Item {
             TabButton { text: "关于" }
         }
 
-        StackLayout {
+        Item {
             width: parent.width
             height: parent.height - tabBar.height - 12
-            currentIndex: tabBar.currentIndex
 
-            SettingsPage {}
-            AccountsPage {}
-            AboutPage {}
+            PageLayer {
+                anchors.fill: parent
+                active: tabBar.currentIndex === 0
+                direction: root.tabDirection
+                SettingsPage {}
+            }
+            PageLayer {
+                anchors.fill: parent
+                active: tabBar.currentIndex === 1
+                direction: root.tabDirection
+                AccountsPage {}
+            }
+            PageLayer {
+                anchors.fill: parent
+                active: tabBar.currentIndex === 2
+                direction: root.tabDirection
+                AboutPage {}
+            }
         }
     }
 

@@ -216,16 +216,133 @@ fn auto_download(
     result
 }
 
+fn resolve_version_info_for_instance(
+    minecraft_dir: &Path,
+    instance_name: &str,
+) -> CoreResult<crate::modloader::instance_json::InstanceVersionInfo> {
+    let json_path = minecraft_dir
+        .join("versions")
+        .join(instance_name)
+        .join(format!("{instance_name}.json"));
+    let instance_dir = minecraft_dir.join("versions").join(instance_name);
+    let info = if json_path.exists() {
+        let content = std::fs::read_to_string(&json_path)?;
+        let vj: VersionJson = serde_json::from_str(&content)?;
+        crate::modloader::instance_json::resolve_instance_version(
+            instance_name,
+            &vj,
+            Some(&instance_dir),
+        )
+    } else if let Some(mc) =
+        crate::client_jar::read_mc_version_from_instance(&instance_dir, instance_name, instance_name)
+    {
+        crate::modloader::instance_json::InstanceVersionInfo {
+            mc_version: mc,
+            modloader: crate::modloader::instance_json::guess_modloader_from_name(instance_name)
+                .unwrap_or(crate::types::ModLoader::Vanilla),
+            loader_version: None,
+        }
+    } else {
+        crate::modloader::instance_json::InstanceVersionInfo {
+            mc_version: crate::modloader::instance_json::normalize_mc_version(instance_name),
+            modloader: crate::modloader::instance_json::guess_modloader_from_name(instance_name)
+                .unwrap_or(crate::types::ModLoader::Vanilla),
+            loader_version: None,
+        }
+    };
+    Ok(info)
+}
+
+fn version_info_to_json(name: &str, info: &crate::modloader::instance_json::InstanceVersionInfo) -> String {
+    let modloader = match info.modloader {
+        crate::types::ModLoader::Vanilla => "vanilla",
+        crate::types::ModLoader::Fabric => "fabric",
+        crate::types::ModLoader::Forge => "forge",
+        crate::types::ModLoader::NeoForge => "neoforge",
+        crate::types::ModLoader::OptiFine => "optifine",
+        crate::types::ModLoader::LabyMod => "labymod",
+    };
+    let label = match (&info.loader_version, info.modloader) {
+        (Some(lv), crate::types::ModLoader::NeoForge) => format!("{} + NeoForge {}", info.mc_version, lv),
+        (Some(lv), crate::types::ModLoader::Forge) => format!("{} + Forge {}", info.mc_version, lv),
+        (Some(lv), crate::types::ModLoader::Fabric) => format!("{} + Fabric {}", info.mc_version, lv),
+        (_, crate::types::ModLoader::Vanilla) if name != info.mc_version => {
+            format!("{name} — {}", info.mc_version)
+        }
+        (_, crate::types::ModLoader::Vanilla) => info.mc_version.clone(),
+        (_, _) => format!("{} + {}", info.mc_version, modloader),
+    };
+    serde_json::json!({
+        "name": name,
+        "mcVersion": info.mc_version,
+        "modloader": modloader,
+        "loaderVersion": info.loader_version,
+        "label": label,
+    })
+    .to_string()
+}
+
 #[pyfunction]
-fn get_minecraft_version(minecraft_dir: &str, instance_name: &str) -> PyResult<String> {
+fn get_minecraft_version(py: Python<'_>, minecraft_dir: &str, instance_name: &str) -> PyResult<String> {
     let json_path = PathBuf::from(minecraft_dir)
         .join("versions")
         .join(instance_name)
         .join(format!("{instance_name}.json"));
-    let content = std::fs::read_to_string(&json_path)
-        .map_err(|e| PyOSError::new_err(format!("read version json: {e}")))?;
-    let vj: VersionJson = serde_json::from_str(&content).map_err(py_err)?;
-    Ok(VersionJsonManager::get_minecraft_version(&vj))
+    let instance_dir = PathBuf::from(minecraft_dir)
+        .join("versions")
+        .join(instance_name);
+    if !json_path.exists() {
+        if let Some(mc) = crate::client_jar::read_mc_version_from_instance(
+            &instance_dir,
+            instance_name,
+            instance_name,
+        ) {
+            return Ok(mc);
+        }
+        return Ok(crate::modloader::instance_json::normalize_mc_version(instance_name));
+    }
+    let client = http().clone();
+    let instance_name_owned = instance_name.to_string();
+    let vj = run_async(py, async move {
+        let mut mgr = VersionJsonManager::new(client.clone());
+        let mut manifest = crate::manifest::ManifestManager::new(client);
+        mgr.resolve_instance_json(&json_path, &mut manifest).await
+    })?;
+    Ok(crate::modloader::instance_json::guess_mc_version_in_dir(
+        &instance_name_owned,
+        &vj,
+        Some(&instance_dir),
+    ))
+}
+
+#[pyfunction]
+fn get_instance_version_info(minecraft_dir: &str, instance_name: &str) -> PyResult<String> {
+    let info = resolve_version_info_for_instance(Path::new(minecraft_dir), instance_name).map_err(py_err)?;
+    Ok(version_info_to_json(instance_name, &info))
+}
+
+#[pyfunction]
+fn list_instance_summaries(minecraft_dir: &str) -> PyResult<Vec<String>> {
+    let mgr = InstanceManager::new(PathBuf::from(minecraft_dir));
+    let names = mgr.list_instances().map_err(py_err)?;
+    let mc_dir = PathBuf::from(minecraft_dir);
+    Ok(names
+        .iter()
+        .map(|name| {
+            resolve_version_info_for_instance(&mc_dir, name)
+                .map(|info| version_info_to_json(name, &info))
+                .unwrap_or_else(|_| {
+                    serde_json::json!({
+                        "name": name,
+                        "mcVersion": crate::modloader::instance_json::normalize_mc_version(name),
+                        "modloader": "vanilla",
+                        "loaderVersion": null,
+                        "label": name,
+                    })
+                    .to_string()
+                })
+        })
+        .collect())
 }
 
 #[pyfunction]
@@ -292,10 +409,13 @@ fn build_launch_script(
     let vj = run_async(py, async move {
         let mut eng = DownloadEngine::new(client.clone());
         let mc_dir = PathBuf::from(&minecraft_dir_owned);
-        let _ = eng
-            .repair_modloader_json_if_needed(&mc_dir, &instance_name_owned)
-            .await;
+        eng.repair_modloader_json_if_needed(&mc_dir, &instance_name_owned)
+            .await?;
+        eng.repair_incomplete_modloader_json(&mc_dir, &instance_name_owned)
+            .await?;
         eng.ensure_instance_libraries(&mc_dir, &instance_name_owned)
+            .await?;
+        eng.ensure_instance_natives(&mc_dir, &instance_name_owned)
             .await?;
 
         let mut mgr = VersionJsonManager::new(client.clone());
@@ -698,6 +818,8 @@ pub fn init_module(m: &Bound<'_, PyModule>) -> PyResult<()> {
     m.add_function(wrap_pyfunction!(get_version_json, m)?)?;
     m.add_function(wrap_pyfunction!(auto_download, m)?)?;
     m.add_function(wrap_pyfunction!(get_minecraft_version, m)?)?;
+    m.add_function(wrap_pyfunction!(get_instance_version_info, m)?)?;
+    m.add_function(wrap_pyfunction!(list_instance_summaries, m)?)?;
     m.add_function(wrap_pyfunction!(get_required_java_version, m)?)?;
     m.add_function(wrap_pyfunction!(build_launch_script, m)?)?;
     m.add_function(wrap_pyfunction!(find_javas, m)?)?;

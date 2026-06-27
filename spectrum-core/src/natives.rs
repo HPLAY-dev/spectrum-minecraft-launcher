@@ -23,6 +23,23 @@ pub fn pick_native_artifact(
     None
 }
 
+/// MC 1.21+ 独立 natives 库（如 `:natives-windows`）是否匹配当前平台
+pub fn native_library_matches_platform(lib_name: &str) -> bool {
+    let Some(classifier) = lib_name.rsplit(':').next() else {
+        return false;
+    };
+    if !(classifier.starts_with("natives-") || classifier.starts_with("natives_")) {
+        return false;
+    }
+    native_classifier_keys()
+        .iter()
+        .any(|key| classifier == key.as_str())
+}
+
+pub fn is_standalone_native_library(lib_name: &str) -> bool {
+    lib_name.contains(":natives-") || lib_name.contains(":natives_")
+}
+
 /// 解压 natives ZIP 到目标目录，按 extract.exclude 跳过条目
 pub async fn extract_natives_archive(
     archive_path: &Path,

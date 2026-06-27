@@ -163,7 +163,7 @@ pub enum ArgumentValue {
     Multi(Vec<String>),
 }
 
-#[derive(Debug, Clone, Default, Serialize, Deserialize)]
+#[derive(Debug, Clone, Default, Serialize)]
 pub struct Library {
     pub name: String,
     #[serde(default)]
@@ -176,6 +176,40 @@ pub struct Library {
     pub natives: Option<HashMap<String, String>>,
     #[serde(default)]
     pub extract: Option<ExtractRule>,
+}
+
+#[derive(Deserialize)]
+struct LibraryData {
+    name: String,
+    #[serde(default)]
+    downloads: Option<LibraryDownloads>,
+    #[serde(default)]
+    url: Option<String>,
+    #[serde(default)]
+    rules: Option<Vec<Rule>>,
+    #[serde(default, deserialize_with = "deserialize_natives")]
+    natives: Option<HashMap<String, String>>,
+    #[serde(default)]
+    extract: Option<ExtractRule>,
+}
+
+impl<'de> Deserialize<'de> for Library {
+    fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
+    where
+        D: Deserializer<'de>,
+    {
+        let mut value = serde_json::Value::deserialize(deserializer)?;
+        normalize_library_json(&mut value);
+        let data: LibraryData = serde_json::from_value(value).map_err(serde::de::Error::custom)?;
+        Ok(Library {
+            name: data.name,
+            downloads: data.downloads,
+            url: data.url,
+            rules: data.rules,
+            natives: data.natives,
+            extract: data.extract,
+        })
+    }
 }
 
 #[derive(Debug, Clone, Default, Serialize, Deserialize)]
@@ -582,6 +616,68 @@ pub fn maven_to_path(maven_str: &str) -> CoreResult<String> {
 //  Argument 反序列化 (Minecraft 混合格式)
 // ========================================================================
 
+/// LabyMod 等第三方 manifest 可能写 `"natives": []`，标准格式为 map。
+fn deserialize_natives<'de, D>(deserializer: D) -> Result<Option<HashMap<String, String>>, D::Error>
+where
+    D: Deserializer<'de>,
+{
+    let value = Option::<serde_json::Value>::deserialize(deserializer)?;
+    match value {
+        None | Some(serde_json::Value::Null) => Ok(None),
+        Some(serde_json::Value::Object(map)) => {
+            serde_json::from_value(serde_json::Value::Object(map)).map_err(serde::de::Error::custom)
+        }
+        Some(serde_json::Value::Array(_)) => Ok(None),
+        Some(other) => Err(serde::de::Error::custom(format!(
+            "unexpected natives type: {other}"
+        ))),
+    }
+}
+
+/// 将 LabyMod 扁平 library（顶层 url/sha1）规范为标准 downloads.artifact。
+fn normalize_library_json(value: &mut serde_json::Value) {
+    let Some(obj) = value.as_object_mut() else {
+        return;
+    };
+
+    if obj.get("natives").is_some_and(|v| v.is_array()) {
+        obj.remove("natives");
+    }
+
+    if obj.contains_key("downloads") {
+        return;
+    }
+
+    let Some(name) = obj.get("name").and_then(|v| v.as_str()) else {
+        return;
+    };
+    let Some(url) = obj.get("url").and_then(|v| v.as_str()) else {
+        return;
+    };
+    let Some(sha1) = obj.get("sha1").and_then(|v| v.as_str()) else {
+        return;
+    };
+    if !url.starts_with("http") {
+        return;
+    }
+
+    let Ok(path) = maven_to_path(name) else {
+        return;
+    };
+    let size = obj.get("size").and_then(|v| v.as_u64()).unwrap_or(0);
+    obj.insert(
+        "downloads".into(),
+        serde_json::json!({
+            "artifact": {
+                "path": path,
+                "sha1": sha1,
+                "url": url,
+                "size": size,
+            }
+        }),
+    );
+}
+
 fn deserialize_arguments<'de, D>(deserializer: D) -> Result<Vec<Argument>, D::Error>
 where
     D: Deserializer<'de>,
@@ -659,5 +755,25 @@ mod tests {
         assert_eq!(ModLoader::from_str("fabric"), ModLoader::Fabric);
         assert_eq!(ModLoader::from_str("NeoForge"), ModLoader::NeoForge);
         assert_eq!(ModLoader::from_str("unknown"), ModLoader::Vanilla);
+    }
+
+    #[test]
+    fn test_labymod_flat_library_deserialize() {
+        let json = r#"{
+            "minecraftVersion": "all",
+            "name": "org.ow2.asm:asm-util:9.9.1",
+            "natives": [],
+            "sha1": "e51f5b0ae0b0c1960687ae970a2a3434d39d8abb",
+            "size": 94643,
+            "url": "https://releases.r2.labymod.net/libraries/org/ow2/asm/asm-util/9.9.1/asm-util-9.9.1.jar"
+        }"#;
+        let lib: Library = serde_json::from_str(json).expect("labymod library");
+        let artifact = lib
+            .downloads
+            .as_ref()
+            .and_then(|d| d.artifact.as_ref())
+            .expect("artifact");
+        assert_eq!(artifact.sha1, "e51f5b0ae0b0c1960687ae970a2a3434d39d8abb");
+        assert!(lib.natives.is_none());
     }
 }

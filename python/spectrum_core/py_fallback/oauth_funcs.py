@@ -40,9 +40,9 @@ def access_token_to_xbl(access_token: str):
         "Properties": {
             "AuthMethod": "RPS",
             "SiteName": "user.auth.xboxlive.com",
-            "RpsTicket": f"d={access_token}"  # 确保�?d= 前缀
+            "RpsTicket": f"d={access_token}"  # ç¡®ä¿�æœ?d= å‰�ç¼€
         },
-        "RelyingParty": "http://auth.xboxlive.com",  # 使用 http 而不�?https
+        "RelyingParty": "http://auth.xboxlive.com",  # ä½¿ç”¨ http è€Œä¸�æ˜?https
         "TokenType": "JWT"
     }
     headers = {
@@ -50,7 +50,7 @@ def access_token_to_xbl(access_token: str):
         'Accept': 'application/json'
     }
 
-    # 添加详细的调试信�?
+    # æ·»åŠ è¯¦ç»†çš„è°ƒè¯•ä¿¡æ�?
     print(f"Making XBL request with access token: {access_token[:50]}...")
 
     try:
@@ -118,19 +118,19 @@ def xbl_to_xsts(xbl_return: dict):
         'Accept': 'application/json'
     }
 
-    # 发送请求并获取响应
+    # å�‘é€�è¯·æ±‚å¹¶èŽ·å�–å“�åº”
     response = requests.post(url, json=data, headers=headers)
 
-    # 检查状态码
+    # æ£€æŸ¥çŠ¶æ€�ç �
     if response.status_code != 200:
         print(f"XSTS Error: {response.status_code}")
         print(f"Response: {response.text}")
         raise Exception(f"XSTS auth failed: {response.status_code}")
 
-    # 解析JSON响应
+    # è§£æž�JSONå“�åº”
     response_data = response.json()
 
-    # 创建返回字典
+    # åˆ›å»ºè¿”å›žå­—å…¸
     returns = {}
     returns['uhs'] = response_data['DisplayClaims']['xui'][0]['uhs']
     returns['xsts_token'] = response_data['Token']
@@ -146,7 +146,7 @@ def xsts_to_mc_token(xsts_return: dict):
         "identityToken": f"XBL3.0 x={uhs};{xsts_token}"
     }
 
-    # 添加调试信息
+    # æ·»åŠ è°ƒè¯•ä¿¡æ�¯
     print(f"Making Minecraft auth request with XSTS token")
     print(f"Identity token: XBL3.0 x={uhs};{xsts_token[:50]}...")
 
@@ -162,10 +162,10 @@ def xsts_to_mc_token(xsts_return: dict):
 
         response_data = response.json()
 
-        # 检查access_token是否存在
+        # æ£€æŸ¥access_tokenæ˜¯å�¦å­˜åœ¨
         if 'access_token' not in response_data:
             print(f"Access token not found in response: {response_data}")
-            # 检查是否有错误信息
+            # æ£€æŸ¥æ˜¯å�¦æœ‰é”™è¯¯ä¿¡æ�¯
             if 'error' in response_data:
                 print(f"Error: {response_data.get('error')}")
                 print(f"Error description: {response_data.get('error_description', 'No description')}")
@@ -216,23 +216,23 @@ def is_owned(mc_token, with_profile_data=False):
         'Accept': 'application/json'
     }
 
-    # 检查Minecraft权限
+    # æ£€æŸ¥Minecraftæ�ƒé™�
     entitlements_url = "https://api.minecraftservices.com/entitlements/mcstore"
     try:
         entitlements_response = requests.get(entitlements_url, headers=headers)
         entitlements_response.raise_for_status()
         entitlements_data = entitlements_response.json()
 
-        # 获取物品列表
+        # èŽ·å�–ç‰©å“�åˆ—è¡¨
         items = entitlements_data.get('items', [])
 
-        # 获取用户资料
+        # èŽ·å�–ç”¨æˆ·èµ„æ–™
         profile_url = "https://api.minecraftservices.com/minecraft/profile"
         profile_response = requests.get(profile_url, headers=headers)
         profile_data = profile_response.json() if profile_response.status_code == 200 else {}
 
-        # 检查是否拥有Minecraft
-        # 条件：有权限物品 �?个人资料不包含NOT_FOUND错误
+        # æ£€æŸ¥æ˜¯å�¦æ‹¥æœ‰Minecraft
+        # æ�¡ä»¶ï¼šæœ‰æ�ƒé™�ç‰©å“� ä¸?ä¸ªäººèµ„æ–™ä¸�åŒ…å�«NOT_FOUNDé”™è¯¯
         has_minecraft = (len(items) > 0 and
                          profile_response.status_code == 200 and
                          'error' not in profile_data)
@@ -248,7 +248,7 @@ def is_owned(mc_token, with_profile_data=False):
 def get_mslogin_uuid_name(access_token: str):
     data = is_owned(access_token, True)
     if data[0]:
-        # 提取用户信息
+        # æ��å�–ç”¨æˆ·ä¿¡æ�¯
         uuid = data[1].get('id', '')
         name = data[1].get('name', '')
         print(f"uuid={uuid}")

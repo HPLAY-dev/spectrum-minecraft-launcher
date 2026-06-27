@@ -13,6 +13,17 @@ Button {
     font.weight: AppFonts.weightFor(control.text, false)
     font.pixelSize: filled ? 16 : 14
 
+    scale: !control.enabled ? 1
+        : (control.pressed ? SpectrumMotion.pressScale
+            : (control.hovered ? SpectrumMotion.hoverScale : 1))
+
+    Behavior on scale {
+        NumberAnimation {
+            duration: SpectrumMotion.fast
+            easing.type: SpectrumMotion.easeOut
+        }
+    }
+
     background: CutCornerBox {
         cut: control.cornerCut
         fillColor: {
@@ -40,5 +51,11 @@ Button {
         }
         horizontalAlignment: Text.AlignHCenter
         verticalAlignment: Text.AlignVCenter
+        Behavior on color {
+            ColorAnimation {
+                duration: SpectrumMotion.normal
+                easing.type: SpectrumMotion.easeOut
+            }
+        }
     }
 }

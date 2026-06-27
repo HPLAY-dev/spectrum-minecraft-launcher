@@ -49,8 +49,10 @@ impl LaunchCommandBuilder {
             natives.to_string_lossy()
         ));
 
-        // version JSON 中的 JVM 参数模板
-        Self::append_jvm_arguments(&mut args, version_json, config);
+        // version JSON 中的 JVM 参数模板（NeoForge 等在此注入 -cp ${classpath}）
+        let classpath = Self::build_classpath(config, version_json)?;
+        let jvm_has_classpath = Self::jvm_arguments_include_classpath(version_json);
+        Self::append_jvm_arguments(&mut args, version_json, config, &classpath);
 
         if !config.extra_jvm_args.is_empty() {
             for extra in config.extra_jvm_args.split_whitespace() {
@@ -58,9 +60,7 @@ impl LaunchCommandBuilder {
             }
         }
 
-        let uses_module_path = Self::uses_module_path(version_json);
-        if !uses_module_path {
-            let classpath = Self::build_classpath(config, version_json)?;
+        if !Self::uses_module_path(version_json) && !jvm_has_classpath {
             args.push("-cp".into());
             args.push(classpath);
         }
@@ -87,8 +87,13 @@ impl LaunchCommandBuilder {
         Ok(args)
     }
 
-    /// 追加 version JSON 中的 JVM 参数（跳过 -cp / ${classpath}）
-    fn append_jvm_arguments(args: &mut Vec<String>, vj: &VersionJson, config: &LaunchConfig) {
+    /// 追加 version JSON 中的 JVM 参数，并展开 ${classpath}
+    fn append_jvm_arguments(
+        args: &mut Vec<String>,
+        vj: &VersionJson,
+        config: &LaunchConfig,
+        classpath: &str,
+    ) {
         let Some(ref arguments) = vj.arguments else {
             return;
         };
@@ -96,28 +101,23 @@ impl LaunchCommandBuilder {
             return;
         }
 
-        let skip = ["-cp", "-classpath", "${classpath}"];
         for arg in &arguments.jvm {
             match arg {
-                Argument::Value(s) if skip.iter().any(|x| s.contains(x)) => continue,
                 Argument::Value(s) => {
-                    let v = Self::replace_tokens(s, config, vj);
+                    let v = Self::expand_jvm_arg(s, config, vj, classpath);
                     if Self::is_valid_launch_arg(&v) {
                         args.push(v);
                     }
                 }
                 Argument::Rules { rules, value } if rules_compatible(rules) => {
                     let values = match value {
-                        ArgumentValue::Single(s) => vec![Self::replace_tokens(s, config, vj)],
+                        ArgumentValue::Single(s) => vec![Self::expand_jvm_arg(s, config, vj, classpath)],
                         ArgumentValue::Multi(v) => v
                             .iter()
-                            .map(|s| Self::replace_tokens(s, config, vj))
+                            .map(|s| Self::expand_jvm_arg(s, config, vj, classpath))
                             .collect(),
                     };
                     for v in values {
-                        if skip.iter().any(|x| v.contains(x)) {
-                            continue;
-                        }
                         if Self::is_valid_launch_arg(&v) {
                             args.push(v);
                         }
@@ -128,7 +128,29 @@ impl LaunchCommandBuilder {
         }
     }
 
-    /// NeoForge / Fabric 等使用 `-p` 模块路径启动，不应再追加 `-cp`。
+    fn expand_jvm_arg(
+        template: &str,
+        config: &LaunchConfig,
+        version_json: &VersionJson,
+        classpath: &str,
+    ) -> String {
+        Self::replace_tokens(template, config, version_json).replace("${classpath}", classpath)
+    }
+
+    fn jvm_arguments_include_classpath(vj: &VersionJson) -> bool {
+        let Some(ref arguments) = vj.arguments else {
+            return false;
+        };
+        arguments.jvm.iter().any(|arg| match arg {
+            Argument::Value(s) => s.contains("classpath"),
+            Argument::Rules { value, .. } => match value {
+                ArgumentValue::Single(s) => s.contains("classpath"),
+                ArgumentValue::Multi(v) => v.iter().any(|s| s.contains("classpath")),
+            },
+        })
+    }
+
+    /// NeoForge 使用 `-p` 模块路径；`-cp` 由 JSON 模板中的 ${classpath} 提供。
     fn uses_module_path(vj: &VersionJson) -> bool {
         if vj.main_class.to_lowercase().contains("bootstraplauncher") {
             return true;
@@ -156,8 +178,26 @@ impl LaunchCommandBuilder {
 
     fn build_classpath(config: &LaunchConfig, version_json: &VersionJson) -> CoreResult<String> {
         let mut paths = Vec::new();
+        let mut seen = std::collections::HashSet::new();
+        let module_path = Self::module_path_entries(version_json, config);
+        let skip_client_jar = version_json
+            .main_class
+            .contains("BootstrapLauncher");
+        let mut client_jar: Option<std::path::PathBuf> = None;
 
-        // client jar — 优先 instance_name.jar
+        let mut push_path = |path: std::path::PathBuf| {
+            if !path.exists() || Self::is_native_artifact(&path) {
+                return;
+            }
+            if Self::is_on_module_path(&path, &module_path) {
+                return;
+            }
+            let key = Self::normalize_path_key(&path);
+            if seen.insert(key) {
+                paths.push(path);
+            }
+        };
+
         let jar_candidates = [
             config.game_directory.join(format!("{}.jar", config.instance_name)),
             config
@@ -166,31 +206,32 @@ impl LaunchCommandBuilder {
         ];
         for jar in jar_candidates {
             if jar.exists() {
-                paths.push(jar);
+                client_jar = Some(jar);
                 break;
             }
         }
 
         for lib in &version_json.libraries {
-            if !Self::is_library_compatible(lib) {
+            if !Self::is_library_compatible(lib) || Self::is_native_library_name(&lib.name) {
                 continue;
             }
 
             if let Some(ref dl) = lib.downloads {
                 if let Some(ref artifact) = dl.artifact {
-                    let lib_path = config.libraries_directory.join(&artifact.path);
-                    if lib_path.exists() {
-                        paths.push(lib_path);
-                        continue;
-                    }
+                    push_path(config.libraries_directory.join(&artifact.path));
+                    continue;
                 }
             }
 
             if let Ok(maven_path) = maven_to_path(&lib.name) {
-                let lib_path = config.libraries_directory.join(&maven_path);
-                if lib_path.exists() {
-                    paths.push(lib_path);
-                }
+                push_path(config.libraries_directory.join(&maven_path));
+            }
+        }
+
+        // NeoForge 由 production client provider 加载 patched client，原版 jar 仅由 ignoreList 引用
+        if !skip_client_jar {
+            if let Some(jar) = client_jar {
+                push_path(jar);
             }
         }
 
@@ -200,6 +241,82 @@ impl LaunchCommandBuilder {
             .map(|p| p.to_string_lossy().to_string())
             .collect::<Vec<_>>()
             .join(sep))
+    }
+
+    fn module_path_entries(
+        vj: &VersionJson,
+        config: &LaunchConfig,
+    ) -> std::collections::HashSet<String> {
+        let mut entries = std::collections::HashSet::new();
+        let flat = Self::flatten_jvm_arguments(vj);
+        if flat.is_empty() {
+            return entries;
+        }
+        let sep = if cfg!(target_os = "windows") { ";" } else { ":" };
+
+        let mut i = 0;
+        while i < flat.len() {
+            if flat[i] == "-p" && i + 1 < flat.len() {
+                let expanded = Self::replace_tokens(&flat[i + 1], config, vj);
+                for part in expanded.split(sep) {
+                    let key = Self::normalize_path_key_str(part.trim());
+                    if !key.is_empty() {
+                        entries.insert(key);
+                    }
+                }
+                i += 2;
+            } else {
+                i += 1;
+            }
+        }
+        entries
+    }
+
+    fn flatten_jvm_arguments(vj: &VersionJson) -> Vec<String> {
+        let Some(ref arguments) = vj.arguments else {
+            return Vec::new();
+        };
+        let mut flat = Vec::new();
+        for arg in &arguments.jvm {
+            match arg {
+                Argument::Value(s) => flat.push(s.clone()),
+                Argument::Rules { rules, value } if rules_compatible(rules) => match value {
+                    ArgumentValue::Single(s) => flat.push(s.clone()),
+                    ArgumentValue::Multi(v) => flat.extend(v.iter().cloned()),
+                },
+                Argument::Rules { .. } => {}
+            }
+        }
+        flat
+    }
+
+    fn normalize_path_key(path: &std::path::Path) -> String {
+        Self::normalize_path_key_str(&path.to_string_lossy())
+    }
+
+    fn normalize_path_key_str(path: &str) -> String {
+        path.to_ascii_lowercase().replace('\\', "/")
+    }
+
+    fn is_on_module_path(path: &std::path::Path, module_path: &std::collections::HashSet<String>) -> bool {
+        let key = Self::normalize_path_key(path);
+        if module_path.contains(&key) {
+            return true;
+        }
+        // 兜底：按 jar 文件名匹配（防止路径分隔符差异导致漏过滤）
+        path.file_name()
+            .map(|n| module_path.iter().any(|mp| mp.ends_with(&Self::normalize_path_key_str(&n.to_string_lossy()))))
+            .unwrap_or(false)
+    }
+
+    fn is_native_library_name(name: &str) -> bool {
+        name.contains(":natives-") || name.contains(":natives_")
+    }
+
+    fn is_native_artifact(path: &std::path::Path) -> bool {
+        path.file_name()
+            .map(|n| n.to_string_lossy().contains("-natives-"))
+            .unwrap_or(false)
     }
 
     fn build_game_args(config: &LaunchConfig, version_json: &VersionJson) -> CoreResult<Vec<String>> {
@@ -268,17 +385,24 @@ impl LaunchCommandBuilder {
         }
     }
 
+    fn asset_index_name(version_json: &VersionJson) -> String {
+        version_json
+            .asset_index
+            .as_ref()
+            .map(|a| a.id.clone())
+            .or_else(|| version_json.assets.clone())
+            .unwrap_or_else(|| "legacy".into())
+    }
+
     fn replace_tokens(template: &str, config: &LaunchConfig, version_json: &VersionJson) -> String {
+        let asset_index = Self::asset_index_name(version_json);
         template
             .replace("${auth_player_name}", &config.username)
             .replace("${version_name}", &config.instance_name)
             .replace("${game_directory}", &config.game_directory.to_string_lossy())
             .replace("${game_assets}", &config.assets_directory.to_string_lossy())
             .replace("${assets_root}", &config.assets_directory.to_string_lossy())
-            .replace(
-                "${assets_index_name}",
-                version_json.assets.as_deref().unwrap_or("legacy"),
-            )
+            .replace("${assets_index_name}", &asset_index)
             .replace("${auth_uuid}", &config.uuid)
             .replace("${auth_access_token}", &config.access_token)
             .replace("${user_type}", &config.user_type)
@@ -286,7 +410,7 @@ impl LaunchCommandBuilder {
             .replace("${resolution_width}", &config.width.to_string())
             .replace("${resolution_height}", &config.height.to_string())
             .replace("${natives_directory}", &config.natives_directory.to_string_lossy())
-            .replace("${launcher_name}", "Spectrum Launcher")
+            .replace("${launcher_name}", "SerenaLauncher")
             .replace("${launcher_version}", env!("CARGO_PKG_VERSION"))
             .replace("${clientid}", "")
             .replace("${auth_xuid}", "")
@@ -352,10 +476,7 @@ impl LaunchCommandBuilder {
             "--assetsDir".into(),
             config.assets_directory.to_string_lossy().to_string(),
             "--assetIndex".into(),
-            version_json
-                .assets
-                .clone()
-                .unwrap_or_else(|| "legacy".into()),
+            Self::asset_index_name(version_json),
             "--uuid".into(),
             config.uuid.clone(),
             "--accessToken".into(),

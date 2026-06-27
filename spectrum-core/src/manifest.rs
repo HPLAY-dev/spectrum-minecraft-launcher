@@ -4,6 +4,7 @@
 //! 对应原 Python: `manifest_funcs.py` + `download_funcs.py` 中的版本列表部分。
 
 use crate::http_client::HttpClient;
+use crate::modloader::instance_json;
 use crate::types::*;
 
 /// 版本清单 URL (Mojang 官方)
@@ -193,7 +194,7 @@ impl VersionJsonManager {
         // 从根向子合并
         let mut merged = chain.pop().unwrap();
         while let Some(child) = chain.pop() {
-            merged = Self::merge_version_json(child, merged)?;
+            merged = VersionJsonManager::merge_version_json(child, merged)?;
         }
 
         self.cache.insert(version_id.to_string(), merged.clone());
@@ -211,7 +212,11 @@ impl VersionJsonManager {
 
         if let Some(ref parent_id) = child.inherits_from {
             let parent = self.get_version_json(parent_id, manifest_mgr).await?;
-            Self::merge_version_json(child, parent)
+            VersionJsonManager::merge_version_json(child, parent)
+        } else if instance_json::needs_vanilla_metadata(&child) {
+            let mc_version = instance_json::guess_mc_version_from_json(&child);
+            let parent = self.get_version_json(&mc_version, manifest_mgr).await?;
+            VersionJsonManager::merge_version_json(child, parent)
         } else {
             Ok(child)
         }
@@ -219,11 +224,7 @@ impl VersionJsonManager {
 
     /// 从 version JSON 推断 Minecraft 基版本 ID
     pub fn get_minecraft_version(vj: &VersionJson) -> String {
-        if let Some(ref parent) = vj.inherits_from {
-            parent.clone()
-        } else {
-            vj.id.clone()
-        }
+        crate::modloader::instance_json::guess_mc_version_from_json(vj)
     }
 
     /// 获取 version JSON 要求的 Java 主版本
@@ -254,7 +255,7 @@ impl VersionJsonManager {
 
     /// 深度合并两个 VersionJson
     /// child 是修饰版本 (如 Forge), parent 是父版本 (如 1.19.2 原版)
-    fn merge_version_json(child: VersionJson, parent: VersionJson) -> CoreResult<VersionJson> {
+    pub fn merge_version_json(child: VersionJson, parent: VersionJson) -> CoreResult<VersionJson> {
         let merged_libraries = Self::merge_libraries(
             parent.libraries.clone(),
             child.libraries.clone(),

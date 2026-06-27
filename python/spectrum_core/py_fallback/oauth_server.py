@@ -3,22 +3,22 @@ from http.server import HTTPServer, BaseHTTPRequestHandler
 import threading
 import webbrowser
 
-# OAuth配置
+# OAuthéç˝Ž
 oauth_base_url = 'https://login.microsoftonline.com/consumers/oauth2/v2.0/authorize'
 client_id = "7000942a-0525-4e21-a817-faf950ab6bc4"
-redirect_uri = "http://localhost:8080/callback"  # 本地监听地址
+redirect_uri = "http://localhost:8080/callback"  # ćŹĺ°çĺŹĺ°ĺ
 
 class OAuthHandler(BaseHTTPRequestHandler):
     def do_GET(self):
         global auth_code
-        # 只处理回调路�?
+        # ĺŞĺ¤çĺč°čˇŻĺž?
         print('A GET has been processed')
         if self.path.startswith('/callback'):
             self.send_response(200)
             self.send_header('Content-type', 'text/html')
             self.end_headers()
             
-            # 解析查询参数
+            # č§ŁććĽčŻ˘ĺć°
             query = urlparse(self.path).query
             params = parse_qs(query)
             
@@ -42,11 +42,11 @@ class OAuthHandler(BaseHTTPRequestHandler):
             self.end_headers()
 
 def start_server():
-    """启动HTTP服务�?""
+    """ĺŻĺ¨HTTPćĺĄĺ?""
     server = HTTPServer(('localhost', 8080), OAuthHandler)
     print("Starting HTTP server on http://localhost:8080")
     
-    # 在后台线程中运行服务�?
+    # ĺ¨ĺĺ°çşżç¨ä¸­čżčĄćĺĄĺ?
     server_thread = threading.Thread(target=server.serve_forever)
     server_thread.daemon = True
     server_thread.start()
@@ -54,7 +54,7 @@ def start_server():
     return server, OAuthHandler
 
 def send_auth_request():
-    """发送OAuth认证请求"""
+    """ĺéOAuthčŽ¤čŻčŻˇćą"""
     params = {
         'client_id': client_id,
         'response_type': 'code',
@@ -69,13 +69,13 @@ def send_auth_request():
     webbrowser.open(auth_url)
 
 def get_auth_code(timeout=120):
-    """获取授权码（阻塞直到收到或超时）"""
+    """čˇĺććç ďźéťĺĄç´ĺ°ćśĺ°ćčśćśďź"""
     server, handler = start_server()
     send_auth_request()
     
     print("Waiting for authentication... (timeout: 120 seconds)")
     
-    # 等待授权码或超时
+    # ç­ĺžććç ćčśćś
     import time
     start_time = time.time()
     while time.time() - start_time < timeout:
@@ -93,12 +93,12 @@ def get_auth_code(timeout=120):
     server.shutdown()
     raise TimeoutError("Authentication timeout")
 
-# 使用示例
+# ä˝żç¨ç¤şäž
 if __name__ == "__main__":
     auth_code = get_auth_code()
 #         print(f"Success! Authorization code: {auth_code}")
         
-#         # 这里你可以继续用授权码交换access token
+#         # čżéä˝ ĺŻäťĽçť§çť­ç¨ććç äş¤ć˘access token
 #         token_url = 'https://login.microsoftonline.com/consumers/oauth2/v2.0/token'
 #         token_data = {
 #             'client_id': client_id,

@@ -113,12 +113,15 @@ impl InstanceManager {
         // 计算大小
         let size = Self::dir_size(&instance_dir);
 
-        // 检测 ModLoader
-        let modloader = Self::detect_modloader(&vj);
+        let modloader = crate::modloader::instance_json::detect_modloader(name, &vj);
 
         Ok(InstanceInfo {
             name: name.to_string(),
-            mc_version: vj.id.clone(),
+            mc_version: crate::modloader::instance_json::guess_mc_version_in_dir(
+                name,
+                &vj,
+                Some(&instance_dir),
+            ),
             modloader,
             path: instance_dir,
             game_jar: jar_path,

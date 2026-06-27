@@ -11,17 +11,21 @@ ApplicationWindow {
     minimumWidth: 960
     minimumHeight: 600
     visible: true
-    title: "Spectrum-Minecraft-Launcher"
+    title: "Serena Launcher"
     color: SpectrumTheme.bg
     font.family: SpectrumTheme.fontCnBody
     font.weight: SpectrumTheme.weightCnBody
 
     property int navIndex: 0
+    property var brand: ({})
     property string toastText: ""
     property string toastLevel: ""
     property bool toastVisible: false
 
     property bool javaDropActive: false
+    property int navDirection: 1
+    property int _prevNavIndex: 0
+    property real shellOpacity: 0
 
     readonly property var navItems: [
         "启动", "版本管理", "模组", "设置"
@@ -32,6 +36,36 @@ ApplicationWindow {
         toastLevel = level || "ok"
         toastVisible = true
         toastTimer.restart()
+    }
+
+    function reloadBrand() {
+        try {
+            brand = JSON.parse(App.getBranding())
+            title = (brand.displayName || "Serena Launcher")
+                + " " + (brand.fullVersion || brand.versionRelease || "")
+        } catch (e) {
+            brand = {}
+        }
+    }
+
+    Component.onCompleted: {
+        reloadBrand()
+        shellFadeIn.start()
+    }
+
+    NumberAnimation {
+        id: shellFadeIn
+        target: window
+        property: "shellOpacity"
+        from: 0
+        to: 1
+        duration: SpectrumMotion.slow
+        easing.type: SpectrumMotion.easeOut
+    }
+
+    onNavIndexChanged: {
+        navDirection = navIndex > _prevNavIndex ? 1 : -1
+        _prevNavIndex = navIndex
     }
 
     Timer {
@@ -45,17 +79,41 @@ ApplicationWindow {
         function onToast(msg, level) { window.showToast(msg, level) }
     }
 
+    Win10TopProgress {
+        id: startupProgress
+        z: 200
+        anchors.top: parent.top
+        anchors.left: parent.left
+        anchors.right: parent.right
+        active: App.startupLoading
+    }
+
     CutCornerBox {
-        visible: toastVisible
+        id: toastBox
         z: 100
         anchors.horizontalCenter: parent.horizontalCenter
         anchors.bottom: parent.bottom
-        anchors.bottomMargin: 24
+        anchors.bottomMargin: toastVisible ? 24 : 10
+        opacity: toastVisible ? 1 : 0
+        visible: opacity > 0.01 || toastVisible
         cut: SpectrumTheme.cutSm
         width: toastLabel.implicitWidth + 32
         height: 40
         fillColor: toastLevel === "error" ? SpectrumTheme.surfaceActive : (toastLevel === "warn" ? SpectrumTheme.surfaceHover : SpectrumTheme.surface)
         borderColor: SpectrumTheme.border
+
+        Behavior on opacity {
+            NumberAnimation {
+                duration: SpectrumMotion.normal
+                easing.type: SpectrumMotion.easeOut
+            }
+        }
+        Behavior on anchors.bottomMargin {
+            NumberAnimation {
+                duration: SpectrumMotion.page
+                easing.type: SpectrumMotion.easeOut
+            }
+        }
 
         Text {
             id: toastLabel
@@ -111,13 +169,21 @@ ApplicationWindow {
     }
 
     CutCornerBox {
-        visible: window.javaDropActive
         z: 81
         anchors.fill: parent
         anchors.margins: 12
+        opacity: window.javaDropActive ? 1 : 0
+        visible: opacity > 0.01 || window.javaDropActive
         cut: SpectrumTheme.cutLg
         fillColor: Qt.rgba(0.72, 0.82, 0.75, 0.18)
         borderColor: SpectrumTheme.sageLight
+
+        Behavior on opacity {
+            NumberAnimation {
+                duration: SpectrumMotion.normal
+                easing.type: SpectrumMotion.easeOut
+            }
+        }
 
         Text {
             anchors.centerIn: parent
@@ -125,12 +191,21 @@ ApplicationWindow {
             font.pixelSize: 18
             font.family: SpectrumTheme.fontCnTitle
             color: SpectrumTheme.textTitle
+            opacity: window.javaDropActive ? 1 : 0
+            scale: window.javaDropActive ? 1 : 0.96
+            Behavior on opacity {
+                NumberAnimation { duration: SpectrumMotion.normal; easing.type: SpectrumMotion.easeOut }
+            }
+            Behavior on scale {
+                NumberAnimation { duration: SpectrumMotion.page; easing.type: SpectrumMotion.easeOut }
+            }
         }
     }
 
     RowLayout {
         anchors.fill: parent
         spacing: 0
+        opacity: window.shellOpacity
 
         Rectangle {
             Layout.preferredWidth: 220
@@ -151,14 +226,24 @@ ApplicationWindow {
                 spacing: 10
 
                 Text {
-                    text: "Spectrum-Minecraft-Launcher"
+                    text: brand.displayName || "Serena Launcher"
                     width: parent.width
                     wrapMode: Text.Wrap
                     font.family: SpectrumTheme.fontEnTitle
                     font.weight: SpectrumTheme.weightEnTitle
                     font.pixelSize: 12
                     color: SpectrumTheme.accent
-                    bottomPadding: 24
+                    bottomPadding: 4
+                }
+
+                Text {
+                    visible: brand.codename
+                    text: brand.codename + " · " + (brand.versionRelease || "")
+                    width: parent.width
+                    wrapMode: Text.Wrap
+                    font.pixelSize: 10
+                    color: SpectrumTheme.textMuted
+                    bottomPadding: 20
                 }
 
                 Repeater {
@@ -180,15 +265,78 @@ ApplicationWindow {
             Layout.fillHeight: true
             color: SpectrumTheme.bg
 
-            StackLayout {
+            Item {
                 anchors.fill: parent
-                anchors.margins: 40
-                currentIndex: window.navIndex
 
-                LaunchPage {}
-                ManagerHubPage {}
-                ModrinthPage {}
-                SettingsHubPage {}
+                PageLayer {
+                    id: launchLayer
+                    anchors.fill: parent
+                    anchors.margins: 28
+                    active: window.navIndex === 0
+                    direction: window.navDirection
+                    property bool everShown: active
+                    onActiveChanged: if (active) everShown = true
+
+                    Loader {
+                        anchors.fill: parent
+                        active: launchLayer.everShown
+                        asynchronous: true
+                        source: "pages/LaunchPage.qml"
+                    }
+                }
+                PageLayer {
+                    id: managerLayer
+                    anchors.fill: parent
+                    anchors.margins: 28
+                    active: window.navIndex === 1
+                    direction: window.navDirection
+                    property bool everShown: active
+                    onActiveChanged: if (active) everShown = true
+
+                    Loader {
+                        anchors.fill: parent
+                        active: managerLayer.everShown
+                        asynchronous: true
+                        source: "pages/ManagerHubPage.qml"
+                    }
+                }
+                PageLayer {
+                    id: modrinthLayer
+                    anchors.fill: parent
+                    anchors.margins: 28
+                    active: window.navIndex === 2
+                    direction: window.navDirection
+                    property bool everShown: active
+                    onActiveChanged: {
+                        if (active) {
+                            everShown = true
+                            App.ensureWebEngine()
+                        }
+                    }
+
+                    Loader {
+                        anchors.fill: parent
+                        active: modrinthLayer.everShown && App.webEngineReady
+                        asynchronous: true
+                        source: App.webEngineReady ? "pages/ModrinthPage.qml" : ""
+                    }
+                }
+                PageLayer {
+                    id: settingsLayer
+                    anchors.fill: parent
+                    anchors.margins: 28
+                    active: window.navIndex === 3
+                    direction: window.navDirection
+                    property bool everShown: active
+                    onActiveChanged: if (active) everShown = true
+
+                    Loader {
+                        anchors.fill: parent
+                        active: settingsLayer.everShown
+                        asynchronous: true
+                        source: "pages/SettingsHubPage.qml"
+                    }
+                }
             }
         }
     }
@@ -199,6 +347,7 @@ ApplicationWindow {
         anchors.right: parent.right
         anchors.bottom: parent.bottom
         anchors.margins: 20
+        opacity: window.shellOpacity
     }
 
     Connections {

@@ -5,8 +5,7 @@ import Spectrum
 
 Item {
     id: root
-    Layout.fillWidth: true
-    Layout.fillHeight: true
+    anchors.fill: parent
 
     property var status: ({ instance: "未选择", memory: "4G", javaCount: 0, modCount: 0 })
 
@@ -18,12 +17,12 @@ Item {
         }
     }
 
-    Column {
+    ColumnLayout {
         anchors.fill: parent
         spacing: 0
 
-        Row {
-            width: parent.width
+        RowLayout {
+            Layout.fillWidth: true
             spacing: 16
 
             Text {
@@ -31,10 +30,9 @@ Item {
                 font.family: SpectrumTheme.fontCnTitle
                 font.weight: SpectrumTheme.weightCnTitle
                 color: SpectrumTheme.textTitle
-                anchors.verticalCenter: parent.verticalCenter
             }
 
-            Item { width: parent.width - 400; height: 1 }
+            Item { Layout.fillWidth: true }
 
             PrimaryButton {
                 text: "▶  启动游戏"
@@ -44,188 +42,207 @@ Item {
             }
         }
 
-        Item { height: 40; width: 1 }
+        Item { Layout.preferredHeight: 24 }
 
-        Row {
-            width: parent.width
+        RowLayout {
+            Layout.fillWidth: true
+            Layout.fillHeight: true
             spacing: 20
-            layoutDirection: Qt.LeftToRight
 
             SpectrumCard {
-                width: (parent.width - 20) / 2
-                height: 360
+                Layout.fillWidth: true
+                Layout.fillHeight: true
+                Layout.preferredWidth: (parent.width - 20) / 2
+                animateIn: true
+                staggerIndex: 0
 
-                Column {
+                Flickable {
                     anchors.fill: parent
-                    spacing: 10
+                    contentHeight: configCol.height
+                    clip: true
+                    boundsBehavior: Flickable.StopAtBounds
 
-                    Text {
-                        text: "当前配置"
-                        font.pixelSize: 14
-                        color: SpectrumTheme.textMuted
-                    }
-
-                    Text {
+                    Column {
+                        id: configCol
                         width: parent.width
-                        wrapMode: Text.WordWrap
-                        text: "选择 Minecraft 版本与运行环境，保持轻量化启动配置。"
-                        font.pixelSize: 13
-                        color: SpectrumTheme.textMuted
-                        lineHeight: 1.6
-                    }
+                        spacing: 10
 
-                    Text {
-                        text: "游戏实例"
-                        font.pixelSize: 13
-                        color: SpectrumTheme.textMuted
-                        topPadding: 8
-                    }
-
-                    ComboBox {
-                        id: instCombo
-                        width: parent.width
-                        model: App.getInstances()
-                        onActivated: {
-                            App.selectInstance(model[currentIndex])
-                            javaCombo.reloadForInstance(model[currentIndex])
-                            root.reloadStatus()
-                        }
-                        Component.onCompleted: {
-                            App.refreshInstances()
-                            instCombo.model = App.getInstances()
-                            accountCombo.model = App.getAccounts()
-                            reloadStatus()
-                            if (instCombo.currentIndex >= 0 && instCombo.model.length > 0)
-                                javaCombo.reloadForInstance(instCombo.model[instCombo.currentIndex])
-                        }
-                    }
-
-                    Text { text: "账户"; font.pixelSize: 13; color: SpectrumTheme.textMuted }
-
-                    ComboBox {
-                        id: accountCombo
-                        width: parent.width
-                        model: App.getAccounts()
-                        textRole: "name"
-                        onActivated: App.selectAccount(currentIndex)
-                    }
-
-                    Text { text: "Java 运行时"; font.pixelSize: 13; color: SpectrumTheme.textMuted; topPadding: 4 }
-
-                    ComboBox {
-                        id: javaCombo
-                        width: parent.width
-                        textRole: "label"
-                        valueRole: "path"
-
-                        delegate: ItemDelegate {
-                            width: javaCombo.width
-                            enabled: modelData && modelData.enabled !== false
-                            text: modelData ? modelData.label : ""
-                            font.pixelSize: 12
-                            opacity: enabled ? 1.0 : 0.45
+                        Text {
+                            text: "当前配置"
+                            font.pixelSize: 14
+                            color: SpectrumTheme.textMuted
                         }
 
-                        onActivated: {
-                            if (currentIndex >= 0 && model[currentIndex]
-                                    && model[currentIndex].enabled !== false)
-                                App.selectLaunchJava(model[currentIndex].path)
+                        Text {
+                            width: parent.width
+                            wrapMode: Text.WordWrap
+                            text: "选择 Minecraft 版本与运行环境，保持轻量化启动配置。"
+                            font.pixelSize: 13
+                            color: SpectrumTheme.textMuted
+                            lineHeight: 1.6
                         }
 
-                        function reloadForInstance(instanceName) {
-                            if (!instanceName) {
-                                model = []
-                                return
+                        Text {
+                            text: "游戏实例"
+                            font.pixelSize: 13
+                            color: SpectrumTheme.textMuted
+                            topPadding: 8
+                        }
+
+                        ComboBox {
+                            id: instCombo
+                            width: parent.width
+                            model: App.getInstances()
+                            textRole: "label"
+                            valueRole: "name"
+                            onActivated: {
+                                var inst = model[currentIndex].name || model[currentIndex]
+                                App.selectInstance(inst)
+                                javaCombo.reloadForInstance(inst)
+                                root.reloadStatus()
                             }
-                            try {
-                                model = JSON.parse(App.getJavaOptionsForInstance(instanceName))
-                            } catch (e) {
-                                model = []
-                            }
-                            var pick = -1
-                            for (var j = 0; j < model.length; j++) {
-                                if (model[j].enabled !== false) {
-                                    if (model[j].recommended) {
-                                        pick = j
-                                        break
-                                    }
-                                    if (pick < 0)
-                                        pick = j
+                            Component.onCompleted: {
+                                App.refreshInstances()
+                                instCombo.model = App.getInstances()
+                                accountCombo.model = App.getAccounts()
+                                reloadStatus()
+                                if (instCombo.currentIndex >= 0 && instCombo.model.length > 0) {
+                                    var inst = instCombo.model[instCombo.currentIndex].name
+                                        || instCombo.model[instCombo.currentIndex]
+                                    javaCombo.reloadForInstance(inst)
                                 }
                             }
-                            currentIndex = pick
-                            if (pick >= 0)
-                                App.selectLaunchJava(model[pick].path)
-                            else
-                                App.selectLaunchJava("")
                         }
-                    }
 
-                    Text {
-                        width: parent.width
-                        wrapMode: Text.WordWrap
-                        visible: javaCombo.currentIndex >= 0 && javaCombo.model.length > 0
-                                && javaCombo.model[javaCombo.currentIndex]
-                                && javaCombo.model[javaCombo.currentIndex].warning
-                        font.pixelSize: 11
-                        color: "#c9a227"
-                        text: (javaCombo.currentIndex >= 0 && javaCombo.model[javaCombo.currentIndex])
-                            ? (javaCombo.model[javaCombo.currentIndex].warning || "") : ""
-                    }
+                        Text { text: "账户"; font.pixelSize: 13; color: SpectrumTheme.textMuted }
 
-                    CheckBox {
-                        id: ignoreJavaWarn
-                        text: "忽略 Java 兼容警告"
-                        checked: App.getIgnoreJavaWarnings()
-                        onCheckedChanged: App.setIgnoreJavaWarnings(checked)
-                        font.pixelSize: 12
-                    }
+                        ComboBox {
+                            id: accountCombo
+                            width: parent.width
+                            model: App.getAccounts()
+                            textRole: "name"
+                            onActivated: App.selectAccount(currentIndex)
+                        }
 
-                    Text {
-                        width: parent.width
-                        wrapMode: Text.WordWrap
-                        visible: root.status.minJava > 0 && root.status.mcVersion
-                        font.pixelSize: 11
-                        color: SpectrumTheme.textMuted
-                        text: root.status.mcVersion
-                            ? (root.status.java8Only
-                                ? ("MC " + root.status.mcVersion + " · 仅支持 Java 8")
-                                : ("MC " + root.status.mcVersion
-                                    + (root.status.modloader && root.status.modloader !== "vanilla"
-                                        ? (" · " + root.status.modloader) : "")
-                                    + " · 最低 Java " + root.status.minJava))
-                            : ""
-                    }
+                        Text { text: "Java 运行时"; font.pixelSize: 13; color: SpectrumTheme.textMuted; topPadding: 4 }
 
-                    Row {
-                        spacing: 12
-                        width: parent.width
-                        Column {
-                            width: parent.width / 2 - 6
-                            Text { text: "内存"; font.pixelSize: 13; color: SpectrumTheme.textMuted }
-                            ComboBox {
-                                id: memoryCombo
-                                width: parent.width
-                                model: ["2048M", "3G", "4G", "6G", "8G"]
-                                Component.onCompleted: {
-                                    var mem = App.getMemory()
-                                    for (var i = 0; i < memoryCombo.model.length; i++) {
-                                        if (memoryCombo.model[i] === mem) {
-                                            memoryCombo.currentIndex = i
+                        ComboBox {
+                            id: javaCombo
+                            width: parent.width
+                            textRole: "label"
+                            valueRole: "path"
+
+                            delegate: ItemDelegate {
+                                width: javaCombo.width
+                                enabled: modelData && modelData.enabled !== false
+                                text: modelData ? modelData.label : ""
+                                font.pixelSize: 12
+                                opacity: enabled ? 1.0 : 0.45
+                            }
+
+                            onActivated: {
+                                if (currentIndex >= 0 && model[currentIndex]
+                                        && model[currentIndex].enabled !== false)
+                                    App.selectLaunchJava(model[currentIndex].path)
+                            }
+
+                            function reloadForInstance(instanceName) {
+                                if (!instanceName) {
+                                    model = []
+                                    return
+                                }
+                                try {
+                                    model = JSON.parse(App.getJavaOptionsForInstance(instanceName))
+                                } catch (e) {
+                                    model = []
+                                }
+                                var pick = -1
+                                for (var j = 0; j < model.length; j++) {
+                                    if (model[j].enabled !== false) {
+                                        if (model[j].recommended) {
+                                            pick = j
                                             break
                                         }
+                                        if (pick < 0)
+                                            pick = j
                                     }
                                 }
-                                onActivated: App.setMemory(model[currentIndex])
+                                currentIndex = pick
+                                if (pick >= 0)
+                                    App.selectLaunchJava(model[pick].path)
+                                else
+                                    App.selectLaunchJava("")
                             }
                         }
-                        PrimaryButton {
-                            text: "刷新"
-                            filled: false
-                            anchors.bottom: parent.bottom
-                            onClicked: {
-                                instCombo.model = App.getInstances()
-                                reloadStatus()
+
+                        Text {
+                            width: parent.width
+                            wrapMode: Text.WordWrap
+                            visible: javaCombo.currentIndex >= 0 && javaCombo.model.length > 0
+                                    && javaCombo.model[javaCombo.currentIndex]
+                                    && javaCombo.model[javaCombo.currentIndex].warning
+                            font.pixelSize: 11
+                            color: "#c9a227"
+                            text: (javaCombo.currentIndex >= 0 && javaCombo.model[javaCombo.currentIndex])
+                                ? (javaCombo.model[javaCombo.currentIndex].warning || "") : ""
+                        }
+
+                        CheckBox {
+                            id: ignoreJavaWarn
+                            text: "忽略 Java 兼容警告"
+                            checked: App.getIgnoreJavaWarnings()
+                            onCheckedChanged: App.setIgnoreJavaWarnings(checked)
+                            font.pixelSize: 12
+                        }
+
+                        Text {
+                            width: parent.width
+                            wrapMode: Text.WordWrap
+                            visible: root.status.minJava > 0 && root.status.mcVersion
+                            font.pixelSize: 11
+                            color: SpectrumTheme.textMuted
+                            text: root.status.versionLabel || (root.status.mcVersion
+                                ? (root.status.java8Only
+                                    ? ("MC " + root.status.mcVersion + " · 仅支持 Java 8")
+                                    : ("MC " + root.status.mcVersion
+                                        + (root.status.loaderVersion
+                                            ? (" · " + root.status.modloader + " " + root.status.loaderVersion)
+                                            : (root.status.modloader && root.status.modloader !== "vanilla"
+                                                ? (" · " + root.status.modloader) : ""))
+                                        + " · 最低 Java " + root.status.minJava))
+                                : "")
+                        }
+
+                        Row {
+                            spacing: 12
+                            width: parent.width
+                            Column {
+                                width: parent.width / 2 - 6
+                                Text { text: "内存"; font.pixelSize: 13; color: SpectrumTheme.textMuted }
+                                ComboBox {
+                                    id: memoryCombo
+                                    width: parent.width
+                                    model: ["2048M", "3G", "4G", "6G", "8G"]
+                                    Component.onCompleted: {
+                                        var mem = App.getMemory()
+                                        for (var i = 0; i < memoryCombo.model.length; i++) {
+                                            if (memoryCombo.model[i] === mem) {
+                                                memoryCombo.currentIndex = i
+                                                break
+                                            }
+                                        }
+                                    }
+                                    onActivated: App.setMemory(model[currentIndex])
+                                }
+                            }
+                            PrimaryButton {
+                                text: "刷新"
+                                filled: false
+                                anchors.bottom: parent.bottom
+                                onClicked: {
+                                    instCombo.model = App.getInstances()
+                                    reloadStatus()
+                                }
                             }
                         }
                     }
@@ -233,10 +250,13 @@ Item {
             }
 
             SpectrumCard {
-                width: (parent.width - 20) / 2
-                height: 360
+                Layout.fillWidth: true
+                Layout.fillHeight: true
+                Layout.preferredWidth: (parent.width - 20) / 2
+                animateIn: true
+                staggerIndex: 1
 
-                Column {
+                ColumnLayout {
                     anchors.fill: parent
                     spacing: 10
 
@@ -247,17 +267,22 @@ Item {
                     }
 
                     Text {
-                        width: parent.width
+                        Layout.fillWidth: true
                         font.pixelSize: 13
                         color: SpectrumTheme.textMuted
                         lineHeight: 1.8
+                        wrapMode: Text.WordWrap
                         text: "Java：已检测 " + root.status.javaCount + " 个"
                             + (root.status.java8Only ? "（仅 Java 8）" : (root.status.minJava ? "（需要 ≥" + root.status.minJava + "）" : "")) + "\n"
                             + "内存：" + root.status.memory + " 分配\n"
                             + "当前实例：" + root.status.instance + "\n"
-                            + (root.status.mcVersion ? ("MC 版本：" + root.status.mcVersion + "\n") : "")
+                            + (root.status.versionLabel
+                                ? ("版本：" + root.status.versionLabel + "\n")
+                                : (root.status.mcVersion ? ("MC 版本：" + root.status.mcVersion + "\n") : ""))
                             + "模组：" + root.status.modCount
                     }
+
+                    Item { Layout.fillHeight: true }
                 }
             }
         }

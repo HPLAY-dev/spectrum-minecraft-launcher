@@ -40,6 +40,7 @@ fn deep_merge(a: Value, b: Value) -> Value {
             Value::Object(ao)
         }
         (Value::Array(a_arr), Value::Array(b_arr)) => Value::Array(deep_merge_list(a_arr, b_arr)),
+        (a, Value::Null) => a,
         (_, b) => b,
     }
 }
