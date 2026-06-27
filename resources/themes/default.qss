@@ -1,0 +1,17 @@
+/* MC Launcher default theme */
+
+QWidget {
+    background-color: #0f1117;
+    color: #e8eaed;
+}
+
+QPushButton {
+    background-color: #4c8bf5;
+    border: none;
+    border-radius: 6px;
+    padding: 8px 16px;
+}
+
+QPushButton:hover {
+    background-color: #5a95f6;
+}

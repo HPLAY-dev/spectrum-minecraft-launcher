@@ -1,0 +1,17 @@
+{
+  "minecraft_dir": "",
+  "use_bmclapi": true,
+  "language": "zh_cn",
+  "theme": "default",
+  "memory": "4G",
+  "window": {
+    "width": 1024,
+    "height": 680
+  },
+  "version_filters": {
+    "release": true,
+    "snapshot": false,
+    "old_alpha": false,
+    "old_beta": false
+  }
+}

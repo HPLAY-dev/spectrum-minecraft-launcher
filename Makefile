@@ -1,99 +1,49 @@
-# Spectrum Minecraft Launcher — Nuitka build
-# Windows: make.bat all VERSION=1.0.0
-# Unix:    make all VERSION=1.0.0
+# MC Launcher — build shortcuts
+# Windows: scripts\build.ps1
+# Unix:    ./scripts/build.sh
 
-VERSION     ?= 1.0.0
-NUITKA      ?= $(PYTHON) make_tools.py nuitka
+VERSION     ?= 0.1.0
 PYTHON      ?= python
-JOBS        ?= 16
-ENTRY       ?= main.py
+JOBS        ?= 8
 BUILD_DIR   ?= build
-DIST_NAME   ?= nuitka-$(VERSION)
-DIST_DIR    ?= builds/$(DIST_NAME)
-ARCHIVE     ?= builds/$(DIST_NAME)-windows.7z
-PYD         ?= python/spectrum_core/_spectrum_core.pyd
+GUI_DIR     ?= src/core/GUI/py
+RUST_DIR    ?= src/core/rs/mc-core
+PYD         ?= $(GUI_DIR)/mc_core/_mc_core.pyd
 
-NUITKA_BASE = --mingw64 \
-	--standalone \
-	--jobs=$(JOBS) \
-	--enable-plugin=pyside6 \
-	--include-package=spectrum_core \
-	--include-package=modrinth_api_wrapper \
-	--include-package=app \
-	--include-data-dir=./assets=assets \
-	--include-data-dir=./languages=languages \
-	--include-data-dir=./qml=qml \
-	--include-data-dir=./themes=themes \
-	--include-data-dir=./web=web \
-	--assume-yes-for-downloads \
-	--output-dir=$(BUILD_DIR) \
-	--show-progress \
-	--windows-console-mode=disable \
-	--windows-file-version=$(VERSION) \
-	--windows-product-version=$(VERSION) \
-	--windows-file-description=Spectrum Minecraft Launcher
-
-ifneq (,$(wildcard $(PYD)))
-NUITKA_FLAGS = $(NUITKA_BASE) \
-	--include-data-files=$(PYD)=python/spectrum_core/_spectrum_core.pyd
-else
-NUITKA_FLAGS = $(NUITKA_BASE)
-endif
-
-ifeq ($(OS),Windows_NT)
-	RUST_BUILD = powershell -NoProfile -ExecutionPolicy Bypass -File cargo_build.ps1
-	SHELL = cmd.exe
-.SHELLFLAGS = /c
-	RM = if exist $(BUILD_DIR) rmdir /s /q $(BUILD_DIR)
-	MKDIST = if not exist builds mkdir builds & if exist $(DIST_DIR) rmdir /s /q $(DIST_DIR) & mkdir $(DIST_DIR)
-	COPY_DIST = xcopy /E /I /Q $(BUILD_DIR)\main.dist $(DIST_DIR)
-	COPY_ASSETS = xcopy /E /I /Q assets $(DIST_DIR)\assets
-	COPY_LANG = xcopy /E /I /Q languages $(DIST_DIR)\languages
-	ARCHIVE_CMD = 7z a -mx0 $(ARCHIVE) $(DIST_DIR)
-else
-	RUST_BUILD = cd spectrum-core && PYO3_PYTHON=$(PYTHON) cargo build --release --features python
-	RM = rm -rf $(BUILD_DIR)
-	MKDIST = rm -rf $(DIST_DIR) && mkdir -p $(DIST_DIR)
-	COPY_DIST = cp -r $(BUILD_DIR)/main.dist/. $(DIST_DIR)/
-	COPY_ASSETS = cp -r assets $(DIST_DIR)/
-	COPY_LANG = cp -r languages $(DIST_DIR)/
-	ARCHIVE_CMD = 7z a -mx0 $(ARCHIVE) $(DIST_DIR)
-endif
-
-.PHONY: help all clean rust ui nuitka dist archive
+.PHONY: help all rust cpp gui clean test
 
 help:
-	@echo Spectrum Launcher — Nuitka build
+	@echo MC Launcher build
 	@echo.
-	@echo   make all              rust + ui + nuitka + dist + archive
-	@echo   make nuitka           compile standalone bundle
-	@echo   make dist             copy build output to builds/nuitka-VERSION
-	@echo   make archive          create 7z release archive
-	@echo   make rust             build PyO3 extension (optional)
-	@echo   make ui               regenerate ui.py from qt.ui
-	@echo   make clean            remove build/
-	@echo.
-	@echo   VERSION=1.0.0 make all
+	@echo   make all     rust + cpp
+	@echo   make rust    build PyO3 extension
+	@echo   make cpp     cmake build C++ core
+	@echo   make gui     run PySide6 QML GUI
+	@echo   make test    run python tests
+	@echo   make clean   remove build/
 
-all: archive
-
-archive: dist
-	$(ARCHIVE_CMD)
-
-dist: nuitka
-	$(MKDIST)
-	$(COPY_DIST)
-	$(COPY_ASSETS)
-	$(COPY_LANG)
-
-nuitka: rust ui
-	PYTHONPATH=python $(NUITKA) $(NUITKA_FLAGS) $(ENTRY)
+all: rust cpp
 
 rust:
-	$(RUST_BUILD)
+ifeq ($(OS),Windows_NT)
+	powershell -NoProfile -ExecutionPolicy Bypass -File scripts/cargo_build.ps1
+else
+	./scripts/cargo_build.sh
+endif
 
-ui:
-	$(PYTHON) make_tools.py uic -o ui.py qt.ui
+cpp:
+	cmake -S . -B $(BUILD_DIR) -DCMAKE_BUILD_TYPE=Release
+	cmake --build $(BUILD_DIR) -j$(JOBS)
+
+gui: rust
+	cd $(GUI_DIR) && $(PYTHON) main_qml.py
+
+test:
+	$(PYTHON) -m pytest tests/python -q
 
 clean:
-	$(RM)
+ifeq ($(OS),Windows_NT)
+	if exist $(BUILD_DIR) rmdir /s /q $(BUILD_DIR)
+else
+	rm -rf $(BUILD_DIR)
+endif

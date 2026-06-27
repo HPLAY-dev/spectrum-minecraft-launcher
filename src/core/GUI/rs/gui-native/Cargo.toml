@@ -1,0 +1,12 @@
+[package]
+name = "mc-gui-native"
+version = "0.1.0"
+edition = "2021"
+description = "Optional native Rust GUI (Slint / Tauri placeholder)"
+
+[[bin]]
+name = "mc-gui-native"
+path = "src/main.rs"
+
+[dependencies]
+mc-core = { path = "../../rs/mc-core", default-features = false }

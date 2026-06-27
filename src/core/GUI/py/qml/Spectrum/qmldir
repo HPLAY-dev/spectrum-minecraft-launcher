@@ -1,0 +1,4 @@
+module Spectrum
+singleton SpectrumTheme 1.0 SpectrumTheme.qml
+PrimaryButton 1.0 components/PrimaryButton.qml
+SpectrumCard 1.0 components/SpectrumCard.qml

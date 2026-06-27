@@ -1,0 +1,26 @@
+[package]
+name = "mc-core"
+version = "0.1.0"
+edition = "2021"
+description = "Minecraft launcher high-performance core (download, manifest, launch)"
+
+[lib]
+name = "_mc_core"
+crate-type = ["cdylib", "rlib"]
+
+[features]
+default = ["python"]
+python = ["pyo3"]
+
+[dependencies]
+reqwest = { version = "0.12", default-features = false, features = ["json", "rustls-tls"] }
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
+tokio = { version = "1", features = ["rt-multi-thread", "macros"] }
+thiserror = "2"
+tracing = "0.1"
+
+pyo3 = { version = "0.23", optional = true, features = ["extension-module", "abi3-py310"] }
+
+[dev-dependencies]
+tokio = { version = "1", features = ["rt-multi-thread", "macros"] }
