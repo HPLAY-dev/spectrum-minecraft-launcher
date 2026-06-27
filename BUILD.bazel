@@ -1,0 +1,41 @@
+# Spectrum Launcher - Bazel root
+# Recommended: .\build.ps1  (Cargo Rust + Bazel packaging)
+# Bazel only: bazel build //:build_all
+
+load("@bazel_skylib//rules:build_test.bzl", "build_test")
+
+package(default_visibility = ["//visibility:public"])
+
+filegroup(
+    name = "runtime_assets",
+    srcs = glob(
+        [
+            "assets/**",
+            "languages/**",
+            "themes/**",
+            "qml/**",
+            "web/**",
+            "fonts/**/OFL.txt",
+            "fonts/**/README.txt",
+        ],
+        allow_empty = True,
+    ),
+)
+
+filegroup(
+    name = "launcher",
+    srcs = glob(["*.py"]) + [":runtime_assets"],
+)
+
+alias(
+    name = "spectrum_core",
+    actual = "//python:spectrum_core",
+)
+
+build_test(
+    name = "build_all",
+    targets = [
+        "//python:spectrum_core",
+        ":launcher",
+    ],
+)

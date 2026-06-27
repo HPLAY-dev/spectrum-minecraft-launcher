@@ -1,0 +1,55 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>模组 — Spectrum-Minecraft-Launcher</title>
+  <script src="vendor/vue.global.prod.js"></script>
+  <script src="qrc:///qtwebchannel/qwebchannel.js"></script>
+  <link rel="stylesheet" href="fonts.css" />
+  <link rel="stylesheet" href="styles.css" />
+</head>
+<body>
+  <div id="app">
+    <div class="topbar">
+      <div>
+        <h1 class="title">模组中心</h1>
+        <p class="subtitle">Modrinth 搜索与安装</p>
+      </div>
+    </div>
+
+    <div class="toolbar">
+      <input class="cut-input" v-model="query" placeholder="搜索模组..." @keyup.enter="search" />
+      <select v-model="loader">
+        <option value="fabric">fabric</option>
+        <option value="forge">forge</option>
+        <option value="neoforge">neoforge</option>
+        <option value="quilt">quilt</option>
+      </select>
+      <select v-model="targetInstance">
+        <option v-for="i in instances" :key="i" :value="i">{{ i }}</option>
+      </select>
+      <button class="btn" @click="search">搜索</button>
+    </div>
+
+    <ul class="results">
+      <li v-for="item in results" :key="item.id" class="card">
+        <div class="card-main">
+          <img v-if="item.icon_url" class="icon" :src="item.icon_url" alt="" />
+          <div class="meta">
+            <div class="title-row">{{ item.title || item.slug || item.id }}</div>
+            <div class="desc">{{ item.description }}</div>
+            <div class="stats" v-if="item.downloads">下载 {{ item.downloads.toLocaleString() }}</div>
+          </div>
+        </div>
+        <button class="btn" @click="install(item.index)">安装</button>
+      </li>
+    </ul>
+
+    <p v-if="error" class="empty error">{{ error }}</p>
+    <p v-else-if="!results.length" class="empty">输入关键词搜索 Modrinth 模组（API v2）</p>
+  </div>
+
+  <script src="app.js"></script>
+</body>
+</html>

@@ -1,1 +1,2 @@
- pyside6-uic -o .\ui.py .\qt.ui
+@echo off
+python make_tools.py uic -o ui.py qt.ui

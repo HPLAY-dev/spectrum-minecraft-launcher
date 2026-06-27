@@ -33,9 +33,50 @@ To make all parts of this application work, you need to install the following pa
 - PySide6
 - modrinth_api_wrapper
 - requests
+- nuitka (release build; Nuitka 4.x uses `python -m nuitka`)
 ```
+pip install PySide6 requests modrinth_api_wrapper nuitka
+```
+
+### Run from source
+```powershell
 pip install PySide6 requests modrinth_api_wrapper
+python main.py
 ```
+
+主程序已切换至 `spectrum_core`（Rust 核心 + Python 桥接）。`SPECTRUM_USE_RUST=0` 可回退纯 Python 实现（`python/spectrum_core/py_fallback/`）。
+
+### Rust 核心（推荐编译）
+```powershell
+.\cargo_build.ps1
+```
+产物：`python/spectrum_core/_spectrum_core.pyd`
+
+### Release build — Nuitka + Makefile + make.bat
+
+Windows 推荐（MinGW64 + Nuitka）：
+
+```bat
+make.bat all 1.0.0
+```
+
+或分步：
+
+```bat
+make.bat clean
+make.bat nuitka 1.0.0
+make.bat dist 1.0.0
+make.bat archive 1.0.0
+```
+
+已安装 GNU Make 时，`make.bat` 会委托给 `Makefile`：
+
+```bat
+make.bat all VERSION=1.0.0
+```
+
+产物目录：`builds/nuitka-<VERSION>/`，压缩包：`builds/nuitka-<VERSION>-windows.7z`
+
 ### UI Modification 
 Run `pyside6-designer qt.ui` to modify UI.
 Run `./buildui.bat`(Windows only) to build the ui.

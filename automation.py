@@ -1,18 +1,21 @@
-import os, sys
-import mclauncher_core.download_funcs as downloader
+import os
+import sys
 
-import mclauncher_core.launcher_funcs as launcher
-# from modrinth_api_wrapper import Client
+_PYTHON_ROOT = os.path.join(os.path.dirname(os.path.abspath(__file__)), "python")
+if _PYTHON_ROOT not in sys.path:
+    sys.path.insert(0, _PYTHON_ROOT)
 
-# client = Client()
+import spectrum_core.download_funcs as downloader
+import spectrum_core.launcher_funcs as launcher
+from spectrum_core.javawrapper import download_javawrapper
 
 
 def err(text):
     print('[ERR] '+text)
 def inf(text):
-    print('[ERR] '+text)
+    print('[INF] '+text)
 def war(text):
-    print('[ERR] '+text)
+    print('[WAR] '+text)
 
 def lnparse(ln, v):
     ln = ln.replace('$$', '$DOLLAR_SYMBOL')
@@ -63,7 +66,7 @@ xmx = ''
 xmn = '128M'
 jwrapper = 'JavaWrapper.jar'
 if launcher.native() == 'windows' and not os.path.exists('JavaWrapper.jar'):
-    l.javawrapper.download_javawrapper()
+    download_javawrapper()
 bmclapi = False
 l = -1
 while int(l) < len(program):
@@ -107,8 +110,8 @@ while int(l) < len(program):
                 err(str(l)+' Value not suitable for dlver.')
         
         elif ln[0] == 'launch':
-            if minecraft_dir and version_name and javaw and xmx and xmn and javawrapper and name:
-                launcher.launch(javaw, xmx, minecraft_dir, version_name, javawrapper, name, xmn)
+            if minecraft_dir and version_name and javaw and xmx and xmn and jwrapper and name:
+                launcher.launch(javaw, xmx, minecraft_dir, version_name, javawrapper=jwrapper, username=name, xmn=xmn)
         
         # Variables
         elif ln[0] == 'set':

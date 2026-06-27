@@ -1,0 +1,78 @@
+/* Spectrum 字体 — 本地 fonts/ 目录 */
+
+@font-face {
+  font-family: "Source Han Serif CN";
+  src: url("../fonts/SiYuanSongTiRegular/SourceHanSerifCN-Regular-1.otf") format("opentype");
+  font-weight: 400;
+  font-style: normal;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: "Source Han Serif CN";
+  src: url("../fonts/SiYuanSongTiRegular/SourceHanSerifCN-SemiBold-7.otf") format("opentype");
+  font-weight: 600;
+  font-style: normal;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: "Source Han Serif CN";
+  src: url("../fonts/SiYuanSongTiRegular/SourceHanSerifCN-Bold-2.otf") format("opentype");
+  font-weight: 700;
+  font-style: normal;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: "Playfair Display";
+  src: url("../fonts/Playfair_Display/static/PlayfairDisplay-Bold.ttf") format("truetype");
+  font-weight: 700;
+  font-style: normal;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: "Lora";
+  src: url("../fonts/Lora/static/Lora-Regular.ttf") format("truetype");
+  font-weight: 400;
+  font-style: normal;
+  font-display: swap;
+}
+
+:root {
+  /* 色卡 */
+  --sage: #777C6D;
+  --sage-light: #B7B89F;
+  --gray: #CBCBCB;
+  --light: #EEEEEE;
+
+  --font-cn-title: "Source Han Serif CN", "Noto Serif SC", SimSun, serif;
+  --font-cn-body: "Source Han Serif CN", "Noto Serif SC", SimSun, serif;
+  --font-en-title: "Playfair Display", Georgia, "Times New Roman", serif;
+  --font-en-body: "Lora", Georgia, "Times New Roman", serif;
+  --weight-cn-title: 600;
+  --weight-cn-body: 400;
+  --weight-en-title: 700;
+  --weight-en-body: 400;
+}
+
+.font-cn-title {
+  font-family: var(--font-cn-title);
+  font-weight: var(--weight-cn-title);
+}
+
+.font-cn-body {
+  font-family: var(--font-cn-body);
+  font-weight: var(--weight-cn-body);
+}
+
+.font-en-title {
+  font-family: var(--font-en-title);
+  font-weight: var(--weight-en-title);
+}
+
+.font-en-body {
+  font-family: var(--font-en-body);
+  font-weight: var(--weight-en-body);
+}

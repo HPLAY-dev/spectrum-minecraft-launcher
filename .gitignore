@@ -25,7 +25,8 @@ build/
 .venv/
 .idea/
 __pycache__/
-mclauncher_core/__pycache__/
+python/spectrum_core/__pycache__/
+python/spectrum_core/py_fallback/__pycache__/
 modrinth/__pycache__/
 build-*/
 cfg.json.*
@@ -34,5 +35,10 @@ launch.bat
 config/
 nuitka-crash-report.xml
 temp/
-mclauncher_core/*/
 upx/
+spectrum-core/target/
+*.pyd.new
+/bazel-bin/
+/bazel-out/
+/bazel-testlogs/
+/bazel-spectrum-minecraft-launcher/

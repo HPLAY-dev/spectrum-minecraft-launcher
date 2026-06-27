@@ -1,0 +1,6 @@
+package(default_visibility = ["//visibility:public"])
+
+filegroup(
+    name = "spectrum_core",
+    srcs = glob(["spectrum_core/**/*"]),
+)

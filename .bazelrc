@@ -1,0 +1,5 @@
+build --enable_platform_specific_config
+build --check_direct_dependencies=off
+
+# PyO3 需指向含 development headers 的 Python
+build --action_env=PYO3_PYTHON

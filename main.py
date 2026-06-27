@@ -8,23 +8,29 @@ USE_OS_SYSTEM_TO_EXECUTE = 0
 import sys
 import os
 
+# spectrum_core 包位于 python/ 目录
+_PYTHON_ROOT = os.path.join(os.path.dirname(os.path.abspath(__file__)), "python")
+if _PYTHON_ROOT not in sys.path:
+    sys.path.insert(0, _PYTHON_ROOT)
+
 from PySide6.QtCore import QStringListModel, QProcess, Signal
-from PySide6.QtWidgets import QApplication, QMainWindow, QMessageBox, QFileDialog
+from PySide6.QtWidgets import QApplication, QMainWindow, QMessageBox, QFileDialog, QInputDialog
 from PySide6.QtGui import QStandardItemModel, QIcon, QStandardItem, QPixmap
 from PySide6.QtCore import Qt
 
 import re
 import json
-from mclauncher_core.javawrapper import download_javawrapper
-import mclauncher_core.launcher_funcs as launcher
-import mclauncher_core.oauth_funcs as oa
-import mclauncher_core.manager as manager
-import mclauncher_core.download_funcs as downloader
-import mclauncher_core.java as java
-import mclauncher_core.modloader_fabric as fabric
-import mclauncher_core.modloader_forge as forge
-import mclauncher_core.modloader_neoforge as neoforge
-import mclauncher_core.labymod as labymod
+from spectrum_core.javawrapper import download_javawrapper
+import spectrum_core.launcher_funcs as launcher
+import spectrum_core.oauth_funcs as oa
+import spectrum_core.manager as manager
+import spectrum_core.download_funcs as downloader
+import spectrum_core.java as java
+import spectrum_core.modloader_fabric as fabric
+import spectrum_core.modloader_forge as forge
+import spectrum_core.modloader_neoforge as neoforge
+import spectrum_core.labymod as labymod
+import spectrum_core as spectrum_core_mod
 import stylesheets
 # import hashlib
 
@@ -78,7 +84,19 @@ def log(string: str, log_type='STD', level=1, file=sys.stdout):
     #        1 - Standard Level
     #        2 - Verbose Level
     t = time.strftime("%H:%M:%S", time.localtime(time.time()))
-    print(f'[{t}][{log_type}] {str(string)}', file=file)
+    line = f'[{t}][{log_type}] {str(string)}'
+    print(line, file=file)
+    if level <= 1 and _log_listener is not None:
+        try:
+            _log_listener(line)
+        except Exception:
+            pass
+
+_log_listener = None
+
+def set_log_listener(listener):
+    global _log_listener
+    _log_listener = listener
 
 def check_update():
     pass
@@ -1007,10 +1025,10 @@ class MainWindow(QMainWindow, Ui_MainWindow):
                 self.checkBox_5.setChecked(config.get('launcher', {}).get('auto_download_fabric_api_mod', False))
                 memory = config.get('launcher', {}).get('memory', '2048M')
                 self.comboBox_4.setCurrentText(memory)
-                self.comboBox_7.clear()
-                self.comboBox_7.addItems(config.get('javas', []))
+                self.javas.clear()
                 for i in config.get('javas', []):
                     self.javas[i] = java.get_java_version(i)
+                self.refresh_java_combo()
         else:
             self.lineEdit.setText('.minecraft')
 
@@ -1197,6 +1215,32 @@ class MainWindow(QMainWindow, Ui_MainWindow):
                     f.write(raw.content)
                     return
 
+    def refresh_java_combo(self):
+        self.comboBox_7.clear()
+        for path, version in sorted(
+            self.javas.items(), key=lambda item: item[1], reverse=True
+        ):
+            self.comboBox_7.addItem(f"Java {version} — {path}", path)
+
+    def scan_system_javas(self):
+        log("Scanning system Java installations", "JAVA", level=1)
+        for entry in java.find_javas():
+            path = entry["path"] if isinstance(entry, dict) else entry.path
+            self.add_java(path)
+        self.refresh_java_combo()
+
+    def prompt_download_java(self):
+        version, ok = QInputDialog.getItem(
+            self,
+            "下载 Java",
+            "选择 Java 主版本:",
+            ["8", "17", "21"],
+            0,
+            False,
+        )
+        if ok and version:
+            self.download_java(int(version))
+
     def add_java(self, file_path):
         if file_path in self.javas:
             return
@@ -1205,12 +1249,12 @@ class MainWindow(QMainWindow, Ui_MainWindow):
             log('Bad java path: '+file_path)
             return
         self.javas[file_path] = v
-        self.comboBox_7.addItem(file_path)
     
     def remove_java(self):
-        current_java = self.comboBox_7.currentText()
-        del self.javas[current_java]
-        self.comboBox_7.removeItem(self.comboBox_7.currentIndex())
+        current_java = self.comboBox_7.currentData() or self.comboBox_7.currentText()
+        if current_java in self.javas:
+            del self.javas[current_java]
+        self.refresh_java_combo()
 
     def get_java(self, version):
         for java in self.javas:
@@ -1221,6 +1265,11 @@ class MainWindow(QMainWindow, Ui_MainWindow):
 
 log(l18n.string("startingMainIs")+__name__)
 if __name__ in ("__main__", "__compiled__", "__mp_main__"):
+    if spectrum_core_mod.rust_available():
+        spectrum_core_mod.require_native().init(
+            use_bmclapi=os.environ.get("SPECTRUM_USE_BMCLAPI", "1").lower()
+            not in ("0", "false", "no")
+        )
     if launcher.native() == "windows" and not os.path.exists(app_path+'/JavaWrapper.jar'):
         log(l18n.string("javaWrapper"), "INIT", level=1)
         download_javawrapper()
