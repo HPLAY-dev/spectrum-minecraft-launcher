@@ -1,7 +1,0 @@
-module Spectrum
-singleton AppFonts 1.0 AppFonts.qml
-singleton SpectrumTheme 1.0 SpectrumTheme.qml
-CutCornerBox 1.0 components/CutCornerBox.qml
-PrimaryButton 1.0 components/PrimaryButton.qml
-NavItem 1.0 components/NavItem.qml
-SpectrumCard 1.0 components/SpectrumCard.qml

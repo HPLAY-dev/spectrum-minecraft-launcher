@@ -8,34 +8,23 @@ USE_OS_SYSTEM_TO_EXECUTE = 0
 import sys
 import os
 
-if getattr(sys, 'frozen', False):
-    app_path = os.path.dirname(sys.executable)
-else:
-    app_path = os.path.dirname(os.path.abspath(__file__))
-
-# Rust 核心桥接层 (Bazel: bazel-bin/python 或开发: ./python)
-_python_bridge = os.path.join(app_path, 'python')
-_bazel_python = os.path.join(app_path, 'bazel-bin', 'python')
-for p in (_bazel_python, _python_bridge):
-    if os.path.isdir(p) and p not in sys.path:
-        sys.path.insert(0, p)
-
 from PySide6.QtCore import QStringListModel, QProcess, Signal
-from PySide6.QtWidgets import QApplication, QMainWindow, QMessageBox, QFileDialog, QInputDialog, QPushButton
+from PySide6.QtWidgets import QApplication, QMainWindow, QMessageBox, QFileDialog
 from PySide6.QtGui import QStandardItemModel, QIcon, QStandardItem, QPixmap
 from PySide6.QtCore import Qt
 
 import re
 import json
-import spectrum_core.launcher_funcs as launcher
-import spectrum_core.oauth_funcs as oa
-import spectrum_core.manager as manager
-import spectrum_core.download_funcs as downloader
-import spectrum_core.java as java
-import spectrum_core.modloader_fabric as fabric
-import spectrum_core.modloader_forge as forge
-import spectrum_core.modloader_neoforge as neoforge
-import spectrum_core.labymod as labymod
+from mclauncher_core.javawrapper import download_javawrapper
+import mclauncher_core.launcher_funcs as launcher
+import mclauncher_core.oauth_funcs as oa
+import mclauncher_core.manager as manager
+import mclauncher_core.download_funcs as downloader
+import mclauncher_core.java as java
+import mclauncher_core.modloader_fabric as fabric
+import mclauncher_core.modloader_forge as forge
+import mclauncher_core.modloader_neoforge as neoforge
+import mclauncher_core.labymod as labymod
 import stylesheets
 # import hashlib
 
@@ -56,19 +45,12 @@ def fpath(path):
     if path[-1] == '/':
         path = path[:-1]
     return path
+    
 
-
-def resolve_minecraft_dir(raw_path: str) -> str:
-    """解析并规范化 Minecraft 根目录（支持 .minecraft / ~ / 相对路径）。"""
-    path = (raw_path or '').strip()
-    if not path or path in ('.minecraft', './.minecraft'):
-        if sys.platform == 'win32':
-            appdata = os.environ.get('APPDATA', '')
-            path = os.path.join(appdata, '.minecraft') if appdata else '.minecraft'
-        else:
-            path = os.path.expanduser('~/.minecraft')
-    path = os.path.abspath(os.path.expanduser(path))
-    return path.replace('\\', '/').rstrip('/')
+if getattr(sys, 'frozen', False):
+    app_path = os.path.dirname(sys.executable)
+else:
+    app_path = os.path.dirname(os.path.abspath(__file__))
 
 app_path = fpath(app_path)
 lang_path = app_path + '/languages'
@@ -97,16 +79,6 @@ def log(string: str, log_type='STD', level=1, file=sys.stdout):
     #        2 - Verbose Level
     t = time.strftime("%H:%M:%S", time.localtime(time.time()))
     print(f'[{t}][{log_type}] {str(string)}', file=file)
-
-try:
-    from spectrum_core import rust_available, require_native
-    if rust_available():
-        require_native().init(True)
-        log("Rust core (_spectrum_core) loaded", "INIT", level=1)
-    else:
-        log("Rust core unavailable, using mclauncher_core fallback", "INIT", level=0)
-except Exception:
-    pass
 
 def check_update():
     pass
@@ -160,8 +132,6 @@ class MainWindow(QMainWindow, Ui_MainWindow):
         self.download_finished.connect(self._on_download_finished)
 
         self.launch_version = None
-        self.temp_access_token = ''
-        self.temp_refresh_token = ''
         # Stuff
         self.autodl_fabric_api = False
 
@@ -177,6 +147,9 @@ class MainWindow(QMainWindow, Ui_MainWindow):
         }
         '''
 
+        temp_access_token = ''
+        temp_refresh_token = ''
+
         hide_ctrl(self.create_account)
         # hide_ctrl(self.offline)
         hide_ctrl(self.microsoft)
@@ -190,7 +163,6 @@ class MainWindow(QMainWindow, Ui_MainWindow):
         log('Loading Config & Accounts', "INIT", level=1)
         self.load_config()
         self.load_accounts()
-        self.scan_system_javas(silent=True)
 
         log('Loading LabyMod versions', "INIT", level=1)
         try:
@@ -238,11 +210,7 @@ class MainWindow(QMainWindow, Ui_MainWindow):
 
         self.pushButton_10.clicked.connect(lambda: self.download_java(8, callback=self.progressBar_3.setValue))
         self.pushButton_11.clicked.connect(lambda: self.download_java(17, callback=self.progressBar_3.setValue))
-        self.pushButton_12.clicked.connect(self.prompt_download_java)
-        self.pushButton_12.setText("下载 Java...")
-        self.pushButton_scan_java = QPushButton("扫描", self.scrollAreaWidgetContents_2)
-        self.pushButton_scan_java.setGeometry(465, 100, 41, 31)
-        self.pushButton_scan_java.clicked.connect(self.scan_system_javas)
+        self.pushButton_12.clicked.connect(lambda: self.download_java(21, callback=self.progressBar_3.setValue))
 
         self.pushButton_9.clicked.connect(self.rename_version)
 
@@ -309,7 +277,7 @@ class MainWindow(QMainWindow, Ui_MainWindow):
             uuid, name = oa.get_mslogin_uuid_name(self.temp_access_token)
             self.accounts.append({
                 "type": "microsoft",
-                "refresh_token": self.temp_refresh_token,
+                "refresh_token": temp_refresh_token,
                 "name": name,
                 "uuid": uuid
             })
@@ -430,8 +398,12 @@ class MainWindow(QMainWindow, Ui_MainWindow):
         
     def oauth(self):
         log("Call OAUTH", "OAUTH", level=1)
-        self.temp_access_token, self.temp_refresh_token = oa.get_mc_token(need_refresh_token=True)
-        self.add_account(microsoft=True, access_token=self.temp_access_token, refresh_token=self.temp_refresh_token)
+        # try:
+        temp_access_token, temp_refresh_token = oa.get_mc_token(need_refresh_token=True)
+        self.add_account(microsoft=True, access_token=temp_access_token, refresh_token=temp_refresh_token)
+        # except Exception as e:
+        #     print('OAUTH EXCEPTION: '+str(e))
+        #     # self.label_18.setText(self.lineEdit_6.text())
 
     def remove_version(self):
         log("remove version", "OAUTH", level=1)
@@ -636,18 +608,13 @@ class MainWindow(QMainWindow, Ui_MainWindow):
             self.setAcceptDrops(False)
 
     def update_installed_versions(self):
-        try:
-            minecraft_dir = self.get_minecraft_dir()
-        except OSError:
+        minecraft_dir = self.lineEdit.text().replace('\\', '/')
+        if minecraft_dir == '':
             return 1
-        if not minecraft_dir:
-            return 1
-        versions_dir = minecraft_dir + '/versions'
-        if os.path.exists(versions_dir):
-            try:
-                versions = manager.list_instances(minecraft_dir)
-            except Exception:
-                versions = os.listdir(versions_dir)
+        if minecraft_dir[-1] == '/':
+            minecraft_dir = minecraft_dir[:-1]
+        if os.path.exists(minecraft_dir+'/versions'):
+            versions = os.listdir(minecraft_dir+'/versions')
 
             _ = QStringListModel()
             _.setStringList(versions)
@@ -656,11 +623,9 @@ class MainWindow(QMainWindow, Ui_MainWindow):
             self.comboBox_6.setModel(_)
     
     def launch(self):
-        try:
-            minecraft_dir = self.get_minecraft_dir()
-        except OSError:
-            QMessageBox.critical(None, l18n.string("appName"), l18n.string("minecraftPathInvalid"))
-            return 1
+        minecraft_dir = self.lineEdit.text().replace('\\', '/')
+        if minecraft_dir[-1] == '/':
+            minecraft_dir = minecraft_dir[:-1]
         if not os.path.exists(minecraft_dir):
             QMessageBox.critical(None, l18n.string("appName"), l18n.string("minecraftPathInvalid"))
             return 1
@@ -670,27 +635,11 @@ class MainWindow(QMainWindow, Ui_MainWindow):
             return 1
         instance_name = self.launch_version
 
-        # LabyMod 实例：启动前补全缺失依赖（如 launchwrapper-4.0.8.jar）
-        try:
-            vj_path = os.path.join(
-                minecraft_dir, 'versions', instance_name, f'{instance_name}.json',
-            )
-            if os.path.isfile(vj_path):
-                with open(vj_path, encoding='utf-8') as f:
-                    vj_meta = json.load(f)
-                if vj_meta.get('labymod_data'):
-                    lm_mc = vj_meta['labymod_data'].get('minecraftVersion')
-                    if not lm_mc:
-                        lm_mc = launcher.get_minecraft_version(minecraft_dir, instance_name)
-                    labymod.sync_libraries(minecraft_dir, lm_mc)
-        except Exception as e:
-            log(f"LabyMod library sync skipped: {e}", "WARN", level=2)
-
         if instance_name in self.versions_config and self.versions_config[instance_name]['if_override_java']:
             javaw = self.versions_config[instance_name]['override_java_path']
         else:
             java_major_version = launcher.get_required_java_version(minecraft_dir, instance_name)
-            javaw = self.get_java(version=java_major_version) or self.pick_java_for_mc(minecraft_dir, instance_name)
+            javaw = self.get_java(version=java_major_version)
             if not javaw:
                 QMessageBox.critical(None, l18n.string("appName"), l18n.string("ui", "javaNotFoundOrNoSuitable")\
                     .replace('${version}', str(java_major_version))\
@@ -706,23 +655,18 @@ class MainWindow(QMainWindow, Ui_MainWindow):
         # if bool(pattern.search(username)):
         #     QMessageBox.warning(None, l18n.string("appName"), '玩家名称含有其他语言字符，可能出现问题。')
 
+        if launcher.native() == 'windows':
+            javawrapper = app_path + '/JavaWrapper.jar'
+            if not os.path.exists(javawrapper):
+                QMessageBox.critical(None, l18n.string("appName"), l18n.string("javaWrapperInvalid"))
+                return 1
+        else:
+            javawrapper = None
+
         if self.accounts[self.comboBox_8.currentIndex()]['type'] == 'offline':
             access_token = None
-            ms_login = False
         else:
-            ms_login = True
-            try:
-                access_token = oa.refresh_token(
-                    self.accounts[self.comboBox_8.currentIndex()]['refresh_token']
-                )
-            except Exception as e:
-                log(f"OAuth refresh failed: {e}", "OAUTH", level=0)
-                QMessageBox.warning(
-                    None,
-                    l18n.string("appName"),
-                    f"Microsoft 账户令牌刷新失败，无法联机启动：\n{e}",
-                )
-                return 1
+            access_token = oa.refresh_token(self.accounts[self.comboBox_8.currentIndex()]['refresh_token'])
 
         uuid = self.accounts[self.comboBox_8.currentIndex()].get('uuid', None)
         # 使用QProcess启动Minecraft而不阻塞UI\
@@ -732,8 +676,8 @@ class MainWindow(QMainWindow, Ui_MainWindow):
             version_type = '§l§1S§9p§2e§ac§3t§br§9u§1m§r Launcher'
             # version_type = 'NullPointerException'
         cmd = launcher.launch(javaw=javaw, xmx=xmx, minecraft_dir=minecraft_dir, 
-                            instance_name=instance_name, 
-                            username=username, ms_login=ms_login, 
+                            instance_name=instance_name, javawrapper=javawrapper, 
+                            username=username, ms_login=self.accounts[self.comboBox_8.currentIndex()]['type'] == 'microsoft', 
                             access_token=access_token,
                             version_type=version_type,
                             jvm_args=self.lineEdit_11.text(),
@@ -776,20 +720,13 @@ class MainWindow(QMainWindow, Ui_MainWindow):
             return 1
         mcversion = self.listView.selectionModel().selectedIndexes()[0].data()
 
-        try:
-            minecraft_dir = self.get_minecraft_dir(create=True)
-        except OSError as e:
-            QMessageBox.critical(None, l18n.string("appName"), l18n.string("minecraftPathInvalid") + f"\n{e}")
-            return 1
-        if not os.path.isdir(minecraft_dir):
-            QMessageBox.critical(None, l18n.string("appName"), l18n.string("minecraftPathInvalid"))
-            return 1
+        minecraft_dir = self.lineEdit.text().replace('\\', '/')
+        if minecraft_dir[-1] == '/':
+            minecraft_dir = minecraft_dir[:-1]
 
-        instance_name = self.lineEdit_7.text().strip()
-        if not instance_name:
-            QMessageBox.critical(None, l18n.string("appName"), l18n.string("pleaseEnterInstanceName"))
-            return 1
-        if instance_name in os.listdir(os.path.join(minecraft_dir, 'versions')):
+        instance_name = self.lineEdit_7.text()
+        os.makedirs(minecraft_dir+'/versions', exist_ok=True)
+        if instance_name in os.listdir(minecraft_dir+'/versions'):
             QMessageBox.critical(None, l18n.string("appName"), l18n.string("nameAlreadyExists"))
             return 1
         
@@ -802,9 +739,15 @@ class MainWindow(QMainWindow, Ui_MainWindow):
             QMessageBox.critical(None, l18n.string("appName"), l18n.string("selectModLoaderVersion"))
             return 1
 
-        javaw = self.pick_java_for_mc(minecraft_dir, mcversion=mcversion)
+        
+        java_major_version = downloader.get_version_json(mcversion).get('javaVersion', {}).get('majorVersion', 0)
+        if not java_major_version:
+            java_major_version = 8  # default to Java 8 if not specified
+        javaw = self.get_java(version=java_major_version)
 
+        # Start asynchronous download to avoid blocking the UI
         self.start_download(minecraft_dir=minecraft_dir, mcversion=mcversion, instance_name=instance_name, modloader=modloader, modloader_version=modloader_version, java=javaw, bmclapi=self.checkBox.isChecked())
+        # update will be handled when finished via signal handler
 
     def download_labymod(self):
         if len(self.listView_5.selectionModel().selectedIndexes()) == 0:
@@ -812,49 +755,18 @@ class MainWindow(QMainWindow, Ui_MainWindow):
             return 1
         mcversion = self.listView_5.selectionModel().selectedIndexes()[0].data()
 
-        try:
-            minecraft_dir = self.get_minecraft_dir(create=True)
-        except OSError as e:
-            QMessageBox.critical(None, l18n.string("appName"), l18n.string("minecraftPathInvalid") + f"\n{e}")
-            return 1
-        if not os.path.isdir(minecraft_dir):
-            QMessageBox.critical(None, l18n.string("appName"), l18n.string("minecraftPathInvalid"))
-            return 1
+        minecraft_dir = self.lineEdit.text().replace('\\', '/')
+        if minecraft_dir[-1] == '/':
+            minecraft_dir = minecraft_dir[:-1]
 
-        instance_name = self.lineEdit_14.text().strip()
-        if not instance_name:
-            QMessageBox.critical(None, l18n.string("appName"), l18n.string("pleaseEnterInstanceName"))
-            return 1
-        versions_dir = os.path.join(minecraft_dir, 'versions')
-        if instance_name in os.listdir(versions_dir):
+        instance_name = self.lineEdit_14.text()
+        os.makedirs(minecraft_dir+'/versions', exist_ok=True)
+        if instance_name in os.listdir(minecraft_dir+'/versions'):
             QMessageBox.critical(None, l18n.string("appName"), l18n.string("nameAlreadyExists"))
             return 1
-
-        self.pushButton_28.setEnabled(False)
-        bmclapi = self.checkBox_7.isChecked()
-        future = self._dl_executor.submit(
-            self._run_labymod_task, minecraft_dir, mcversion, instance_name, bmclapi,
-        )
-
-        def _done(fut):
-            self.pushButton_28.setEnabled(True)
-            try:
-                fut.result()
-                QMessageBox.information(None, l18n.string("appName"), "LabyMod 下载完成")
-                self.update_installed_versions()
-            except Exception as e:
-                log(f"LabyMod download failed: {e}", "WARN", 0)
-                QMessageBox.warning(None, l18n.string("appName"), l18n.string("downloadFail") + str(e))
-        future.add_done_callback(_done)
-
-    def _run_labymod_task(self, minecraft_dir, mcversion, instance_name, bmclapi):
-        labymod.download(
-            minecraftDirectory=minecraft_dir, version=4,
-            mcversion=mcversion, instance_name=instance_name,
-        )
-        downloader.auto_download(
-            minecraft_dir, mcversion, instance_name, bmclapi=bmclapi,
-        )
+        
+        labymod.download(minecraftDirectory=minecraft_dir, version=4, mcversion=mcversion, instance_name=instance_name)
+        downloader.auto_download(minecraft_dir, mcversion, instance_name, bmclapi=self.checkBox_7.isChecked())
 
 
         
@@ -1004,10 +916,6 @@ class MainWindow(QMainWindow, Ui_MainWindow):
             return
         
         # 检查Minecraft目录是否存在
-        try:
-            minecraft_dir = resolve_minecraft_dir(minecraft_dir)
-        except Exception:
-            pass
         if not os.path.exists(minecraft_dir):
             QMessageBox.critical(None, l18n.string("appName"), l18n.string("minecraftPathInvalid"))
             self.pushButton_3.setEnabled(True)
@@ -1083,15 +991,10 @@ class MainWindow(QMainWindow, Ui_MainWindow):
         future.add_done_callback(_done)
 
     def progress_callback(self, current, total, description):
-        log(f"Download {description}", "DL", level=1)
-        if total <= 0:
-            return
-        pct = int(current / total * 100)
-        stage = description[1:].split(']')[0] if description.startswith('[') else ''
-        if stage == 'LIB' or stage == 'JAR':
-            self.progressBar.setValue(pct)
-        elif stage == 'AST':
-            self.progressBar_2.setValue(pct)
+        if description[1:-1].split('][')[0] == 'LIB':
+            self.progressBar.setValue(int(current/total*100))
+        elif description[1:-1].split('][')[0] == 'AST':
+            self.progressBar_2.setValue(int(current/total*100))
 
     def load_config(self):
         if os.path.exists(app_path+'/cfg.json'):
@@ -1099,18 +1002,17 @@ class MainWindow(QMainWindow, Ui_MainWindow):
                 config = json.loads(f.read())
                 self.lineEdit_10.setText(config.get('launcher', {}).get('launcher_info', ''))
                 self.lineEdit_11.setText(config.get('launcher', {}).get('jvm_args', ''))
-                raw_mc = config.get('launcher', {}).get('minecraftPath', '')
-                self.lineEdit.setText(resolve_minecraft_dir(raw_mc) if raw_mc else resolve_minecraft_dir(''))
+                self.lineEdit.setText(config.get('launcher', {}).get('minecraftPath', ''))
                 self.lineEdit_12.setText(config.get('launcher', {}).get('game_extend', ''))
                 self.checkBox_5.setChecked(config.get('launcher', {}).get('auto_download_fabric_api_mod', False))
                 memory = config.get('launcher', {}).get('memory', '2048M')
                 self.comboBox_4.setCurrentText(memory)
                 self.comboBox_7.clear()
-                for jpath in config.get('javas', []):
-                    if os.path.isfile(jpath):
-                        self.javas[jpath] = java.get_java_version(jpath)
+                self.comboBox_7.addItems(config.get('javas', []))
+                for i in config.get('javas', []):
+                    self.javas[i] = java.get_java_version(i)
         else:
-            self.lineEdit.setText(resolve_minecraft_dir('.minecraft'))
+            self.lineEdit.setText('.minecraft')
 
 
         if os.path.exists(app_path+'/versions.json'):
@@ -1121,6 +1023,7 @@ class MainWindow(QMainWindow, Ui_MainWindow):
     
     def save_config(self):
         jsonfile = {'launcher': {}}
+        jsonfile['launcher']['wrapperPath'] = './JavaWrapper.jar'
         jsonfile['launcher']['minecraftPath'] = self.lineEdit.text()
         jsonfile['launcher']['auto_download_fabric_api_mod'] = self.checkBox_5.isChecked()
         jsonfile['launcher']['launcher_info'] = self.lineEdit_10.text()
@@ -1240,8 +1143,7 @@ class MainWindow(QMainWindow, Ui_MainWindow):
             instance_name = self.comboBox_6.currentText()
             mcversion = launcher.get_minecraft_version(minecraft_dir, instance_name)
         except Exception as E:
-            log(l18n.string("cannotGetMinecraftVersion"))
-            return
+            log(l18.cannotGetMinecraftVersion)
 
         modloader = self.comboBox_3.currentText()
 
@@ -1296,146 +1198,33 @@ class MainWindow(QMainWindow, Ui_MainWindow):
                     return
 
     def add_java(self, file_path):
-        if not file_path or file_path in self.javas:
+        if file_path in self.javas:
             return
         v = java.get_java_version(file_path)
         if not v:
             log('Bad java path: '+file_path)
             return
-        self.javas[file_path] = int(v)
-        self.refresh_java_combo()
+        self.javas[file_path] = v
+        self.comboBox_7.addItem(file_path)
     
     def remove_java(self):
-        data = self.comboBox_7.currentData()
-        current_java = data if data else self.comboBox_7.currentText().split(' — ')[-1]
-        if current_java in self.javas:
-            del self.javas[current_java]
+        current_java = self.comboBox_7.currentText()
+        del self.javas[current_java]
         self.comboBox_7.removeItem(self.comboBox_7.currentIndex())
 
-    def get_minecraft_dir(self, create=False):
-        """返回规范化后的 Minecraft 目录，必要时创建。"""
-        minecraft_dir = resolve_minecraft_dir(self.lineEdit.text())
-        if create:
-            os.makedirs(os.path.join(minecraft_dir, 'versions'), exist_ok=True)
-        return minecraft_dir
-
-    def scan_system_javas(self, silent=False):
-        """扫描系统已安装的 Java 并加入管理列表。"""
-        added = 0
-        try:
-            found = java.find_javas()
-        except Exception as e:
-            if not silent:
-                QMessageBox.warning(None, l18n.string("appName"), f"扫描 Java 失败: {e}")
-            return
-        for item in found:
-            path = item.get('path') if isinstance(item, dict) else getattr(item, 'path', None)
-            if not path or path in self.javas:
-                continue
-            major = item.get('major_version') if isinstance(item, dict) else getattr(item, 'major_version', None)
-            if major is None:
-                major = java.get_java_version(path)
-            if not major:
-                continue
-            self.javas[path] = int(major)
-            added += 1
-        self.refresh_java_combo()
-        if not silent and added:
-            log(f"扫描到 {added} 个 Java 运行时", "JAVA", level=1)
-
-    def refresh_java_combo(self):
-        """刷新 Java 下拉列表，显示路径与主版本号。"""
-        current = self.comboBox_7.currentText()
-        self.comboBox_7.clear()
-        for path, major in sorted(self.javas.items(), key=lambda x: (-x[1], x[0])):
-            label = f"Java {major} — {path}"
-            self.comboBox_7.addItem(label, path)
-        idx = self.comboBox_7.findData(current.split(' — ')[-1] if ' — ' in current else current)
-        if idx >= 0:
-            self.comboBox_7.setCurrentIndex(idx)
-
-    def prompt_download_java(self):
-        major, ok = QInputDialog.getInt(
-            self, l18n.string("appName"), "输入 Java 主版本号 (如 8/17/21/25):",
-            21, 8, 99, 1,
-        )
-        if ok:
-            self.download_java(major, callback=self.progressBar_3.setValue)
-
-    def get_java(self, version, prefer_selected=True):
-        """按主版本号选取 Java：优先精确匹配，否则选 >= 要求的最低版本。"""
-        version = int(version)
-        if prefer_selected and self.comboBox_7.currentData():
-            selected = self.comboBox_7.currentData()
-            if selected in self.javas and self.javas[selected] >= version:
-                return selected
-        exact = [p for p, v in self.javas.items() if v == version]
-        if exact:
-            return exact[0]
-        candidates = [(p, v) for p, v in self.javas.items() if v >= version]
-        if candidates:
-            return min(candidates, key=lambda x: x[1])[0]
-        return None
-
-    def pick_java_for_mc(self, minecraft_dir, instance_name=None, mcversion=None):
-        """根据实例或 MC 版本推断所需 Java。"""
-        required = 21
-        if instance_name and minecraft_dir:
-            try:
-                required = launcher.get_required_java_version(minecraft_dir, instance_name)
-            except Exception:
-                pass
-        elif mcversion:
-            required = self._guess_java_major(mcversion)
-        javaw = self.get_java(required)
-        if not javaw:
-            for fallback in (required, 25, 21, 17, 11, 8):
-                javaw = self.get_java(fallback, prefer_selected=False)
-                if javaw:
-                    break
-        return javaw or 'java'
-
-    def _guess_java_major(self, mcversion):
-        parts = str(mcversion).split('.')
-        try:
-            head = int(parts[0])
-            if head >= 26:
-                return 25
-            if head == 1 and len(parts) > 1:
-                minor = int(parts[1])
-                if minor >= 20:
-                    return 21
-                if minor >= 18:
-                    return 17
-                if minor >= 17:
-                    return 16
-                return 8
-            return max(8, min(21, head))
-        except (ValueError, IndexError):
-            return 21
+    def get_java(self, version):
+        for java in self.javas:
+            if self.javas[java] == version:
+                return java
 
 
 
 log(l18n.string("startingMainIs")+__name__)
 if __name__ in ("__main__", "__compiled__", "__mp_main__"):
-    use_legacy = "--legacy" in sys.argv
-    use_qml = "--qml" in sys.argv or os.environ.get("SPECTRUM_UI", "qml").lower() == "qml"
-
-    if use_qml and not use_legacy:
-        from main_qml import run_qml_ui
-
-        sys.exit(run_qml_ui())
-
-    from PySide6.QtWidgets import QApplication
-
-    from app.local_fonts import register_local_fonts
-
+    if launcher.native() == "windows" and not os.path.exists(app_path+'/JavaWrapper.jar'):
+        log(l18n.string("javaWrapper"), "INIT", level=1)
+        download_javawrapper()
     app = QApplication(sys.argv)
-    register_local_fonts(app_path)
-    qss_path = os.path.join(app_path, "themes", "spectrum.qss")
-    if os.path.isfile(qss_path):
-        with open(qss_path, encoding="utf-8") as f:
-            app.setStyleSheet(f.read())
     win = MainWindow()
     win.show()
     sys.exit(app.exec())

@@ -36,8 +36,3 @@ nuitka-crash-report.xml
 temp/
 mclauncher_core/*/
 upx/
-spectrum-core/target/
-bazel-*
-bazel-out/
-CARGO.BAZEL.lock
-python/spectrum_core/_spectrum_core.*

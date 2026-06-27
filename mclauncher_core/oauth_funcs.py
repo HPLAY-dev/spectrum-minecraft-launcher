@@ -23,26 +23,15 @@ def code_to_token(auth_code: str, redirect_uri=oauth.redirect_uri):
 
 
 def refresh_token(refresh_token: str):
-    """用 Microsoft refresh_token 刷新并返回 Minecraft access_token"""
     url = 'https://login.microsoftonline.com/consumers/oauth2/v2.0/token'
     token_data = {
-        'client_id': client_id,
-        'scope': 'XboxLive.signin offline_access',
-        'refresh_token': refresh_token,
-        'grant_type': 'refresh_token',
+        {"client_id", client_id},
+        {"scope", "XboxLive.signin XboxLive.offline_access"},
+        {"refresh_token", refresh_token},
+        {"grant_type", "refresh_token"}
     }
-    headers = {
-        'Content-Type': 'application/x-www-form-urlencoded',
-        'Accept': 'application/json',
-    }
-    response = requests.post(url, data=token_data, headers=headers)
-    if response.status_code != 200:
-        raise Exception(f"Refresh token failed: {response.status_code} {response.text}")
-    token_return = response.json()
-    access_token = token_return['access_token']
-    xbl = access_token_to_xbl(access_token)
-    xsts = xbl_to_xsts(xbl)
-    return xsts_to_mc_token(xsts)
+    response = requests.post(url, data=token_data)
+    return response.json()
 
 
 def access_token_to_xbl(access_token: str):

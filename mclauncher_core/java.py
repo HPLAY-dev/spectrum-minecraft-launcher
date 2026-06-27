@@ -37,17 +37,17 @@ def get_arch():
     return arch
 
 def get_url(java_major_version: int, java_type, arch=get_arch(), platform=platform.system().lower(), file_type='.msi', tuna=False):
-    """获取 Java (Adoptium) 下载地址，支持任意主版本号。"""
-    java_major_version = int(java_major_version)
-    if java_major_version < 8:
-        raise ValueError('Java 主版本号至少为 8')
-    if java_type not in java_types:
+    """获取Java(Adoptium)的tuna源最新下载地址"""
+    # check format for args
+    if not java_major_version in java_major_versions:
+        raise SyntaxError('java_major_version')
+    if not java_type in java_types:
         raise SyntaxError('java_type')
-    if platform not in platforms:
+    if not platform in platforms:
         raise SyntaxError('platform')
-    if file_type not in file_types:
-        if '.' + file_type in file_types:
-            file_type = '.' + file_type
+    if not file_type in file_types:
+        if '.'+file_type in file_types:
+            file_type = '.'+file_type
         else:
             raise SyntaxError('file_type')
     # if java_major_version == '8' and java_type == 'jre':
