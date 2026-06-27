@@ -1,0 +1,4 @@
+# Spectrum Launcher — Bazel 根目录
+# Repin: set CARGO_BAZEL_REPIN=1 && bazel sync --only=crates
+
+package(default_visibility = ["//visibility:public"])

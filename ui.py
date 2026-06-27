@@ -470,7 +470,7 @@ class Ui_MainWindow(object):
     # setupUi
 
     def retranslateUi(self, MainWindow):
-        MainWindow.setWindowTitle(QCoreApplication.translate("MainWindow", u"Spectrum Launcher", None))
+        MainWindow.setWindowTitle(QCoreApplication.translate("MainWindow", u"Spectrum-Minecraft-Launcher", None))
         self.pushButton_15.setText(QCoreApplication.translate("MainWindow", u"\u25b4", None))
         self.label_3.setText(QCoreApplication.translate("MainWindow", u"\u767b\u5f55\u4e3a", None))
         self.launchBtn.setText(QCoreApplication.translate("MainWindow", u"LaunchButton", None))

@@ -1,0 +1,7 @@
+build --enable_platform_specific_config
+
+# Rust
+build --@rules_rust//:rustc_flags=-Copt-level=3
+
+# Python 扩展需要找到 Python 头文件
+build --action_env=PYO3_PYTHON

@@ -1,0 +1,133 @@
+/* Spectrum — 浅色切角 + 色卡 #777C6D #B7B89F #CBCBCB #EEEEEE */
+
+@import url("fonts.css");
+
+:root {
+  --bg: var(--light);
+  --surface: var(--light);
+  --surface-hover: var(--gray);
+  --surface-active: var(--sage-light);
+  --text: var(--sage);
+  --text-muted: var(--sage-light);
+  --text-title: var(--sage);
+  --border: var(--gray);
+  --border-input: var(--gray);
+  --input-bg: var(--light);
+  --primary: var(--sage);
+  --on-primary: var(--light);
+  --cut: 6px;
+}
+
+* { box-sizing: border-box; }
+
+body {
+  margin: 0;
+  font-family: var(--font-cn-body);
+  font-weight: var(--weight-cn-body);
+  background: var(--bg);
+  color: var(--text);
+  height: 100vh;
+  overflow: hidden;
+}
+
+#app {
+  display: flex;
+  flex-direction: column;
+  height: 100vh;
+  padding: 24px 32px;
+}
+
+.topbar {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 24px;
+}
+
+.title {
+  font-family: var(--font-cn-title);
+  font-weight: var(--weight-cn-title);
+  font-size: 22px;
+  color: var(--text-title);
+  letter-spacing: 0.05em;
+  margin: 0;
+}
+
+.subtitle {
+  margin: 4px 0 0;
+  font-family: var(--font-cn-body);
+  font-size: 13px;
+  color: var(--text-muted);
+}
+
+.toolbar {
+  display: flex;
+  gap: 10px;
+  flex-wrap: wrap;
+  margin-bottom: 16px;
+}
+
+.cut-input,
+.toolbar select {
+  font-family: var(--font-cn-body);
+  padding: 8px 12px;
+  border: 1px solid var(--border-input);
+  background: var(--input-bg);
+  color: var(--text);
+  outline: none;
+  min-width: 140px;
+  clip-path: polygon(var(--cut) 0, 100% 0, 100% calc(100% - var(--cut)),
+    calc(100% - var(--cut)) 100%, 0 100%, 0 var(--cut));
+}
+
+.cut-input { flex: 1; min-width: 180px; }
+
+.btn {
+  font-family: var(--font-cn-body);
+  padding: 8px 18px;
+  border: 1px solid var(--border);
+  background: var(--surface);
+  color: var(--text);
+  font-size: 14px;
+  cursor: pointer;
+  clip-path: polygon(8px 0, 100% 0, 100% calc(100% - 8px),
+    calc(100% - 8px) 100%, 0 100%, 0 8px);
+  transition: background 0.2s;
+}
+
+.btn:hover { background: var(--surface-hover); }
+
+.results {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  flex: 1;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.card {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  padding: 14px 18px;
+  clip-path: polygon(8px 0, 100% 0, 100% calc(100% - 8px),
+    calc(100% - 8px) 100%, 0 100%, 0 8px);
+}
+
+.card .id {
+  font-family: var(--font-en-body);
+  font-size: 13px;
+  color: var(--text);
+}
+
+.empty {
+  text-align: center;
+  color: var(--text-muted);
+  font-size: 13px;
+  padding: 40px;
+}

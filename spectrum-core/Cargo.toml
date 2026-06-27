@@ -1,0 +1,83 @@
+[package]
+name = "spectrum-core"
+version = "0.1.0"
+edition = "2021"
+description = "Spectrum Launcher — Rust async core library"
+
+[lib]
+name = "spectrum_core"
+crate-type = ["rlib", "cdylib"]
+
+[features]
+default = []
+python = ["dep:pyo3"]
+
+[dependencies]
+# HTTP 客户端 (异步)
+reqwest = { version = "0.12", features = ["json", "stream"] }
+tokio = { version = "1", features = ["full"] }
+
+# JSON 序列化
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
+
+# XML 解析 (Forge/Fabric Maven metadata)
+quick-xml = "0.36"
+
+# HTML 解析 (Java 下载页)
+scraper = "0.21"
+
+# 本地 HTTP 服务器 (OAuth 回调)
+tiny_http = "0.12"
+
+# URL 处理
+url = "2"
+webbrowser = "1"
+
+# 文件系统
+zip = "2"
+
+# 哈希
+sha1 = "0.10"
+sha2 = "0.10"
+
+# stream
+futures-util = "0.3"
+
+# async trait
+async-trait = "0.1"
+
+# 正则
+regex = "1"
+
+# 并发 & 同步
+parking_lot = "0.12"
+
+# FFI
+libc = "0.2"
+
+# 日志
+log = "0.4"
+env_logger = "0.11"
+
+# 错误处理
+thiserror = "2"
+
+# OAuth2
+oauth2 = { version = "5", features = ["reqwest"] }
+
+# 异步 fs
+tokio-util = "0.7"
+
+# 格式化
+chrono = "0.4"
+
+# 路径处理
+path-clean = "1"
+
+# Windows 注册表 (Java 检测)
+[target.'cfg(windows)'.dependencies]
+winreg = "0.55"
+
+# Python 扩展 (PyO3)
+pyo3 = { version = "0.23", optional = true, features = ["extension-module", "abi3-py38"] }

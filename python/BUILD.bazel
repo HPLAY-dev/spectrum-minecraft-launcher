@@ -1,0 +1,27 @@
+load("@rules_python//python:defs.bzl", "py_library")
+load("@bazel_skylib//rules:copy_file.bzl", "copy_file")
+
+package(default_visibility = ["//visibility:public"])
+
+# 将 Rust 扩展复制为 Python 可 import 的名称
+copy_file(
+    name = "_spectrum_core_pyd",
+    src = "//spectrum-core:spectrum_core_native",
+    out = "spectrum_core/_spectrum_core.pyd",
+)
+
+copy_file(
+    name = "_spectrum_core_so",
+    src = "//spectrum-core:spectrum_core_native",
+    out = "spectrum_core/_spectrum_core.so",
+)
+
+py_library(
+    name = "spectrum_core",
+    srcs = glob(["spectrum_core/**/*.py"]),
+    data = select({
+        "@platforms//os:windows": [":_spectrum_core_pyd"],
+        "//conditions:default": [":_spectrum_core_so"],
+    }),
+    imports = ["."],
+)

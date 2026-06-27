@@ -1,0 +1,1 @@
+# Spectrum Launcher integration tests
