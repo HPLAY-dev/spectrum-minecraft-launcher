@@ -7,6 +7,8 @@ $Root = Split-Path -Parent $PSScriptRoot
 $CoreDir = Join-Path $Root "src\core\rs\mc-core"
 $OutDir = Join-Path $Root "src\core\GUI\py\mc_core"
 
+& (Join-Path $Root "scripts\gen_version.ps1") -BuildId $env:SERENA_BUILD_ID
+
 Push-Location $CoreDir
 try {
     $env:PYO3_PYTHON = "python"

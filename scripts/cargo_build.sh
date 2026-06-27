@@ -5,6 +5,8 @@ ROOT="$(cd "$(dirname "$0")/.." && pwd)"
 CORE_DIR="$ROOT/src/core/rs/mc-core"
 OUT_DIR="$ROOT/src/core/GUI/py/mc_core"
 
+"$ROOT/scripts/gen_version.sh"
+
 cd "$CORE_DIR"
 export PYO3_PYTHON="${PYO3_PYTHON:-python3}"
 export PYO3_USE_ABI3_FORWARD_COMPATIBILITY=1

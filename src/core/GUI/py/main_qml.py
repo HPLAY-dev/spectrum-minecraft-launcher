@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""MC Launcher — PySide6 + Qt6 QML 入口（推荐 GUI）。"""
+"""SerenaLauncher — PySide6 + Qt6 QML 入口。"""
 
 from __future__ import annotations
 
@@ -16,16 +16,23 @@ from PySide6.QtGui import QGuiApplication
 from PySide6.QtQml import QQmlApplicationEngine
 
 from app.bridge import AppBridge
+from app.branding import load_branding
 
 
 def main() -> int:
     os.environ.setdefault("QT_QUICK_CONTROLS_STYLE", "Fusion")
 
+    branding = load_branding()
     app = QGuiApplication(sys.argv)
+    app.setApplicationName(branding.name)
+    app.setApplicationDisplayName(branding.display_title)
+    app.setApplicationVersion(branding.full_version)
+
     engine = QQmlApplicationEngine()
     bridge = AppBridge()
 
     engine.rootContext().setContextProperty("App", bridge)
+    engine.rootContext().setContextProperty("Branding", branding.to_dict())
     engine.addImportPath(str(ROOT / "qml"))
     engine.load(QUrl.fromLocalFile(str(ROOT / "qml" / "main.qml")))
 

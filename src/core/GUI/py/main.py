@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""兼容入口 — 转发到 QML GUI。"""
+"""SerenaLauncher — 兼容入口，转发到 QML GUI。"""
 
 from main_qml import main
 

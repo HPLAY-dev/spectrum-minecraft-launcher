@@ -1,4 +1,10 @@
 {
+  "name": "SerenaLauncher",
+  "codename": "Okra",
+  "major": 26,
+  "quarter": "Q2",
+  "build_id": "0",
+  "commit": "dev",
   "minecraft_dir": "",
   "use_bmclapi": true,
   "language": "zh_cn",

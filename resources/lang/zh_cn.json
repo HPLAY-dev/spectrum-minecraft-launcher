@@ -1,5 +1,7 @@
 {
-  "app.title": "MC 启动器",
+  "app.title": "SerenaLauncher",
+  "app.codename": "Okra",
+  "app.major": "26",
   "nav.launch": "启动",
   "nav.download": "下载",
   "nav.manage": "管理",

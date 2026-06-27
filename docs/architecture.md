@@ -1,4 +1,14 @@
-# MC Launcher 架构
+# SerenaLauncher 架构
+
+## 品牌
+
+| 字段 | 值 |
+|------|-----|
+| 产品名 | SerenaLauncher |
+| 大版本 | 26 |
+| 渠道 | Q2 (2026 Q2) |
+| 开发代号 | Okra |
+| 版本字符串 | `26Q2.BuildID.commitid` |
 
 ## 技术栈
 
@@ -22,6 +32,7 @@ Qt6 QML UI  ←→  Python AppBridge  ←→  mc_core (Rust / py_fallback)
 
 ## 构建顺序
 
-1. `scripts/cargo_build.ps1` — 编译 Rust PyO3 扩展
-2. `cmake -B build` — 编译 C++ 核心与 CLI
-3. `py src/core/GUI/py/main_qml.py` — 运行 Python GUI
+1. `scripts/gen_version.ps1` — 写入 `26Q2.BuildID.commitid`
+2. `scripts/cargo_build.ps1` — 编译 Rust PyO3 扩展
+3. `cmake -B build` — 编译 C++ 核心与 CLI
+4. `py src/core/GUI/py/main_qml.py` — 运行 Python GUI

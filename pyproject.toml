@@ -1,7 +1,7 @@
 [project]
-name = "mc-launcher"
-version = "0.1.0"
-description = "Cross-platform Minecraft launcher"
+name = "serena-launcher"
+version = "26.2.0"
+description = "SerenaLauncher — cross-platform Minecraft launcher (codename Okra)"
 requires-python = ">=3.10"
 dependencies = [
     "PySide6>=6.6",
@@ -9,7 +9,7 @@ dependencies = [
 ]
 
 [project.scripts]
-mc-launcher = "main_qml:main"
+serena-launcher = "main_qml:main"
 
 [tool.setuptools.packages.find]
 where = ["src/core/GUI/py"]

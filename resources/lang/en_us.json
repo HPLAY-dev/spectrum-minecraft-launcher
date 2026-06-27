@@ -1,5 +1,7 @@
 {
-  "app.title": "MC Launcher",
+  "app.title": "SerenaLauncher",
+  "app.codename": "Okra",
+  "app.major": "26",
   "nav.launch": "Launch",
   "nav.download": "Download",
   "nav.manage": "Manage",

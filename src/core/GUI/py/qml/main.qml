@@ -8,20 +8,38 @@ ApplicationWindow {
     width: 1024
     height: 680
     visible: true
-    title: "MC Launcher"
+    title: Branding.display_title
 
     color: SpectrumTheme.background
+
+    property var brand: Branding
 
     ColumnLayout {
         anchors.fill: parent
         anchors.margins: 28
         spacing: 20
 
-        Text {
-            text: "MC Launcher"
-            font.pixelSize: 28
-            font.bold: true
-            color: SpectrumTheme.textTitle
+        ColumnLayout {
+            spacing: 4
+
+            Text {
+                text: brand.name
+                font.pixelSize: 28
+                font.bold: true
+                color: SpectrumTheme.textTitle
+            }
+
+            Text {
+                text: brand.full_version
+                font.pixelSize: 14
+                color: SpectrumTheme.primary
+            }
+
+            Text {
+                text: "开发代号 " + brand.codename + " · 大版本 " + brand.major
+                font.pixelSize: 13
+                color: SpectrumTheme.textMuted
+            }
         }
 
         Text {
@@ -40,7 +58,7 @@ ApplicationWindow {
                 spacing: 12
 
                 Text {
-                    text: "版本列表（前 50 条）"
+                    text: "Minecraft 版本列表（前 50 条）"
                     color: SpectrumTheme.textMuted
                 }
 

@@ -7,7 +7,7 @@ ApplicationWindow {
     width: 960
     height: 640
     visible: true
-    title: "MC Launcher (Qt6 C++)"
+    title: "SerenaLauncher (Qt6 C++)"
 
     ColumnLayout {
         anchors.fill: parent
@@ -15,9 +15,15 @@ ApplicationWindow {
         spacing: 16
 
         Label {
-            text: "MC Launcher"
+            text: "SerenaLauncher"
             font.pixelSize: 28
             font.bold: true
+        }
+
+        Label {
+            text: "26Q2 · 开发代号 Okra · 大版本 26"
+            wrapMode: Text.WordWrap
+            Layout.fillWidth: true
         }
 
         Label {

@@ -1,4 +1,4 @@
-# 构建指南
+# 构建指南 — SerenaLauncher (Okra)
 
 ## 依赖
 
@@ -12,6 +12,7 @@
 
 ```powershell
 pip install -r requirements.txt
+.\scripts\gen_version.ps1
 .\scripts\cargo_build.ps1
 cmake -B build -DCMAKE_BUILD_TYPE=Release
 cmake --build build --config Release
@@ -22,6 +23,7 @@ py .\src\core\GUI\py\main_qml.py
 
 ```bash
 pip install -r requirements.txt
+./scripts/gen_version.sh
 ./scripts/cargo_build.sh
 cmake -B build -DCMAKE_BUILD_TYPE=Release
 cmake --build build -j$(nproc)
@@ -34,3 +36,4 @@ python3 src/core/GUI/py/main_qml.py
 |------|------|------|
 | `MC_USE_RUST` | 启用 Rust 核心 | `1` |
 | `MC_USE_BMCLAPI` | 使用 BMCLAPI 镜像 | `1` |
+| `SERENA_BUILD_ID` | 构建编号（版本号中间段） | `0` |

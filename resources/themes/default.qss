@@ -1,4 +1,4 @@
-/* MC Launcher default theme */
+/* SerenaLauncher default theme (Okra) */
 
 QWidget {
     background-color: #0f1117;

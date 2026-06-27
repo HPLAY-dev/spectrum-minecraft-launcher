@@ -1,4 +1,4 @@
-"""MC Launcher — Python 桥接层（Rust 优先，py_fallback 回退）。"""
+"""SerenaLauncher — Python 桥接层（Rust 优先，py_fallback 回退）。"""
 
 from __future__ import annotations
 
