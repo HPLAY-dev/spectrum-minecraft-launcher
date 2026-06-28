@@ -2,7 +2,7 @@ import requests
 import base64
 
 
-def get_skin_and_cape(uuid=str):
+def get_skin_and_cape(uuid: str):
     """
     Get skin and cape texture from mojang server.
     Return:
@@ -31,3 +31,10 @@ def get_skin_and_cape(uuid=str):
             return_dict['cape_url'] = cape_url
 
     return return_dict
+
+def get_uuid_from_name(name: str):
+    url = f"https://api.mojang.com/users/profiles/minecraft/{name}"
+    response = requests.get(url)
+    if response.status_code == 200:
+        return response.json().get("id")
+    return None
