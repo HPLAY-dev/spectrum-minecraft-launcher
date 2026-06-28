@@ -1,4 +1,5 @@
 import requests
+import base64
 
 
 def get_skin_and_cape(uuid=str):
@@ -16,7 +17,8 @@ def get_skin_and_cape(uuid=str):
     return_dict = {"skin_url": None, "cape_url": None, "slim": False}
     if response.status_code == 200:
         data = response.json()
-        textures = data.get("properties", []).get("value", []).get("textures", {})
+        value = base64.b64decode(data.get("properties", []).get("value", []))
+        textures = value.get("textures", {})
     
     for texture in textures:
         if texture.get("type") == "SKIN":
