@@ -12,6 +12,15 @@ Language composition: Python ~42.1%, Rust ~39.6%, QML ~11.2% (plus PowerShell, H
 - Modrinth mod downloads and BMCLAPI mirror support
 - Account management, version file management
 
+## Recent changes (high level)
+
+- 2026-06-27 — Introduced spectrum_core (Rust/PyO3) as the recommended core, new QML/Web UI, and Bazel/Cargo build integration. This moves heavy work into a Rust extension with a pure-Python fallback.
+- 2026-06-28 — Added mojang API helper, multiple bug fixes, and English README improvements.
+- 2026-01 → 2026-06 — Many UI improvements, bug fixes, async/threading stability fixes, BMCLAPI and Forge/Neoforge fixes, LabyMod support, and improvements to Java detection/management and Nuitka release scripts.
+- Ongoing — Localization (zh_CN / en_US) improvements and community contributions.
+
+(For full commit history see: https://github.com/HPLAY-dev/spectrum-minecraft-launcher/commits)
+
 ## Supported ModLoaders
 
 - Fabric
