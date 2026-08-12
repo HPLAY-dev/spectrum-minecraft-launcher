@@ -1,5 +1,7 @@
 # Spectrum Minecraft Launcher
 
+**Version 26Q3.8 — "Pacific"** (released 2026-08-12)
+
 An open-source, lightweight Minecraft Launcher written in Python 3 with a Rust core option for improved performance.
 
 Language composition: Python ~42.1%, Rust ~39.6%, QML ~11.2% (plus PowerShell, HTML, JavaScript, and other small files).
@@ -11,6 +13,18 @@ Language composition: Python ~42.1%, Rust ~39.6%, QML ~11.2% (plus PowerShell, H
 - Supports Fabric, Neoforge and Forge mod loaders
 - Modrinth mod downloads and BMCLAPI mirror support
 - Account management, version file management
+
+## Release 26Q3.8 "Pacific" — Summary
+
+This release (26Q3.8, codename "Pacific") packages the major improvements made over the last development cycle into a stable release. Key highlights:
+
+- spectrum_core (Rust/PyO3) is the recommended runtime core for better performance and stability; a pure-Python fallback remains available.
+- New QML/Web UI improvements and updated Spectrum theme for a modern look and smoother UX.
+- Added mojang API helper for UUID resolution and related fixes.
+- Multiple bug fixes and stability improvements: async/threading fixes, BMCLAPI/Forge/Neoforge fixes, LabyMod support, and Java detection improvements.
+- Release/build improvements: updated Nuitka build flow, Makefile helpers and Cargo/Bazel integrations for reproducible builds.
+
+For a concise list of changes and all commits, see the project commits page: https://github.com/HPLAY-dev/spectrum-minecraft-launcher/commits
 
 ## Recent changes (high level)
 
